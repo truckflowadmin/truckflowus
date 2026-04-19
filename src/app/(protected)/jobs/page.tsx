@@ -69,11 +69,11 @@ export default async function JobsPage() {
   }));
 
   return (
-    <div className="p-8 max-w-7xl">
-      <header className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-8 max-w-7xl">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Operations</div>
-          <h1 className="text-3xl font-bold tracking-tight">Jobs</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Jobs</h1>
         </div>
         <div className="flex gap-2">
           <Link href="/jobs/new" className="btn-accent">+ New Job</Link>

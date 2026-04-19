@@ -29,10 +29,10 @@ export default async function CustomersPage() {
   });
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-5xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">People</div>
-        <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Customers</h1>
       </header>
 
       <form action={createCustomerAction} className="panel p-5 mb-6 grid grid-cols-1 md:grid-cols-6 gap-3">
@@ -68,27 +68,27 @@ export default async function CustomersPage() {
           <table className="w-full text-sm">
             <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
               <tr>
-                <th className="text-left px-5 py-2">Name</th>
-                <th className="text-left px-5 py-2">Contact</th>
-                <th className="text-left px-5 py-2">Phone</th>
-                <th className="text-left px-5 py-2">Email</th>
-                <th className="text-right px-5 py-2">Tickets</th>
-                <th className="text-right px-5 py-2">Invoices</th>
-                <th className="text-right px-5 py-2"></th>
+                <th className="text-left px-3 md:px-5 py-2">Name</th>
+                <th className="text-left px-3 md:px-5 py-2">Contact</th>
+                <th className="text-left px-3 md:px-5 py-2">Phone</th>
+                <th className="text-left px-3 md:px-5 py-2 hidden md:table-cell">Email</th>
+                <th className="text-right px-3 md:px-5 py-2">Tickets</th>
+                <th className="text-right px-3 md:px-5 py-2">Invoices</th>
+                <th className="text-right px-3 md:px-5 py-2"></th>
               </tr>
             </thead>
             <tbody>
               {customers.map((c) => (
                 <tr key={c.id} className="border-b border-steel-100 hover:bg-steel-50">
-                  <td className="px-5 py-3 font-medium">
+                  <td className="px-3 md:px-5 py-3 font-medium">
                     <a href={`/customers/${c.id}`} className="hover:text-safety-dark">{c.name}</a>
                   </td>
-                  <td className="px-5 py-3">{c.contact ?? '—'}</td>
-                  <td className="px-5 py-3">{c.phone ?? '—'}</td>
-                  <td className="px-5 py-3">{c.email ?? '—'}</td>
-                  <td className="px-5 py-3 text-right tabular-nums">{c._count.tickets}</td>
-                  <td className="px-5 py-3 text-right tabular-nums">{c._count.invoices}</td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-3 md:px-5 py-3">{c.contact ?? '—'}</td>
+                  <td className="px-3 md:px-5 py-3">{c.phone ?? '—'}</td>
+                  <td className="px-3 md:px-5 py-3 hidden md:table-cell">{c.email ?? '—'}</td>
+                  <td className="px-3 md:px-5 py-3 text-right tabular-nums">{c._count.tickets}</td>
+                  <td className="px-3 md:px-5 py-3 text-right tabular-nums">{c._count.invoices}</td>
+                  <td className="px-3 md:px-5 py-3 text-right">
                     <a href={`/customers/${c.id}/edit`} className="text-xs text-steel-600 hover:text-steel-900">Edit</a>
                   </td>
                 </tr>

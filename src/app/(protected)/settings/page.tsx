@@ -195,10 +195,10 @@ export default async function SettingsPage({
   const grouped = featuresBySide();
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-3xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Configuration</div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Settings</h1>
       </header>
 
       {/* My Plan & Features */}
@@ -282,7 +282,7 @@ export default async function SettingsPage({
           <label className="label">Address</label>
           <input name="address" defaultValue={company.address ?? ''} className="input" />
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="label">City</label>
             <input name="city" defaultValue={company.city ?? ''} className="input" />
@@ -296,7 +296,7 @@ export default async function SettingsPage({
             <input name="zip" defaultValue={company.zip ?? ''} className="input" />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="label">Phone</label>
             <input name="phone" defaultValue={company.phone ?? ''} className="input" />
@@ -330,7 +330,7 @@ export default async function SettingsPage({
           <label className="label">Current Password</label>
           <input name="currentPassword" type="password" required className="input max-w-sm" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="label">New Password</label>
             <input name="newPassword" type="password" required minLength={6} className="input" />
@@ -433,7 +433,7 @@ export default async function SettingsPage({
           <details>
             <summary className="text-sm font-medium text-steel-700 cursor-pointer mb-3">+ Add User</summary>
             <form action={addUserAction} className="space-y-3 border-t border-steel-200 pt-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="label">Name</label>
                   <input name="name" required className="input" />
@@ -443,7 +443,7 @@ export default async function SettingsPage({
                   <input name="email" type="email" required className="input" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="label">Password</label>
                   <input name="password" type="password" required minLength={6} className="input" />

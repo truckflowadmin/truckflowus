@@ -67,6 +67,49 @@ html, body {
   }
 }
 
+/* Mobile responsive overrides for dispatcher & superadmin */
+@media (max-width: 1023px) {
+  /* Reduce padding on all page containers */
+  main > div[class*="p-8"],
+  main > div[class*="p-6"] {
+    padding: 1rem !important;
+  }
+
+  /* Make all tables horizontally scrollable */
+  main table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  main thead, main tbody, main tr {
+    display: table;
+    width: 100%;
+    table-layout: auto;
+  }
+  main table {
+    min-width: 600px;
+  }
+
+  /* Stack page headers (title + action button) */
+  main header[class*="flex"] {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  /* Reduce large headings on mobile */
+  main h1[class*="text-3xl"] {
+    font-size: 1.5rem;
+  }
+  main h1[class*="text-2xl"] {
+    font-size: 1.25rem;
+  }
+
+  /* Panels need some breathing room */
+  .panel, .panel-sa {
+    overflow-x: auto;
+  }
+}
+
 /* Print styles — hide sidebar/nav, full-width content */
 @media print {
   aside, nav, header form, header a, button, .btn, .btn-primary, .btn-accent, .btn-ghost, .btn-danger, details {

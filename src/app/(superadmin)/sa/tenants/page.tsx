@@ -16,16 +16,16 @@ export default async function TenantsPage() {
   });
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-white">Tenants</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">Tenants</h1>
         <p className="text-purple-300 text-sm">
           {tenants.length} compan{tenants.length === 1 ? 'y' : 'ies'} on the platform.
         </p>
       </header>
 
-      <div className="panel-sa p-0 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="panel-sa p-0 overflow-hidden overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead className="text-purple-400 text-left">
             <tr className="border-b border-purple-900/40">
               <th className="px-4 py-3">Company</th>

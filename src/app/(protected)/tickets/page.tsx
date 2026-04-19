@@ -96,14 +96,14 @@ export default async function TicketsPage({
     const statuses = ['PENDING', 'DISPATCHED', 'IN_PROGRESS', 'COMPLETED', 'ISSUE', 'CANCELLED'];
 
     return (
-      <div className="p-8 max-w-7xl">
-        <header className="flex items-center justify-between mb-6">
+      <div className="p-4 md:p-8 max-w-7xl">
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Operations</div>
-            <h1 className="text-3xl font-bold tracking-tight">Tickets</h1>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Tickets</h1>
             <p className="text-sm text-steel-500 mt-0.5">{billableTickets.length} ready to bill</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link href="/tickets/scan" className="btn-ghost text-sm">Bulk Scan</Link>
             <Link href="/tickets/bulk" className="btn-ghost text-sm">Bulk Create</Link>
             <Link href="/tickets/new" className="btn-accent">+ New Ticket</Link>
@@ -198,11 +198,11 @@ export default async function TicketsPage({
   });
 
   return (
-    <div className="p-8 max-w-7xl">
-      <header className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-8 max-w-7xl">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Operations</div>
-          <h1 className="text-3xl font-bold tracking-tight">Tickets</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Tickets</h1>
         </div>
         <div className="flex gap-2">
           <Link

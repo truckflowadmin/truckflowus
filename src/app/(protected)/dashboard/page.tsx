@@ -40,13 +40,13 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="p-8 max-w-7xl">
-      <header className="flex items-baseline justify-between mb-8">
+    <div className="p-4 md:p-8 max-w-7xl">
+      <header className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 mb-6 md:mb-8">
         <div>
           <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Dispatch</div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
         </div>
-        <a href="/tickets/new" className="btn-accent">+ New Ticket</a>
+        <a href="/tickets/new" className="btn-accent self-start">+ New Ticket</a>
       </header>
 
       <InspectionAlerts />
@@ -74,34 +74,36 @@ export default async function DashboardPage() {
             No tickets yet. <a href="/tickets/new" className="text-safety-dark font-medium">Create your first</a>.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200">
-              <tr>
-                <th className="text-left px-5 py-2">#</th>
-                <th className="text-left px-5 py-2">Customer</th>
-                <th className="text-left px-5 py-2">Driver</th>
-                <th className="text-left px-5 py-2">Material</th>
-                <th className="text-left px-5 py-2">Qty</th>
-                <th className="text-left px-5 py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((t) => (
-                <tr key={t.id} className="border-b border-steel-100 hover:bg-steel-50">
-                  <td className="px-5 py-3 font-mono">
-                    <a href={`/tickets/${t.id}`} className="text-steel-900 hover:text-safety-dark">
-                      #{String(t.ticketNumber).padStart(4, '0')}
-                    </a>
-                  </td>
-                  <td className="px-5 py-3">{t.customer?.name ?? '—'}</td>
-                  <td className="px-5 py-3">{t.driver?.name ?? <span className="text-steel-400">unassigned</span>}</td>
-                  <td className="px-5 py-3">{t.material ?? '—'}</td>
-                  <td className="px-5 py-3">{fmtQty(t.quantity, t.quantityType)} {qtyUnit(t.quantityType)}</td>
-                  <td className="px-5 py-3"><StatusBadge status={t.status} /></td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
+              <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200">
+                <tr>
+                  <th className="text-left px-3 md:px-5 py-2">#</th>
+                  <th className="text-left px-3 md:px-5 py-2">Customer</th>
+                  <th className="text-left px-3 md:px-5 py-2">Driver</th>
+                  <th className="text-left px-3 md:px-5 py-2">Material</th>
+                  <th className="text-left px-3 md:px-5 py-2">Qty</th>
+                  <th className="text-left px-3 md:px-5 py-2">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {recent.map((t) => (
+                  <tr key={t.id} className="border-b border-steel-100 hover:bg-steel-50">
+                    <td className="px-3 md:px-5 py-3 font-mono">
+                      <a href={`/tickets/${t.id}`} className="text-steel-900 hover:text-safety-dark">
+                        #{String(t.ticketNumber).padStart(4, '0')}
+                      </a>
+                    </td>
+                    <td className="px-3 md:px-5 py-3">{t.customer?.name ?? '—'}</td>
+                    <td className="px-3 md:px-5 py-3">{t.driver?.name ?? <span className="text-steel-400">unassigned</span>}</td>
+                    <td className="px-3 md:px-5 py-3">{t.material ?? '—'}</td>
+                    <td className="px-3 md:px-5 py-3">{fmtQty(t.quantity, t.quantityType)} {qtyUnit(t.quantityType)}</td>
+                    <td className="px-3 md:px-5 py-3"><StatusBadge status={t.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

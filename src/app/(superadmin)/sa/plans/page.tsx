@@ -14,9 +14,9 @@ export default async function PlansPage() {
   });
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-white">Subscription Plans</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">Subscription Plans</h1>
         <p className="text-purple-300 text-sm">
           Prices and feature sets. Changes apply to every tenant on that plan immediately.
         </p>

@@ -150,31 +150,31 @@ async function DriversListContent() {
           <table className="w-full text-sm">
             <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
               <tr>
-                <th className="text-left px-5 py-2">Name</th>
-                <th className="text-left px-5 py-2">Phone</th>
-                <th className="text-left px-5 py-2">Truck</th>
-                <th className="text-left px-5 py-2">Mobile URL</th>
-                <th className="text-left px-5 py-2">Status</th>
-                <th className="text-right px-5 py-2">Actions</th>
+                <th className="text-left px-3 md:px-5 py-2">Name</th>
+                <th className="text-left px-3 md:px-5 py-2">Phone</th>
+                <th className="text-left px-3 md:px-5 py-2">Truck</th>
+                <th className="text-left px-3 md:px-5 py-2 hidden md:table-cell">Mobile URL</th>
+                <th className="text-left px-3 md:px-5 py-2">Status</th>
+                <th className="text-right px-3 md:px-5 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {drivers.map((d) => (
                 <tr key={d.id} className="border-b border-steel-100">
-                  <td className="px-5 py-3 font-medium">{d.name}</td>
-                  <td className="px-5 py-3 font-mono text-xs">{d.phone}</td>
-                  <td className="px-5 py-3">{d.assignedTruck?.truckNumber ?? '—'}</td>
-                  <td className="px-5 py-3 font-mono text-xs text-steel-500">
+                  <td className="px-3 md:px-5 py-3 font-medium">{d.name}</td>
+                  <td className="px-3 md:px-5 py-3 font-mono text-xs">{d.phone}</td>
+                  <td className="px-3 md:px-5 py-3">{d.assignedTruck?.truckNumber ?? '—'}</td>
+                  <td className="px-3 md:px-5 py-3 font-mono text-xs text-steel-500 hidden md:table-cell">
                     <a href={`/d/${d.accessToken}`} target="_blank" className="hover:text-safety-dark">
                       {appUrl}/d/{d.accessToken.slice(0, 12)}…
                     </a>
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-3 md:px-5 py-3">
                     <span className={`badge ${d.active ? 'bg-green-100 text-green-800' : 'bg-steel-200 text-steel-600'}`}>
                       {d.active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-3 md:px-5 py-3 text-right">
                     <a href={`/drivers/${d.id}/edit`} className="text-xs text-steel-600 hover:text-steel-900 px-2">Edit</a>
                     <form action={rotateTokenAction} className="inline">
                       <input type="hidden" name="id" value={d.id} />
@@ -224,10 +224,10 @@ async function PayrollContent() {
 // ---------------------------------------------------------------------------
 export default async function DriversPage() {
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-5xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">People</div>
-        <h1 className="text-3xl font-bold tracking-tight">Drivers</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Drivers</h1>
       </header>
 
       <DriversPageTabs

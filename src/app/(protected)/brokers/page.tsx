@@ -28,28 +28,29 @@ export default async function BrokersPage() {
   const statsMap = Object.fromEntries(brokerStats.map((s) => [s.id, s]));
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 md:p-8 max-w-6xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Partners</div>
-        <h1 className="text-3xl font-bold tracking-tight">Brokers</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Brokers</h1>
       </header>
 
       <div className="panel overflow-hidden">
         {brokers.length === 0 ? (
           <div className="p-10 text-center text-steel-500">No brokers yet. Contact your administrator to add brokers.</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[800px]">
             <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
               <tr>
-                <th className="text-left px-5 py-2">Name</th>
-                <th className="text-left px-5 py-2">Primary Contact</th>
-                <th className="text-left px-5 py-2">Job Title</th>
-                <th className="text-left px-5 py-2">Phone</th>
-                <th className="text-right px-5 py-2">Commission %</th>
-                <th className="text-right px-5 py-2">Tickets</th>
-                <th className="text-right px-5 py-2">Revenue</th>
-                <th className="text-right px-5 py-2">Commission Owed</th>
-                <th className="text-left px-5 py-2">Status</th>
+                <th className="text-left px-3 md:px-5 py-2">Name</th>
+                <th className="text-left px-3 md:px-5 py-2">Primary Contact</th>
+                <th className="text-left px-3 md:px-5 py-2">Job Title</th>
+                <th className="text-left px-3 md:px-5 py-2">Phone</th>
+                <th className="text-right px-3 md:px-5 py-2">Commission %</th>
+                <th className="text-right px-3 md:px-5 py-2">Tickets</th>
+                <th className="text-right px-3 md:px-5 py-2">Revenue</th>
+                <th className="text-right px-3 md:px-5 py-2">Commission Owed</th>
+                <th className="text-left px-3 md:px-5 py-2">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -59,17 +60,17 @@ export default async function BrokersPage() {
                 const pc = contacts[0] ?? null;
                 return (
                   <tr key={b.id} className="border-b border-steel-100 hover:bg-steel-50">
-                    <td className="px-5 py-3 font-medium">
+                    <td className="px-3 md:px-5 py-3 font-medium">
                       <Link href={`/brokers/${b.id}`} className="hover:text-safety-dark">{b.name}</Link>
                     </td>
-                    <td className="px-5 py-3">{pc?.name ?? '—'}</td>
-                    <td className="px-5 py-3">{pc?.jobTitle ?? '—'}</td>
-                    <td className="px-5 py-3">{pc?.phone ?? '—'}</td>
-                    <td className="px-5 py-3 text-right tabular-nums">{Number(b.commissionPct).toFixed(1)}%</td>
-                    <td className="px-5 py-3 text-right tabular-nums">{b._count.tickets}</td>
-                    <td className="px-5 py-3 text-right tabular-nums">${s?.revenue.toFixed(2) ?? '0.00'}</td>
-                    <td className="px-5 py-3 text-right tabular-nums font-medium text-red-700">${s?.commission.toFixed(2) ?? '0.00'}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-3 md:px-5 py-3">{pc?.name ?? '—'}</td>
+                    <td className="px-3 md:px-5 py-3">{pc?.jobTitle ?? '—'}</td>
+                    <td className="px-3 md:px-5 py-3">{pc?.phone ?? '—'}</td>
+                    <td className="px-3 md:px-5 py-3 text-right tabular-nums">{Number(b.commissionPct).toFixed(1)}%</td>
+                    <td className="px-3 md:px-5 py-3 text-right tabular-nums">{b._count.tickets}</td>
+                    <td className="px-3 md:px-5 py-3 text-right tabular-nums">${s?.revenue.toFixed(2) ?? '0.00'}</td>
+                    <td className="px-3 md:px-5 py-3 text-right tabular-nums font-medium text-red-700">${s?.commission.toFixed(2) ?? '0.00'}</td>
+                    <td className="px-3 md:px-5 py-3">
                       <span className={`badge ${b.active ? 'bg-green-100 text-green-800' : 'bg-steel-200 text-steel-600'}`}>
                         {b.active ? 'Active' : 'Inactive'}
                       </span>
@@ -79,6 +80,7 @@ export default async function BrokersPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

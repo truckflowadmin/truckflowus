@@ -96,13 +96,13 @@ export default async function OverviewPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-white">Platform Overview</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">Platform Overview</h1>
         <p className="text-purple-300 text-sm">Tenants, subscriptions, and revenue.</p>
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
         <StatCard label="Tenants" value={companyCount} />
         <StatCard label="Active" value={activeCount} />
         <StatCard label="Suspended" value={suspendedCount} />

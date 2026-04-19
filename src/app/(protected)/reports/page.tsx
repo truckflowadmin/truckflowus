@@ -218,11 +218,11 @@ export default async function ReportsPage({
   const compliantDrivers = Number(driversWithAllDocs[0]?.cnt ?? 0);
 
   return (
-    <div className="p-8 max-w-7xl">
-      <header className="flex items-baseline justify-between mb-6">
+    <div className="p-4 md:p-8 max-w-7xl">
+      <header className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 mb-6">
         <div>
           <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Analytics</div>
-          <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Reports</h1>
         </div>
         <div className="flex gap-1">
           {[7, 14, 30, 90].map((d) => (
