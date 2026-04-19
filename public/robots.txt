@@ -1,0 +1,34 @@
+# TruckFlowUS robots.txt
+# Allow public marketing/auth pages, block all authenticated routes.
+
+User-agent: *
+
+# Authenticated dispatcher routes
+Disallow: /dashboard
+Disallow: /tickets
+Disallow: /drivers
+Disallow: /customers
+Disallow: /invoices
+Disallow: /reports
+Disallow: /settings
+Disallow: /sms
+Disallow: /locked
+Disallow: /jobs
+Disallow: /fleet
+Disallow: /expenses
+
+# Superadmin routes
+Disallow: /sa
+
+# Driver portal (authenticated)
+Disallow: /d/portal
+Disallow: /d/reset
+
+# API endpoints
+Disallow: /api/
+
+# Allow public pages (implicit — everything not disallowed above)
+# Public: /, /login, /signup, /forgot-password, /forgot-password/security,
+#         /reset-password, /d/login, /subscribe
+
+Sitemap: https://truckflowus.com/sitemap.xml

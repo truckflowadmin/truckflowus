@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  @apply bg-steel-50 text-steel-900 antialiased;
+}
+
+/* Utility classes that come up often */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium
+           border border-transparent transition-colors text-sm
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-diesel text-white hover:bg-steel-800;
+  }
+  .btn-accent {
+    @apply btn bg-safety text-diesel hover:bg-safety-dark;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent border-steel-300 hover:bg-steel-100;
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700;
+  }
+  .input {
+    @apply w-full px-3 py-2 rounded-md border border-steel-300 bg-white
+           focus:outline-none focus:ring-2 focus:ring-safety focus:border-transparent
+           text-sm;
+  }
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-wide text-steel-600 mb-1;
+  }
+  .panel {
+    @apply bg-white rounded-lg border border-steel-200 shadow-panel;
+  }
+  .panel-sa {
+    @apply rounded-lg border p-4;
+    background: #1a0a2e;
+    border-color: rgba(147, 51, 234, 0.25);
+  }
+  .input-sa {
+    @apply w-full px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2;
+    background: #0f0719;
+    border: 1px solid rgba(147, 51, 234, 0.35);
+    color: #fff;
+  }
+  .label-sa {
+    @apply block text-xs font-semibold uppercase tracking-wide mb-1;
+    color: #c4b5fd;
+  }
+  .btn-purple {
+    @apply btn text-white;
+    background: #9333ea;
+  }
+  .btn-purple:hover {
+    background: #7e22ce;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wide;
+  }
+}
+
+/* Print styles — hide sidebar/nav, full-width content */
+@media print {
+  aside, nav, header form, header a, button, .btn, .btn-primary, .btn-accent, .btn-ghost, .btn-danger, details {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  .panel {
+    border: none !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  table {
+    font-size: 11px !important;
+  }
+}
+
+/* Toast slide-in animation */
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}

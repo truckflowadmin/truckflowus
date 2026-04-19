@@ -1,0 +1,876 @@
+// TruckFlow database schema
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  DISPATCHER
+}
+
+enum TicketStatus {
+  PENDING
+  DISPATCHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ISSUE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum SmsDirection {
+  OUTBOUND
+  INBOUND
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  city        String?
+  state       String?
+  zip         String?
+  phone       String?
+  email       String?
+  logoUrl     String?
+  // Default rate per load used on new invoices; can be overridden per line
+  defaultRate Decimal  @default(0) @db.Decimal(10, 2)
+  // Subscription / platform state
+  planId            String?
+  plan              Plan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
+  featureOverrides  String[] // extra features granted beyond the plan (superadmin per-tenant)
+  disabledFeatures  String[] // features removed even if the plan includes them
+  suspended         Boolean  @default(false)
+  suspendedAt       DateTime?
+  // Billing
+  customPriceCents     Int?      // override plan price for this tenant (null = use plan price)
+  trialEndsAt          DateTime? // free trial end date
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users                User[]
+  drivers              Driver[]
+  customers            Customer[]
+  brokers              Broker[]
+  materials            Material[]
+  tickets              Ticket[]
+  jobs                 Job[]
+  invoices             Invoice[]
+  tripSheets           TripSheet[]
+  subscriptionRequests SubscriptionRequest[]
+  trucks               Truck[]
+  expenses             Expense[]
+  billingEvents        BillingEvent[]
+
+  @@index([planId])
+}
+
+/// Plan tiers a platform superadmin can assign to companies.
+/// Features is a list of feature keys (see src/lib/features.ts).
+/// Price is stored in cents to avoid Decimal-rounding surprises.
+model Plan {
+  id                 String   @id @default(cuid())
+  key                String   @unique
+  name               String
+  description        String?
+  priceMonthlyCents  Int      @default(0)
+  maxDrivers         Int?     // null = unlimited
+  maxTicketsPerMonth Int?     // null = unlimited
+  features           String[] // e.g. ["bulk_tickets", "reports"]
+  sortOrder          Int      @default(0)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  companies            Company[]
+  subscriptionRequests SubscriptionRequest[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  // Null for SUPERADMIN (platform-level user, not tied to a tenant).
+  companyId    String?
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(DISPATCHER)
+  lastLoginAt        DateTime?
+  lastPasswordChange DateTime?
+  // Security questions for password reset (user picks in settings)
+  securityQ1  String?
+  securityA1  String?  // stored as lowercase trimmed bcrypt hash
+  securityQ2  String?
+  securityA2  String?
+  securityQ3  String?
+  securityA3  String?
+  // Session invalidation — all JWTs issued before this timestamp are rejected
+  sessionInvalidatedAt DateTime?
+  createdAt    DateTime @default(now())
+
+  company        Company?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  passwordResets PasswordReset[]
+
+  @@index([companyId])
+}
+
+/// Rate-limiting: tracks failed login / reset attempts (persists across restarts).
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  key       String   // email, phone, or IP — the identifier being rate-limited
+  type      String   // e.g. "dispatcher_login", "driver_login", "security_reset", "driver_pin_reset"
+  success   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([key, type, createdAt])
+}
+
+/// Token-based password reset flow. Tokens expire after 1 hour.
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique @default(cuid())
+  expiresAt DateTime
+  usedAt    DateTime? // set when the token is consumed
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Driver {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  phone       String // E.164 format, e.g. +12395551234
+  email       String?  // optional email for password reset
+  truckNumber String?
+  active      Boolean  @default(true)
+  // Token used in /d/[token] mobile URL — first-time setup only after auth is set.
+  accessToken String   @unique @default(cuid())
+  // Driver authentication (phone + PIN)
+  pinHash     String?  // bcrypt hash of 4-6 digit PIN
+  pinSet      Boolean  @default(false) // true once driver has completed first-time setup
+  // Security questions for PIN reset (driver picks during setup)
+  securityQ1  String?
+  securityA1  String?  // stored as lowercase trimmed hash
+  securityQ2  String?
+  securityA2  String?
+  securityQ3  String?
+  securityA3  String?
+  // PIN reset via email
+  resetToken     String?   @unique
+  resetTokenExp  DateTime?
+  // Login tracking & session management
+  lastLoginAt          DateTime?
+  sessionInvalidatedAt DateTime?
+  // Profile fields (editable by driver and dispatcher)
+  address              String?  // street address
+  city                 String?
+  state                String?
+  zip                  String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  // Payroll fields
+  workerType  WorkerType @default(EMPLOYEE)
+  payType     PayType    @default(HOURLY)
+  payRate     Decimal?   @db.Decimal(10, 2) // rate amount (hourly $, salary $, or percentage %)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Assigned truck (dispatcher sets this; can be swapped when a truck is out of service)
+  assignedTruckId String?
+
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedTruck   Truck?           @relation("AssignedTruck", fields: [assignedTruckId], references: [id], onDelete: SetNull)
+  tickets         Ticket[]
+  jobs            Job[]
+  jobAssignments  JobAssignment[]
+  smsLogs         SmsLog[]
+  timeOffRequests TimeOffRequest[]
+  documents       DriverDocument[]
+  payments        DriverPayment[]
+  expenses        Expense[]
+
+  @@index([companyId])
+  @@index([phone])
+  @@index([assignedTruckId])
+}
+
+enum WorkerType {
+  EMPLOYEE
+  CONTRACTOR
+}
+
+enum PayType {
+  HOURLY
+  SALARY
+  PERCENTAGE
+}
+
+enum TimeOffStatus {
+  PENDING
+  APPROVED
+  DENIED
+  CANCELLED
+}
+
+/// Driver time-off requests, reviewed by dispatcher.
+model TimeOffRequest {
+  id         String        @id @default(cuid())
+  companyId  String
+  driverId   String
+  startDate  DateTime      // first day off (date only, stored at midnight UTC)
+  endDate    DateTime      // last day off (inclusive)
+  reason     String?       @db.Text
+  status     TimeOffStatus @default(PENDING)
+  reviewNote String?       @db.Text   // dispatcher note on approval/denial
+  reviewedAt DateTime?
+  reviewedBy String?       // user ID of the dispatcher who reviewed
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, driverId])
+  @@index([companyId, status])
+  @@index([driverId, startDate])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  contact   String?
+  phone     String?
+  email     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tickets  Ticket[]
+  jobs     Job[]
+  invoices Invoice[]
+
+  @@index([companyId])
+}
+
+model Broker {
+  id               String   @id @default(cuid())
+  companyId        String?
+  name             String
+  contacts         Json     @default("[]") // Array of {name, phone, email, jobTitle}
+  email            String?  // primary broker email
+  phone            String?  // primary broker phone (E.164 for SMS matching)
+  commissionPct    Decimal  @default(0) @db.Decimal(5, 2) // e.g. 10.00 = 10%
+  mailingAddress   String?  @db.Text // multi-line address for trip sheet header
+  notes            String?  @db.Text
+  tripSheetForm    String?  @db.Text // filename of uploaded PDF template for trip sheets
+  logoFile         String?  @db.Text // filename of uploaded logo image (PNG/JPG) for trip sheets
+  dueDateRule      String   @default("NEXT_FRIDAY") // NEXT_FRIDAY, NET_15, NET_30, NET_45, NET_60
+  dueDateDays      Int?     // custom number of days (used when dueDateRule = CUSTOM)
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company    Company?    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tickets    Ticket[]
+  jobs       Job[]
+  tripSheets TripSheet[]
+  invoices   Invoice[]
+  smsLogs    SmsLog[]
+
+  @@index([companyId])
+}
+
+model TripSheet {
+  id          String          @id @default(cuid())
+  companyId   String
+  brokerId    String
+  weekEnding  DateTime
+  status      TripSheetStatus @default(DRAFT)
+  totalDue    Decimal?        @db.Decimal(10, 2)
+  notes       String?         @db.Text
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  broker   Broker   @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  tickets  Ticket[]
+
+  @@index([companyId])
+  @@index([brokerId])
+}
+
+enum TripSheetStatus {
+  DRAFT
+  SENT
+  PAID
+}
+
+enum QuantityType {
+  LOADS
+  TONS
+  YARDS
+}
+
+enum JobStatus {
+  CREATED
+  ASSIGNED
+  IN_PROGRESS
+  PARTIALLY_COMPLETED
+  COMPLETED
+  CANCELLED
+}
+
+model Job {
+  id            String      @id @default(cuid())
+  companyId     String
+  jobNumber     Int         // auto-incremented per-company
+  name          String      // short description, e.g. "Deliver fill dirt to Main St"
+  customerId    String?
+  brokerId      String?
+  driverId      String?
+  status        JobStatus   @default(CREATED)
+  // Job details
+  hauledFrom        String
+  hauledFromAddress  String?
+  hauledTo          String
+  hauledToAddress    String?
+  material          String?
+  truckNumber       String?      // assigned truck for this job (from driver profile)
+  requiredTruckType  TruckType?   // filter driver assignment to matching truck type
+  requiredTruckCount Int          @default(1) // how many trucks/drivers needed for this job
+  quantityType  QuantityType @default(LOADS)
+  totalLoads    Int          @default(1) // how many loads the job requires
+  completedLoads Int         @default(0) // how many loads have been completed
+  ratePerUnit   Decimal?     @db.Decimal(10, 2)
+  date          DateTime?    // target start date
+  notes         String?      @db.Text
+  // Allow drivers to self-assign from available jobs
+  openForDrivers Boolean     @default(false)
+  // Driver time tracking (pause/resume)
+  driverTimeSeconds Int       @default(0)  // accumulated active seconds
+  lastResumedAt     DateTime?              // when current active segment began
+  // Timestamps
+  assignedAt    DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  company       Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer      Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  broker        Broker?         @relation(fields: [brokerId], references: [id], onDelete: SetNull)
+  driver        Driver?         @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  tickets       Ticket[]
+  assignments   JobAssignment[]
+
+  @@unique([companyId, jobNumber])
+  @@index([companyId, status])
+  @@index([driverId, status])
+  @@index([customerId])
+  @@index([brokerId])
+}
+
+// Multiple drivers can be assigned to a single job (up to requiredTruckCount)
+model JobAssignment {
+  id          String   @id @default(cuid())
+  jobId       String
+  driverId    String
+  truckNumber String?  // snapshot of driver's truck at assignment time
+  assignedAt  DateTime @default(now())
+  // Per-driver status tracking (independent lifecycle per driver on multi-driver jobs)
+  status           String   @default("ASSIGNED") // ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
+  startedAt        DateTime?
+  completedAt      DateTime?
+  driverTimeSeconds Int      @default(0)
+  lastResumedAt    DateTime?
+
+  job    Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, driverId]) // a driver can only be assigned once per job
+  @@index([jobId])
+  @@index([driverId])
+}
+
+model Material {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model Ticket {
+  id             String       @id @default(cuid())
+  companyId      String
+  ticketNumber   Int // auto-incremented per-company, set in app code
+  customerId     String?
+  driverId       String?
+  brokerId       String?
+  jobId          String?
+  tripSheetId    String?
+  status         TicketStatus @default(PENDING)
+  // Job details
+  material       String? // e.g. "Fill Dirt", "Crushed Stone #57"
+  quantityType   QuantityType @default(LOADS)
+  quantity       Decimal      @default(1) @db.Decimal(10, 2)
+  hauledFrom     String
+  hauledTo       String
+  truckNumber    String?      // truck used for this load (snapshot, editable)
+  ticketRef      String?      // optional physical ticket reference number
+  date           DateTime?    // job date (replaces scheduledFor)
+  // Driver updates
+  dispatchedAt   DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  driverNotes    String?
+  // Billing
+  ratePerUnit    Decimal?     @db.Decimal(10, 2)
+  invoiceId      String?
+  // Driver ticket photo + AI-extracted data
+  photoUrl             String?
+  scannedTons          String?   // e.g. "12.5"
+  scannedYards         String?   // e.g. "8"
+  scannedTicketNumber  String?   // physical ticket number from the paper slip
+  scannedDate          String?   // date printed on the physical ticket
+  scannedRawText       String?   @db.Text // full OCR text for audit
+  scannedAt            DateTime? // when AI extraction ran
+  // Dispatcher review — once set, driver can no longer edit
+  dispatcherReviewedAt DateTime?
+  dispatcherReviewedBy String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  driver   Driver?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  broker    Broker?    @relation(fields: [brokerId], references: [id], onDelete: SetNull)
+  job       Job?       @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  tripSheet TripSheet? @relation(fields: [tripSheetId], references: [id], onDelete: SetNull)
+  invoice   Invoice?   @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, ticketNumber])
+  @@index([companyId, status])
+  @@index([driverId, status])
+  @@index([customerId])
+  @@index([brokerId])
+  @@index([jobId])
+  @@index([tripSheetId])
+  @@index([invoiceId])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  companyId     String
+  invoiceNumber Int
+  invoiceType   String        @default("CUSTOMER") // "CUSTOMER" or "BROKER"
+  customerId    String?
+  brokerId      String?
+  status        InvoiceStatus @default(DRAFT)
+  periodStart   DateTime
+  periodEnd     DateTime
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  subtotal      Decimal       @default(0) @db.Decimal(10, 2)
+  taxRate       Decimal       @default(0) @db.Decimal(5, 4)
+  taxAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  total         Decimal       @default(0) @db.Decimal(10, 2)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id])
+  broker   Broker?   @relation(fields: [brokerId], references: [id])
+  tickets  Ticket[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, status])
+  @@index([customerId])
+  @@index([brokerId])
+}
+
+/// Audit trail for superadmin and dispatcher actions on tenant data.
+/// Visible to dispatchers so they know when the platform touched their data.
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String
+  entityType String   // 'ticket', 'driver', 'customer', 'company'
+  entityId   String?  // ID of the affected record (null for company-level actions)
+  action     String   // 'create', 'update', 'delete', 'status_change', 'assign', etc.
+  actor      String   // display name or email of who did it
+  actorRole  String   // 'SUPERADMIN', 'ADMIN', 'DISPATCHER'
+  summary    String   // human-readable one-liner, e.g. "Cancelled ticket #0023"
+  details    String?  @db.Text // JSON blob of changed fields for diff view
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, entityType, entityId])
+  @@index([companyId, createdAt])
+  @@index([entityId])
+}
+
+enum SubscriptionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Dispatcher requests to subscribe to a plan. Superadmin reviews and approves.
+model SubscriptionRequest {
+  id         String                    @id @default(cuid())
+  companyId  String
+  planId     String
+  status     SubscriptionRequestStatus @default(PENDING)
+  message    String?                   @db.Text // optional note from the dispatcher
+  reviewNote String?                   @db.Text // superadmin's response
+  reviewedAt DateTime?
+  reviewedBy String?                   // superadmin user ID
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan    Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([status])
+}
+
+/// Dispatcher notifications triggered by driver actions (status changes, claims, issues).
+model Notification {
+  id         String   @id @default(cuid())
+  companyId  String
+  /// Category of notification: JOB_STARTED, JOB_PAUSED, JOB_COMPLETED, JOB_CANCELLED,
+  /// JOB_CLAIMED, TICKET_STARTED, TICKET_COMPLETED, TICKET_ISSUE
+  type       String
+  title      String   // e.g. "Driver started Job #0012"
+  body       String?  // optional detail line
+  /// Optional link to the related entity (e.g. /jobs/clxyz)
+  link       String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, read, createdAt])
+  @@index([companyId, createdAt])
+}
+
+model SmsLog {
+  id          String       @id @default(cuid())
+  direction   SmsDirection
+  phone       String
+  message     String       @db.Text
+  driverId    String?
+  brokerId    String?
+  ticketId    String?
+  jobId       String?
+  textbeltId  String? // ID returned by Textbelt for outbound messages
+  success     Boolean      @default(true)
+  error       String?
+  createdAt   DateTime     @default(now())
+
+  driver Driver? @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  broker Broker? @relation(fields: [brokerId], references: [id], onDelete: SetNull)
+
+  @@index([phone])
+  @@index([driverId])
+  @@index([brokerId])
+  @@index([createdAt])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  VOID
+}
+
+/// Driver payment records — tracks each pay period with full breakdown.
+model DriverPayment {
+  id              String        @id @default(cuid())
+  companyId       String
+  driverId        String
+  /// Period covered by this payment
+  periodStart     DateTime
+  periodEnd       DateTime
+  /// Tracked metrics for this period
+  hoursWorked     Decimal       @default(0) @db.Decimal(10, 2)
+  jobsCompleted   Int           @default(0)
+  ticketsCompleted Int          @default(0)
+  /// Rate snapshot at time of payment
+  payType         PayType       @default(HOURLY)
+  payRate         Decimal       @default(0) @db.Decimal(10, 2)
+  /// Amounts
+  calculatedAmount Decimal      @default(0) @db.Decimal(10, 2) // system-calculated
+  adjustedAmount   Decimal?     @db.Decimal(10, 2)              // dispatcher override
+  finalAmount      Decimal      @default(0) @db.Decimal(10, 2) // what was actually paid
+  /// Notes & status
+  notes           String?       @db.Text
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, driverId])
+  @@index([companyId, status])
+  @@index([driverId, periodStart])
+}
+
+enum DocType {
+  LICENSE_FRONT
+  LICENSE_BACK
+  MEDICAL_CERT
+  VOID_CHECK
+  OTHER
+}
+
+/// Driver employment documents — license, medical cert, void check, etc.
+model DriverDocument {
+  id        String   @id @default(cuid())
+  driverId  String
+  docType   DocType
+  label     String?  // custom label for OTHER docs
+  fileUrl   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([driverId, docType])
+}
+
+// ---------------------------------------------------------------------------
+// Fleet: Trucks
+// ---------------------------------------------------------------------------
+enum TruckStatus {
+  ACTIVE
+  OUT_OF_SERVICE
+  SOLD
+}
+
+enum TruckType {
+  SINGLE_AXLE
+  TANDEM
+  TRI_AXLE
+  QUAD
+  SUPER_DUMP
+  OTHER
+}
+
+model Truck {
+  id            String      @id @default(cuid())
+  companyId     String
+  truckNumber   String      // visible fleet number (e.g. "T-101")
+  vin           String?     // Vehicle Identification Number
+  year          Int?
+  make          String?     // e.g. "Kenworth"
+  model         String?     // e.g. "T680"
+  licensePlate  String?
+  registrationExpiry DateTime?
+  insuranceExpiry    DateTime?
+  inspectionExpiry   DateTime?
+  status        TruckStatus @default(ACTIVE)
+  truckType     TruckType?  // e.g. SINGLE_AXLE, TANDEM, TRI_AXLE, QUAD, SUPER_DUMP
+  notes         String?
+
+  // Drivetrain details
+  engineMake         String?
+  engineModel        String?
+  engineSerial       String?
+  transmissionMake   String?
+  transmissionModel  String?
+  transmissionSerial String?
+  rearEndMake        String?
+  rearEndModel       String?
+  rearEndRatio       String?
+  rearEndSerial      String?
+
+  // Oil specification
+  oilType            String?
+  oilBrand           String?
+
+  // Trip-sheet overrides (per-truck)
+  payToName          String?   // Override "Pay To" on broker trip sheets
+  dispatcherName     String?   // Override "Dispatcher" column on broker trip sheets
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  photos         TruckPhoto[]
+  expenses       Expense[]
+  filters        TruckFilter[]
+  assignedDrivers Driver[]     @relation("AssignedTruck")
+
+  @@index([companyId])
+  @@index([companyId, truckNumber])
+}
+
+enum FilterType {
+  DIESEL
+  OIL
+  AIR_CABIN
+  AIR_ENGINE
+  TIRES
+  BRAKES
+}
+
+model TruckFilter {
+  id             String     @id @default(cuid())
+  truckId        String
+  filterType     FilterType
+  partNumber     String?
+  lastReplacedAt DateTime?
+  nextDueAt      DateTime?
+  mileage        Int?          // mileage at last replacement
+  nextDueMileage Int?          // mileage when next replacement is due
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  truck Truck @relation(fields: [truckId], references: [id], onDelete: Cascade)
+
+  @@unique([truckId, filterType])
+  @@index([truckId])
+}
+
+enum TruckDocType {
+  REGISTRATION
+  INSURANCE
+  INSPECTION
+  TRUCK_PHOTO
+  OTHER
+}
+
+model TruckPhoto {
+  id        String       @id @default(cuid())
+  truckId   String
+  docType   TruckDocType @default(OTHER)
+  label     String?      // custom label for OTHER docs
+  fileUrl   String
+  createdAt DateTime     @default(now())
+
+  truck Truck @relation(fields: [truckId], references: [id], onDelete: Cascade)
+
+  @@index([truckId])
+  @@index([truckId, docType])
+}
+
+// ---------------------------------------------------------------------------
+// Fleet: Expenses
+// ---------------------------------------------------------------------------
+enum ExpenseCategory {
+  FUEL
+  MAINTENANCE
+  INSURANCE
+  REGISTRATION
+  TOLLS
+  TIRES
+  PARTS
+  LEASE
+  LOAN
+  WASH
+  PERMITS
+  OTHER
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  companyId   String
+  truckId     String?         // null = company-wide expense
+  driverId    String?         // null = dispatcher-entered; set when driver submits
+  date        DateTime
+  amount      Decimal         @db.Decimal(10, 2)
+  category    ExpenseCategory
+  description String?
+  vendor      String?
+  receiptUrl  String?         // uploaded receipt photo
+  // Recurring expense support
+  isRecurring   Boolean  @default(false)
+  recurringDay  Int?     // day of month for recurring (1-28)
+  recurringEnd  DateTime? // optional end date for recurring
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  truck   Truck?  @relation(fields: [truckId], references: [id], onDelete: SetNull)
+  driver  Driver? @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([companyId, category])
+  @@index([companyId, truckId])
+  @@index([companyId, date])
+  @@index([driverId])
+}
+
+// ---------------------------------------------------------------------------
+// Billing: Stripe payment tracking
+// ---------------------------------------------------------------------------
+
+enum BillingEventType {
+  PAYMENT           // tenant paid (Zelle, cash, check, etc.)
+  ADJUSTMENT        // credit, discount, or write-off
+  PLAN_CHANGE       // superadmin changed the tenant's plan
+  TRIAL_STARTED     // trial period began
+  OVERDUE           // payment is overdue
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
+}
+
+/// Tracks all billing events for a company — manual payments and plan changes.
+model BillingEvent {
+  id              String           @id @default(cuid())
+  companyId       String
+  type            BillingEventType
+  /// Amounts in cents (USD)
+  amountCents     Int              @default(0)
+  /// Current subscription status
+  subscriptionStatus SubscriptionStatus?
+  /// Payment method (e.g. "Zelle", "Cash", "Check #1234")
+  paymentMethod   String?
+  /// Human-readable description
+  description     String
+  /// Optional superadmin note
+  note            String?          @db.Text
+  /// Who recorded this
+  actor           String
+  /// Period this payment covers
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  createdAt       DateTime         @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@index([companyId, type])
+}
