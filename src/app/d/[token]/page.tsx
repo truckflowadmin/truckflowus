@@ -299,6 +299,7 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
     truckNumber: j.truckNumber ?? null,
     quantityType: j.quantityType,
     totalLoads: j.totalLoads,
+    ticketCount: j.tickets?.length ?? 0,
     completedLoads: j.completedLoads ?? 0,
     ratePerUnit: j.ratePerUnit ? Number(j.ratePerUnit) : null,
     date: j.date?.toISOString() ?? null,
