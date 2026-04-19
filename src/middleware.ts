@@ -75,9 +75,9 @@ const SECURITY_HEADERS: Record<string, string> = {
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires inline scripts
     "style-src 'self' 'unsafe-inline'", // Tailwind
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com",
     "font-src 'self'",
-    "connect-src 'self'",
+    "connect-src 'self' https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
