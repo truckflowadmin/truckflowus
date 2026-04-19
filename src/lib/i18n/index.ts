@@ -1,4 +1,5 @@
 import translations, { type Lang } from './translations';
+import { cookies } from 'next/headers';
 
 export type { Lang };
 
@@ -23,11 +24,7 @@ export function t(key: string, lang: Lang): string {
  * Must only be called in Server Components / Server Actions.
  */
 export function getServerLang(): Lang {
-  // Dynamic import avoidance: next/headers can only be used at module top-level in server code
-  // We do a lazy require so this file can also be imported in client components.
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { cookies } = require('next/headers');
     const lang = cookies().get(LANG_COOKIE)?.value;
     if (lang === 'es') return 'es';
     return 'en';
