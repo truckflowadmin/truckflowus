@@ -193,7 +193,7 @@ export async function claimJob(formData: FormData) {
 export async function driverUpdateJobStatus(formData: FormData) {
   const token = String(formData.get('token') || '');
   const jobId = String(formData.get('jobId') || '');
-  const action = String(formData.get('action') || ''); // 'start' | 'pause' | 'complete' | 'cancel' | 'report_issue'
+  const action: string = String(formData.get('action') || ''); // 'start' | 'resume' | 'pause' | 'complete' | 'cancel' | 'report_issue'
   if (!token || !jobId || !action) throw new Error('Missing fields');
 
   const driver = await prisma.driver.findUnique({ where: { accessToken: token }, select: { id: true, active: true, companyId: true, name: true, assignedTruckId: true } });
