@@ -10,43 +10,36 @@ import { useEffect, useRef, useCallback } from 'react';
  * address is written into the input's value (and fires onChange).
  *
  * Falls back to a plain text input when the API key is missing or invalid.
+ *
+ * Set NEXT_PUBLIC_GOOGLE_MAPS_ENABLED="true" to activate autocomplete.
+ * Without it, the component renders a normal text input (safe default).
  */
 
 // ---------------------------------------------------------------------------
 // Script loader — shared across all instances
 // ---------------------------------------------------------------------------
 let loadPromise: Promise<void> | null = null;
-let googleMapsAuthFailed = false;
 
 function loadGoogleMaps(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve();
+  if (typeof window === 'undefined') return Promise.reject(new Error('SSR'));
 
-  // If we already know the API key is bad, don't even try
-  if (googleMapsAuthFailed) return Promise.reject(new Error('Auth failed'));
+  // Opt-in flag — must be explicitly enabled
+  if (process.env.NEXT_PUBLIC_GOOGLE_MAPS_ENABLED !== 'true') {
+    return Promise.reject(new Error('Google Maps not enabled'));
+  }
 
   if ((window as any).google?.maps?.places) return Promise.resolve();
 
   if (!loadPromise) {
     loadPromise = new Promise<void>((resolve, reject) => {
-      // Bail out if no API key — component will work as a plain input
       const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
       if (!key) {
         reject(new Error('No API key'));
         return;
       }
 
-      // Google calls this global function when the API key is invalid
-      (window as any).gm_authFailure = () => {
-        googleMapsAuthFailed = true;
-        console.warn('[AddressAutocomplete] Google Maps API key error — falling back to plain input');
-        // Remove Google's error overlays that block inputs
-        document.querySelectorAll('.gm-err-container, .gm-err-autocomplete, .gm-style-pbc').forEach((el) => el.remove());
-        reject(new Error('Auth failed'));
-      };
-
       const existing = document.querySelector('script[src*="maps.googleapis.com"]');
       if (existing) {
-        // Script already added by another mount — wait for it
         existing.addEventListener('load', () => resolve());
         existing.addEventListener('error', () => reject(new Error('Script failed')));
         return;
@@ -56,12 +49,7 @@ function loadGoogleMaps(): Promise<void> {
       script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
       script.async = true;
       script.defer = true;
-      script.onload = () => {
-        // Give Google a moment to check auth — if gm_authFailure fires, it'll reject
-        setTimeout(() => {
-          if (!googleMapsAuthFailed) resolve();
-        }, 500);
-      };
+      script.onload = () => resolve();
       script.onerror = () => reject(new Error('Failed to load Google Maps'));
       document.head.appendChild(script);
     });
@@ -136,7 +124,7 @@ export default function AddressAutocomplete({
     loadGoogleMaps()
       .then(() => {
         if (cancelled || !inputRef.current) return;
-        if (autocompleteRef.current) return; // already attached
+        if (autocompleteRef.current) return;
 
         try {
           const ac = new google.maps.places.Autocomplete(inputRef.current, {
@@ -146,16 +134,11 @@ export default function AddressAutocomplete({
           ac.addListener('place_changed', handlePlaceChanged);
           autocompleteRef.current = ac;
         } catch {
-          // Google Maps loaded but Places failed — input stays plain text
           console.warn('[AddressAutocomplete] Places API init failed, using plain input');
         }
       })
       .catch(() => {
-        // No API key, auth failed, or script failed — remove any error overlays
-        // Google injects .gm-err-container divs that block the page
-        setTimeout(() => {
-          document.querySelectorAll('.gm-err-container, .gm-err-autocomplete, .gm-style-pbc, [class*="gm-err"]').forEach((el) => el.remove());
-        }, 100);
+        // Not enabled, no API key, or script failed — plain text input
       });
 
     return () => {
