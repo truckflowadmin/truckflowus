@@ -323,88 +323,90 @@ export default function DriverTabs(props: DriverTabsProps) {
         </div>
       </header>
 
-      {/* Tabs */}
+      {/* Tabs — horizontally scrollable on small screens */}
       <div className="sticky top-[72px] z-10 bg-steel-100 border-b border-steel-300">
-        <div className="flex max-w-lg mx-auto">
-          <button
-            onClick={() => setTab('active')}
-            className={`flex-1 py-3 text-center text-sm font-semibold uppercase tracking-wider transition-colors ${
-              tab === 'active'
-                ? 'text-diesel border-b-2 border-safety'
-                : 'text-steel-500 hover:text-steel-700'
-            }`}
-          >
-            Active
-          </button>
-          {showAvailable && (
+        <div className="overflow-x-auto scrollbar-hide max-w-lg mx-auto">
+          <div className="flex min-w-max">
             <button
-              onClick={() => setTab('available')}
-              className={`flex-1 py-3 text-center text-sm font-semibold uppercase tracking-wider transition-colors relative ${
-                tab === 'available'
+              onClick={() => setTab('active')}
+              className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap ${
+                tab === 'active'
                   ? 'text-diesel border-b-2 border-safety'
                   : 'text-steel-500 hover:text-steel-700'
               }`}
             >
-              Available
-              {props.availableJobs.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-safety rounded-full animate-pulse" />
-              )}
+              Active
             </button>
-          )}
-          {futureJobs.length > 0 && (
+            {showAvailable && (
+              <button
+                onClick={() => setTab('available')}
+                className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap relative ${
+                  tab === 'available'
+                    ? 'text-diesel border-b-2 border-safety'
+                    : 'text-steel-500 hover:text-steel-700'
+                }`}
+              >
+                Available
+                {props.availableJobs.length > 0 && (
+                  <span className="absolute top-1 right-0.5 w-2 h-2 bg-safety rounded-full animate-pulse" />
+                )}
+              </button>
+            )}
+            {futureJobs.length > 0 && (
+              <button
+                onClick={() => setTab('upcoming')}
+                className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap ${
+                  tab === 'upcoming'
+                    ? 'text-diesel border-b-2 border-safety'
+                    : 'text-steel-500 hover:text-steel-700'
+                }`}
+              >
+                Upcoming
+              </button>
+            )}
+            {props.canViewCompleted && (
+              <button
+                onClick={() => setTab('completed')}
+                className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap ${
+                  tab === 'completed'
+                    ? 'text-diesel border-b-2 border-safety'
+                    : 'text-steel-500 hover:text-steel-700'
+                }`}
+              >
+                Done
+              </button>
+            )}
             <button
-              onClick={() => setTab('upcoming')}
-              className={`flex-1 py-3 text-center text-sm font-semibold uppercase tracking-wider transition-colors ${
-                tab === 'upcoming'
+              onClick={() => setTab('calendar')}
+              className={`px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap ${
+                tab === 'calendar'
                   ? 'text-diesel border-b-2 border-safety'
                   : 'text-steel-500 hover:text-steel-700'
               }`}
             >
-              Upcoming
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mx-auto"><path fillRule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clipRule="evenodd" /></svg>
             </button>
-          )}
-          {props.canViewCompleted && (
             <button
-              onClick={() => setTab('completed')}
-              className={`flex-1 py-3 text-center text-sm font-semibold uppercase tracking-wider transition-colors ${
-                tab === 'completed'
+              onClick={() => setTab('expenses')}
+              className={`px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap ${
+                tab === 'expenses'
                   ? 'text-diesel border-b-2 border-safety'
                   : 'text-steel-500 hover:text-steel-700'
               }`}
             >
-              Completed
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mx-auto"><path fillRule="evenodd" d="M1 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4Zm12 4a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM4 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm13-1a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM1.75 14.5a.75.75 0 0 0 0 1.5c4.417 0 8.693.603 12.749 1.73 1.111.309 2.251-.512 2.251-1.696v-.784a.75.75 0 0 0-1.5 0v.784a.272.272 0 0 1-.35.25A49.043 49.043 0 0 0 1.75 14.5Z" clipRule="evenodd" /></svg>
             </button>
-          )}
-          <button
-            onClick={() => setTab('calendar')}
-            className={`flex-1 py-3 text-center text-sm font-semibold uppercase tracking-wider transition-colors ${
-              tab === 'calendar'
-                ? 'text-diesel border-b-2 border-safety'
-                : 'text-steel-500 hover:text-steel-700'
-            }`}
-          >
-            Calendar
-          </button>
-          <button
-            onClick={() => setTab('expenses')}
-            className={`flex-1 py-3 text-center text-sm font-semibold uppercase tracking-wider transition-colors ${
-              tab === 'expenses'
-                ? 'text-diesel border-b-2 border-safety'
-                : 'text-steel-500 hover:text-steel-700'
-            }`}
-          >
-            💳
-          </button>
-          <button
-            onClick={() => setTab('profile')}
-            className={`flex-1 py-3 text-center text-sm font-semibold uppercase tracking-wider transition-colors ${
-              tab === 'profile'
-                ? 'text-diesel border-b-2 border-safety'
-                : 'text-steel-500 hover:text-steel-700'
-            }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mx-auto"><path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" /></svg>
-          </button>
+            <button
+              onClick={() => setTab('profile')}
+              className={`px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap ${
+                tab === 'profile'
+                  ? 'text-diesel border-b-2 border-safety'
+                  : 'text-steel-500 hover:text-steel-700'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mx-auto"><path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" /></svg>
+            </button>
+          </div>
         </div>
       </div>
 
