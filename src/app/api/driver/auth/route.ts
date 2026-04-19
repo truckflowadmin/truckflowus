@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
           message: 'Account locked due to too many failed attempts. Please reset your PIN.',
         }, { status: 429 });
       }
-      return NextResponse.json({ error: 'Invalid phone number or PIN' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid phone number or PIN', attemptsLeft: afterLimit.attemptsLeft }, { status: 401 });
     }
 
     await clearAttempts(normalizedKey, 'driver_login');

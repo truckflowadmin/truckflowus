@@ -11,12 +11,14 @@ function DriverLoginForm() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [locked, setLocked] = useState(false);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setLocked(false);
+    setAttemptsLeft(null);
     setLoading(true);
     try {
       const res = await fetch('/api/driver/auth', {
@@ -30,6 +32,9 @@ function DriverLoginForm() {
           setLocked(true);
         } else {
           setError(data.error || 'Login failed');
+          if (typeof data.attemptsLeft === 'number') {
+            setAttemptsLeft(data.attemptsLeft);
+          }
         }
         setLoading(false);
         return;
@@ -92,7 +97,16 @@ function DriverLoginForm() {
           </div>
         )}
         {error && !locked && (
-          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg text-center">{error}</div>
+          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg text-center">
+            <p>{error}</p>
+            {attemptsLeft !== null && (
+              <p className="mt-1 font-medium">
+                {attemptsLeft === 0
+                  ? 'This was your last attempt.'
+                  : `${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining before your account is locked.`}
+              </p>
+            )}
+          </div>
         )}
 
         <button
