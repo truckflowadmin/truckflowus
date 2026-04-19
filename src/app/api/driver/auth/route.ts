@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const normalizedKey = phone.replace(/\D/g, '');
 
-    // Helper: check if driver has security questions by phone
+    // Helper: check if driver has usable security questions (set AND not locked out)
     async function driverHasSecurityQuestions(phoneKey: string): Promise<boolean> {
       const phoneVariants = [
         phoneKey,
@@ -47,7 +47,15 @@ export async function POST(req: NextRequest) {
         where: { phone: { in: phoneVariants } },
         select: { securityQ1: true },
       });
-      return !!d?.securityQ1;
+      if (!d?.securityQ1) return false;
+      // Check if security question attempts are also exhausted
+      const sqLimit = await checkRateLimit({
+        key: phoneKey,
+        type: 'driver_pin_reset',
+        maxAttempts: MAX_ATTEMPTS,
+        windowMs: LOCKOUT_MS,
+      });
+      return sqLimit.allowed;
     }
 
     const limit = await checkRateLimit({
@@ -58,9 +66,22 @@ export async function POST(req: NextRequest) {
     });
     if (!limit.allowed) {
       const hasSQ = await driverHasSecurityQuestions(normalizedKey);
+      // Check if driver has email for email-based reset
+      const phoneVariants = [
+        normalizedKey,
+        `+${normalizedKey}`,
+        `+1${normalizedKey}`,
+        normalizedKey.startsWith('1') ? `+${normalizedKey}` : null,
+        normalizedKey.startsWith('1') ? normalizedKey.slice(1) : null,
+      ].filter(Boolean) as string[];
+      const driverForEmail = await prisma.driver.findFirst({
+        where: { phone: { in: phoneVariants } },
+        select: { email: true },
+      });
       return NextResponse.json({
         error: 'locked',
         hasSecurityQuestions: hasSQ,
+        hasEmail: !!driverForEmail?.email,
         message: 'Account locked due to too many failed attempts. Please reset your PIN.',
       }, { status: 429 });
     }
@@ -86,9 +107,16 @@ export async function POST(req: NextRequest) {
       });
       if (!afterLimit.allowed) {
         const hasSQ = await driverHasSecurityQuestions(normalizedKey);
+        const pvs = [
+          normalizedKey, `+${normalizedKey}`, `+1${normalizedKey}`,
+          normalizedKey.startsWith('1') ? `+${normalizedKey}` : null,
+          normalizedKey.startsWith('1') ? normalizedKey.slice(1) : null,
+        ].filter(Boolean) as string[];
+        const dfe = await prisma.driver.findFirst({ where: { phone: { in: pvs } }, select: { email: true } });
         return NextResponse.json({
           error: 'locked',
           hasSecurityQuestions: hasSQ,
+          hasEmail: !!dfe?.email,
           message: 'Account locked due to too many failed attempts. Please reset your PIN.',
         }, { status: 429 });
       }

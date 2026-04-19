@@ -12,6 +12,7 @@ function DriverLoginForm() {
   const [error, setError] = useState('');
   const [locked, setLocked] = useState(false);
   const [lockedHasSQ, setLockedHasSQ] = useState(false);
+  const [lockedHasEmail, setLockedHasEmail] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,6 +22,7 @@ function DriverLoginForm() {
     setError('');
     setLocked(false);
     setLockedHasSQ(false);
+    setLockedHasEmail(false);
     setNotFound(false);
     setAttemptsLeft(null);
     setLoading(true);
@@ -35,6 +37,7 @@ function DriverLoginForm() {
         if (data.error === 'locked') {
           setLocked(true);
           setLockedHasSQ(!!data.hasSecurityQuestions);
+          setLockedHasEmail(!!data.hasEmail);
         } else if (data.error === 'notFound') {
           setNotFound(true);
         } else {
@@ -104,6 +107,10 @@ function DriverLoginForm() {
             {lockedHasSQ ? (
               <a href="/d/reset" className="mt-2 inline-block w-full text-center py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors text-sm">
                 Reset via Security Questions
+              </a>
+            ) : lockedHasEmail ? (
+              <a href="/d/reset" className="mt-2 inline-block w-full text-center py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                Reset via Email
               </a>
             ) : (
               <p className="mt-2 text-red-500">Contact your dispatcher to reset your PIN.</p>
