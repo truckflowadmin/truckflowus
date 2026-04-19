@@ -98,7 +98,7 @@ export async function GET(
   const weekStr = format(sheet.weekEnding, 'yyyy-MM-dd');
   const filename = `TripSheet-${sheet.broker.name.replace(/\s+/g, '_')}-${truckLabel}-${weekStr}.pdf`;
 
-  return new NextResponse(pdfBuffer, {
+  return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `inline; filename="${filename}"`,

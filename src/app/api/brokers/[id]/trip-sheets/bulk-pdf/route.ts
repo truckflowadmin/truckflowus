@@ -132,7 +132,7 @@ export async function POST(
 
   const filename = `TripSheets-${broker.name.replace(/\s+/g, '_')}-${sheets.length}-sheets.pdf`;
 
-  return new NextResponse(pdfBuffer, {
+  return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `inline; filename="${filename}"`,

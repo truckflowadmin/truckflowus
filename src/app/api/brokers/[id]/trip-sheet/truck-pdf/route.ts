@@ -101,7 +101,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const truckLabel = truckNumbers.length === 1 ? truckNumbers[0] : `${truckNumbers.length}-trucks`;
   const filename = `TripSheet-${broker.name.replace(/\s+/g, '_')}-${truckLabel}-${weekStart}.pdf`;
 
-  return new NextResponse(pdfBuffer, {
+  return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `inline; filename="${filename}"`,
