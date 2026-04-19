@@ -36,18 +36,32 @@ export async function POST(req: NextRequest) {
     const limit = await checkRateLimit({
       key: normalizedKey,
       type: 'driver_login',
-      maxAttempts: 10,
+      maxAttempts: 3,
       windowMs: LOCKOUT_MS,
     });
     if (!limit.allowed) {
       return NextResponse.json({
-        error: `Too many login attempts. Try again in ${limit.retryAfterMinutes} minutes.`,
+        error: 'locked',
+        message: 'Account locked due to too many failed attempts. Please reset your PIN.',
       }, { status: 429 });
     }
 
     const session = await loginDriver(phone, pin);
     if (!session) {
       await recordAttempt(normalizedKey, 'driver_login', false);
+      // Check if this attempt triggered the lockout
+      const afterLimit = await checkRateLimit({
+        key: normalizedKey,
+        type: 'driver_login',
+        maxAttempts: 3,
+        windowMs: LOCKOUT_MS,
+      });
+      if (!afterLimit.allowed) {
+        return NextResponse.json({
+          error: 'locked',
+          message: 'Account locked due to too many failed attempts. Please reset your PIN.',
+        }, { status: 429 });
+      }
       return NextResponse.json({ error: 'Invalid phone number or PIN' }, { status: 401 });
     }
 

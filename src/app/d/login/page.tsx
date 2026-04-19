@@ -1,18 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function DriverLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const signedOut = searchParams.get('signedout') === '1';
   const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setLocked(false);
     setLoading(true);
     try {
       const res = await fetch('/api/driver/auth', {
@@ -22,7 +26,11 @@ export default function DriverLoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Login failed');
+        if (data.error === 'locked') {
+          setLocked(true);
+        } else {
+          setError(data.error || 'Login failed');
+        }
         setLoading(false);
         return;
       }
@@ -75,7 +83,16 @@ export default function DriverLoginPage() {
             />
           </div>
 
-          {error && (
+          {signedOut && !error && !locked && (
+            <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg text-center">You have been signed out successfully.</div>
+          )}
+          {locked && (
+            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg text-center">
+              <p className="font-medium">Account locked</p>
+              <p className="mt-1">Too many failed attempts. Please <a href="/d/reset" className="underline font-medium">reset your PIN</a> to unlock.</p>
+            </div>
+          )}
+          {error && !locked && (
             <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg text-center">{error}</div>
           )}
 

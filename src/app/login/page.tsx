@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; next?: string; suspended?: string; signedout?: string };
+  searchParams: { error?: string; next?: string; suspended?: string; signedout?: string; locked?: string };
 }) {
   const session = await getSession();
   if (session) {
@@ -32,6 +32,9 @@ export default async function LoginPage({
 
     if (!result) {
       redirect(`/login?error=1${next ? `&next=${encodeURIComponent(next)}` : ''}`);
+    }
+    if ('locked' in result && result.locked) {
+      redirect('/login?locked=1');
     }
     if ('suspended' in result && result.suspended) {
       redirect('/login?suspended=1');
@@ -65,7 +68,13 @@ export default async function LoginPage({
           {searchParams.signedout && (
             <p className="text-sm text-green-600">You have been signed out successfully.</p>
           )}
-          {searchParams.error && (
+          {searchParams.locked && (
+            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+              <p className="font-medium">Account locked</p>
+              <p className="mt-1">Too many failed login attempts. Please <a href="/forgot-password" className="underline font-medium">reset your password</a> to unlock your account.</p>
+            </div>
+          )}
+          {searchParams.error && !searchParams.locked && (
             <p className="text-sm text-red-600">Invalid email or password.</p>
           )}
           {searchParams.suspended && (

@@ -281,7 +281,7 @@ export default function DriverTabs(props: DriverTabsProps) {
         body: JSON.stringify({ action: 'logout' }),
       });
     } catch { /* ignore */ }
-    router.push('/d/login');
+    router.push('/d/login?signedout=1');
   }
 
   const showAvailable = props.canClaimJobs;

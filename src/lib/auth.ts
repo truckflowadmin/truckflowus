@@ -152,14 +152,14 @@ export async function loginWithCredentials(email: string, password: string) {
   const { checkRateLimit, recordAttempt, clearAttempts } = await import('./rate-limit');
   const normalizedEmail = email.toLowerCase();
 
-  // Rate limit check
+  // Rate limit check — lock after 3 failed attempts, require password reset
   const limit = await checkRateLimit({
     key: normalizedEmail,
     type: 'dispatcher_login',
-    maxAttempts: 10,
+    maxAttempts: 3,
     windowMs: 15 * 60 * 1000,
   });
-  if (!limit.allowed) return null; // silently reject — same as wrong credentials
+  if (!limit.allowed) return { locked: true as const };
 
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
@@ -172,6 +172,14 @@ export async function loginWithCredentials(email: string, password: string) {
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
     await recordAttempt(normalizedEmail, 'dispatcher_login', false);
+    // Check if this attempt triggered the lockout
+    const afterLimit = await checkRateLimit({
+      key: normalizedEmail,
+      type: 'dispatcher_login',
+      maxAttempts: 3,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!afterLimit.allowed) return { locked: true as const };
     return null;
   }
 
