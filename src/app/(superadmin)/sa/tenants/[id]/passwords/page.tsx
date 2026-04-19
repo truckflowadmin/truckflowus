@@ -148,9 +148,18 @@ async function forceResetDriverPinAction(formData: FormData) {
     data: { pinHash: hash, pinSet: true },
   });
 
-  // Clear any login lockout so the driver can log in immediately with the new PIN
+  // Clear any login lockout so the driver can log in immediately with the new PIN.
+  // The driver may have logged in with a different phone format than what's stored,
+  // so clear ALL possible variants and both rate limit types.
   const normalizedPhone = driver.phone.replace(/\D/g, '');
-  await clearAttempts(normalizedPhone, 'driver_login');
+  const phoneVariants = [
+    normalizedPhone,
+    normalizedPhone.startsWith('1') ? normalizedPhone.slice(1) : `1${normalizedPhone}`,
+  ];
+  for (const variant of phoneVariants) {
+    await clearAttempts(variant, 'driver_login');
+    await clearAttempts(variant, 'driver_pin_reset');
+  }
 
   await audit({
     companyId,
@@ -276,10 +285,16 @@ async function resetDriverSetupAction(formData: FormData) {
     redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent('Driver not found')}&msgType=error`);
   }
 
-  // Clear login lockout too
+  // Clear login lockout — clear ALL phone variants to handle format mismatches
   const normalizedPhone = driverCheck.phone.replace(/\D/g, '');
-  await clearAttempts(normalizedPhone, 'driver_login');
-  await clearAttempts(normalizedPhone, 'driver_pin_reset');
+  const phoneVariants = [
+    normalizedPhone,
+    normalizedPhone.startsWith('1') ? normalizedPhone.slice(1) : `1${normalizedPhone}`,
+  ];
+  for (const variant of phoneVariants) {
+    await clearAttempts(variant, 'driver_login');
+    await clearAttempts(variant, 'driver_pin_reset');
+  }
 
   await prisma.driver.update({
     where: { id: driverId },
