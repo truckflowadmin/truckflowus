@@ -19,5 +19,6 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Uploads (local dev only)
-uploads/
+# Uploads (local dev only — root level)
+/uploads/
+/uploads-private/
