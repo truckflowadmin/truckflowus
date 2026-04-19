@@ -51,6 +51,7 @@ export default async function FleetPage() {
     insuranceExpiry: t.insuranceExpiry?.toISOString() ?? null,
     inspectionExpiry: t.inspectionExpiry?.toISOString() ?? null,
     status: t.status,
+    truckType: t.truckType,
     notes: t.notes,
     photos: t.photos.map((p) => ({ id: p.id, docType: p.docType, label: p.label, fileUrl: p.fileUrl })),
     expenseCount: t._count.expenses,
