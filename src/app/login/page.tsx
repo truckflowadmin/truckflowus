@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; next?: string; suspended?: string; signedout?: string; locked?: string; attempts?: string };
+  searchParams: { error?: string; next?: string; suspended?: string; signedout?: string; locked?: string; attempts?: string; notfound?: string };
 }) {
   const session = await getSession();
   if (session) {
@@ -35,6 +35,9 @@ export default async function LoginPage({
     }
     if ('locked' in result && result.locked) {
       redirect('/login?locked=1');
+    }
+    if ('notFound' in result && result.notFound) {
+      redirect(`/login?notfound=1${next ? `&next=${encodeURIComponent(next)}` : ''}`);
     }
     if ('failed' in result && result.failed) {
       redirect(`/login?error=1&attempts=${result.attemptsLeft}${next ? `&next=${encodeURIComponent(next)}` : ''}`);
@@ -77,7 +80,16 @@ export default async function LoginPage({
               <p className="mt-1">Too many failed login attempts. Please <a href="/forgot-password" className="underline font-medium">reset your password</a> to unlock your account.</p>
             </div>
           )}
-          {searchParams.error && !searchParams.locked && (
+          {searchParams.notfound && !searchParams.locked && (
+            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+              <p>No account found with this email address.</p>
+              <p className="mt-1">
+                Don&apos;t have an account?{' '}
+                <a href="/signup" className="underline font-medium text-safety hover:text-safety-dark">Sign up here</a>
+              </p>
+            </div>
+          )}
+          {searchParams.error && !searchParams.locked && !searchParams.notfound && (
             <div className="text-sm text-red-600">
               <p>Invalid email or password.</p>
               {searchParams.attempts && (
@@ -103,7 +115,15 @@ export default async function LoginPage({
         </form>
         <p className="text-center mt-4">
           <a href="/signup" className="text-sm text-steel-400 hover:text-steel-200">
-            Don't have an account? <span className="text-safety">Sign up</span>
+            Don&apos;t have an account? <span className="text-safety">Sign up</span>
+          </a>
+        </p>
+        <p className="text-center mt-3">
+          <a
+            href="mailto:truckflowadmin@gmail.com?subject=TruckFlowUS%20Sign%20In%20Support%20Request&body=Please%20describe%20your%20issue%20below%3A%0A%0A"
+            className="text-sm text-steel-500 hover:text-steel-300"
+          >
+            Having issues signing in? <span className="underline">Contact support</span>
           </a>
         </p>
       </div>

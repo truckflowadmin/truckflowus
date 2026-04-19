@@ -169,7 +169,7 @@ export async function loginWithCredentials(email: string, password: string) {
     await recordAttempt(normalizedEmail, 'dispatcher_login', false);
     const afterLimit = await checkRateLimit({ key: normalizedEmail, type: 'dispatcher_login', maxAttempts: 3, windowMs: 15 * 60 * 1000 });
     if (!afterLimit.allowed) return { locked: true as const };
-    return { failed: true as const, attemptsLeft: afterLimit.attemptsLeft };
+    return { notFound: true as const, attemptsLeft: afterLimit.attemptsLeft };
   }
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
