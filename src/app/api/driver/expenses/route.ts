@@ -3,13 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { getDriverSession } from '@/lib/driver-auth';
 import { createNotification, NOTIFICATION_TYPES } from '@/lib/notifications';
 import { validateFileSize } from '@/lib/upload-limits';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { uploadBlob } from '@/lib/blob-storage';
 import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads-private', 'receipts');
 const VALID_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
 
 // Simplified categories for drivers
@@ -95,16 +92,18 @@ export async function POST(req: NextRequest) {
       if (sizeError) {
         return NextResponse.json({ error: sizeError }, { status: 400 });
       }
-      await mkdir(UPLOAD_DIR, { recursive: true });
       const ext = file.type === 'image/png' ? '.png'
         : file.type === 'image/webp' ? '.webp'
         : file.type === 'application/pdf' ? '.pdf'
         : '.jpg';
       const filename = `receipt-driver-${randomUUID().slice(0, 8)}${ext}`;
-      const filePath = path.join(UPLOAD_DIR, filename);
       const bytes = await file.arrayBuffer();
-      await writeFile(filePath, Buffer.from(bytes));
-      receiptUrl = `/api/uploads/receipts/${filename}`;
+      const blob = await uploadBlob({
+        pathname: `receipts/${filename}`,
+        body: Buffer.from(bytes),
+        contentType: file.type,
+      });
+      receiptUrl = blob.url;
     }
 
     const expense = await prisma.expense.create({

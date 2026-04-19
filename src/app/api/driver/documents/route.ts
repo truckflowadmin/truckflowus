@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateFileSize } from '@/lib/upload-limits';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { uploadBlob } from '@/lib/blob-storage';
 import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads-private', 'documents');
 const VALID_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
 const VALID_DOC_TYPES = ['LICENSE_FRONT', 'LICENSE_BACK', 'MEDICAL_CERT', 'VOID_CHECK', 'OTHER'] as const;
 
@@ -53,18 +51,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: sizeError }, { status: 400 });
     }
 
-    // Save file to disk
-    await mkdir(UPLOAD_DIR, { recursive: true });
+    // Upload to Vercel Blob
     const ext = file.type === 'image/png' ? '.png'
       : file.type === 'image/webp' ? '.webp'
       : file.type === 'application/pdf' ? '.pdf'
       : '.jpg';
     const filename = `${driver.id}-${docType}-${randomUUID().slice(0, 8)}${ext}`;
-    const filePath = path.join(UPLOAD_DIR, filename);
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const blob = await uploadBlob({
+      pathname: `documents/${filename}`,
+      body: Buffer.from(bytes),
+      contentType: file.type,
+    });
 
-    const fileUrl = `/api/uploads/documents/${filename}`;
+    const fileUrl = blob.url;
 
     // For required doc types (not OTHER), replace the existing one if any
     if (docType !== 'OTHER') {

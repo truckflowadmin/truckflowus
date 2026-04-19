@@ -178,24 +178,29 @@ interface BrokerInvoiceForPdf {
 }
 
 export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promise<Buffer> {
-  // If broker has an uploaded logo image, read it for embedding in the PDF
+  // If broker has an uploaded logo image, load it for embedding in the PDF
   let logoImageBuf: Buffer | null = null;
   if (data.broker.logoFile) {
-    const logoDir = path.join(process.cwd(), 'uploads-private', 'broker-logos');
-    const logoPath = path.join(logoDir, data.broker.logoFile);
-    console.log('[TripSheet PDF] logoFile:', data.broker.logoFile);
-    console.log('[TripSheet PDF] logoPath:', logoPath);
-    console.log('[TripSheet PDF] exists:', existsSync(logoPath));
-    if (existsSync(logoPath)) {
-      try {
-        logoImageBuf = readFileSync(logoPath);
-        console.log('[TripSheet PDF] logo loaded, size:', logoImageBuf.length);
-      } catch (err) {
-        console.error('[TripSheet PDF] Failed to read broker logo:', err);
+    try {
+      if (data.broker.logoFile.startsWith('https://')) {
+        // Fetch from Vercel Blob
+        const res = await fetch(data.broker.logoFile);
+        if (res.ok) {
+          logoImageBuf = Buffer.from(await res.arrayBuffer());
+          console.log('[TripSheet PDF] logo fetched from blob, size:', logoImageBuf.length);
+        }
+      } else {
+        // Legacy: read from local filesystem
+        const logoDir = path.join(process.cwd(), 'uploads-private', 'broker-logos');
+        const logoPath = path.join(logoDir, data.broker.logoFile);
+        if (existsSync(logoPath)) {
+          logoImageBuf = readFileSync(logoPath);
+          console.log('[TripSheet PDF] logo loaded from disk, size:', logoImageBuf.length);
+        }
       }
+    } catch (err) {
+      console.error('[TripSheet PDF] Failed to read broker logo:', err);
     }
-  } else {
-    console.log('[TripSheet PDF] No logoFile on broker');
   }
 
   return new Promise((resolve, reject) => {

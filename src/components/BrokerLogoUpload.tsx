@@ -71,7 +71,7 @@ export default function BrokerLogoUpload({ brokerId, currentFile }: Props) {
       {currentFile ? (
         <div className="flex items-center gap-3 mt-1">
           <img
-            src={`/api/uploads/broker-logos/${currentFile}?v=${cacheBust}`}
+            src={currentFile.startsWith('https://') ? currentFile : `/api/uploads/broker-logos/${currentFile}?v=${cacheBust}`}
             alt="Broker logo"
             className="h-12 object-contain"
           />

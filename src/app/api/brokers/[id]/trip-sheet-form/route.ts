@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { validateFileSize } from '@/lib/upload-limits';
-import { writeFile, mkdir, unlink } from 'fs/promises';
-import path from 'path';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads-private', 'trip-sheet-forms');
+import { uploadBlob, deleteBlob, isBlobUrl } from '@/lib/blob-storage';
 
 // POST — upload a PDF template for this broker
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -39,28 +36,27 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: sizeError }, { status: 400 });
     }
 
-    // Ensure upload directory exists
-    await mkdir(UPLOAD_DIR, { recursive: true });
-
-    // Delete old file if exists
-    if (broker.tripSheetForm) {
-      try {
-        await unlink(path.join(UPLOAD_DIR, broker.tripSheetForm));
-      } catch { /* file may not exist */ }
+    // Delete old blob if exists
+    if (broker.tripSheetForm && isBlobUrl(broker.tripSheetForm)) {
+      await deleteBlob(broker.tripSheetForm);
     }
 
     // Save with broker-id prefix to avoid conflicts
     const filename = `${broker.id}-trip-sheet-form.pdf`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(UPLOAD_DIR, filename), buffer);
-
-    // Update broker record
-    await prisma.broker.update({
-      where: { id: broker.id },
-      data: { tripSheetForm: filename },
+    const blob = await uploadBlob({
+      pathname: `trip-sheet-forms/${filename}`,
+      body: buffer,
+      contentType: 'application/pdf',
     });
 
-    return NextResponse.json({ success: true, filename });
+    // Update broker record with full blob URL
+    await prisma.broker.update({
+      where: { id: broker.id },
+      data: { tripSheetForm: blob.url },
+    });
+
+    return NextResponse.json({ success: true, filename: blob.url });
   } catch (err: any) {
     console.error('Trip sheet form upload error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -82,10 +78,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Broker not found' }, { status: 404 });
     }
 
-    if (broker.tripSheetForm) {
-      try {
-        await unlink(path.join(UPLOAD_DIR, broker.tripSheetForm));
-      } catch { /* file may not exist */ }
+    if (broker.tripSheetForm && isBlobUrl(broker.tripSheetForm)) {
+      await deleteBlob(broker.tripSheetForm);
     }
 
     await prisma.broker.update({

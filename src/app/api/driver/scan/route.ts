@@ -3,11 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { FEATURES, loadCompanyFeatures } from '@/lib/features';
 import { extractTicketDataLite } from '@/lib/ai-extract';
 import { validateFileSize } from '@/lib/upload-limits';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { uploadBlob } from '@/lib/blob-storage';
 import { randomUUID } from 'crypto';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads-private', 'tickets');
 
 /**
  * POST /api/driver/scan
@@ -53,13 +50,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: sizeError }, { status: 400 });
     }
 
-    // Save the image to disk
-    await mkdir(UPLOAD_DIR, { recursive: true });
+    // Upload to Vercel Blob
     const ext = file.type === 'image/png' ? '.png' : file.type === 'image/webp' ? '.webp' : '.jpg';
     const filename = `${randomUUID()}${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(UPLOAD_DIR, filename), buffer);
-    const photoUrl = `/api/uploads/tickets/${filename}`;
+    const blob = await uploadBlob({
+      pathname: `tickets/${filename}`,
+      body: buffer,
+      contentType: file.type,
+    });
+    const photoUrl = blob.url;
 
     // Run AI extraction if available — lightweight mode (quantity + ticket # only)
     // All other fields (hauledFrom, hauledTo, customer, material, etc.) come from the job

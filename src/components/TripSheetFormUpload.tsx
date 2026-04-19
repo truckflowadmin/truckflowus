@@ -73,7 +73,7 @@ export default function TripSheetFormUpload({ brokerId, currentFile }: Props) {
       {currentFile ? (
         <div className="flex items-center gap-3 mt-1">
           <a
-            href={`/api/uploads/trip-sheet-forms/${currentFile}?v=${cacheBust}`}
+            href={currentFile.startsWith('https://') ? currentFile : `/api/uploads/trip-sheet-forms/${currentFile}?v=${cacheBust}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-purple-400 hover:text-purple-200 underline"

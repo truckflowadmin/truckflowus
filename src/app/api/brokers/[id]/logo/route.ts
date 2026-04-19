@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { validateFileSize } from '@/lib/upload-limits';
-import { writeFile, mkdir, unlink } from 'fs/promises';
-import path from 'path';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads-private', 'broker-logos');
+import { uploadBlob, deleteBlob, isBlobUrl } from '@/lib/blob-storage';
 
 // POST — upload a logo image for this broker
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -37,24 +34,26 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: sizeError }, { status: 400 });
     }
 
-    await mkdir(UPLOAD_DIR, { recursive: true });
-
-    // Delete old file if exists
-    if (broker.logoFile) {
-      try { await unlink(path.join(UPLOAD_DIR, broker.logoFile)); } catch { /* ok */ }
+    // Delete old blob if exists
+    if (broker.logoFile && isBlobUrl(broker.logoFile)) {
+      await deleteBlob(broker.logoFile);
     }
 
     const ext = file.type === 'image/png' ? 'png' : 'jpg';
     const filename = `${broker.id}-logo.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(UPLOAD_DIR, filename), buffer);
+    const blob = await uploadBlob({
+      pathname: `broker-logos/${filename}`,
+      body: buffer,
+      contentType: file.type,
+    });
 
     await prisma.broker.update({
       where: { id: broker.id },
-      data: { logoFile: filename },
+      data: { logoFile: blob.url },
     });
 
-    return NextResponse.json({ success: true, filename });
+    return NextResponse.json({ success: true, filename: blob.url });
   } catch (err: any) {
     console.error('Broker logo upload error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -76,8 +75,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Broker not found' }, { status: 404 });
     }
 
-    if (broker.logoFile) {
-      try { await unlink(path.join(UPLOAD_DIR, broker.logoFile)); } catch { /* ok */ }
+    if (broker.logoFile && isBlobUrl(broker.logoFile)) {
+      await deleteBlob(broker.logoFile);
     }
 
     await prisma.broker.update({

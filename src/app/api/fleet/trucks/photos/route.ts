@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { validateFileSize } from '@/lib/upload-limits';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { uploadBlob } from '@/lib/blob-storage';
 import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads-private', 'fleet');
 const VALID_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
 const VALID_DOC_TYPES = ['REGISTRATION', 'INSURANCE', 'INSPECTION', 'TRUCK_PHOTO', 'OTHER'] as const;
 
@@ -54,18 +51,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: sizeError }, { status: 400 });
     }
 
-    await mkdir(UPLOAD_DIR, { recursive: true });
     const ext = file.type === 'image/png' ? '.png'
       : file.type === 'image/webp' ? '.webp'
       : file.type === 'application/pdf' ? '.pdf'
       : file.type === 'image/gif' ? '.gif'
       : '.jpg';
     const filename = `truck-${truckId}-${docType}-${randomUUID().slice(0, 8)}${ext}`;
-    const filePath = path.join(UPLOAD_DIR, filename);
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const blob = await uploadBlob({
+      pathname: `fleet/${filename}`,
+      body: Buffer.from(bytes),
+      contentType: file.type,
+    });
 
-    const fileUrl = `/api/uploads/fleet/${filename}`;
+    const fileUrl = blob.url;
 
     // For required doc types, replace existing
     if (docType !== 'OTHER' && docType !== 'TRUCK_PHOTO') {

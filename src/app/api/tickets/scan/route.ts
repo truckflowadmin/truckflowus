@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { extractTicketData, extractTicketDataLite } from '@/lib/ai-extract';
 import { validateFileSize } from '@/lib/upload-limits';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { uploadBlob } from '@/lib/blob-storage';
 import { randomUUID } from 'crypto';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads-private', 'scans');
 
 /**
  * POST /api/tickets/scan
@@ -39,12 +36,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: sizeError }, { status: 400 });
     }
 
-    // Save the image to disk
-    await mkdir(UPLOAD_DIR, { recursive: true });
+    // Upload to Vercel Blob
     const ext = file.type === 'image/png' ? '.png' : file.type === 'image/webp' ? '.webp' : '.jpg';
     const filename = `${randomUUID()}${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(UPLOAD_DIR, filename), buffer);
+    const blob = await uploadBlob({
+      pathname: `scans/${filename}`,
+      body: buffer,
+      contentType: file.type,
+    });
 
     // Run AI extraction — use lightweight mode for job-context scans
     const base64 = buffer.toString('base64');
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       filename,
-      photoUrl: `/api/uploads/scans/${filename}`,
+      photoUrl: blob.url,
       extracted,
     });
   } catch (err: any) {

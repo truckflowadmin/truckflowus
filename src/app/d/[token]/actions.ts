@@ -6,9 +6,8 @@ import { FEATURES, loadCompanyFeatures } from '@/lib/features';
 import { extractTicketDataLite } from '@/lib/ai-extract';
 import { Prisma } from '@prisma/client';
 import type { TicketStatus } from '@prisma/client';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 import { createNotification, NOTIFICATION_TYPES } from '@/lib/notifications';
+import { uploadBlob } from '@/lib/blob-storage';
 import { randomUUID } from 'crypto';
 
 // ---------------------------------------------------------------------------
@@ -510,12 +509,14 @@ export async function uploadTicketPhoto(formData: FormData) {
   const mimeType = file.type || 'image/jpeg';
   const ext = mimeType.includes('png') ? 'png' : 'jpg';
 
-  // Save to uploads-private/tickets/
-  const uploadsDir = path.join(process.cwd(), 'uploads-private', 'tickets');
-  await mkdir(uploadsDir, { recursive: true });
+  // Upload to Vercel Blob
   const filename = `${ticketId}.${ext}`;
-  await writeFile(path.join(uploadsDir, filename), buffer);
-  const photoUrl = `/api/uploads/tickets/${filename}`;
+  const blob = await uploadBlob({
+    pathname: `tickets/${filename}`,
+    body: buffer,
+    contentType: mimeType,
+  });
+  const photoUrl = blob.url;
 
   // Run AI extraction if the plan supports it
   let scannedData: {

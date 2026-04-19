@@ -3,13 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { extractTicketData } from '@/lib/ai-extract';
 import { validateFileSize } from '@/lib/upload-limits';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { uploadBlob } from '@/lib/blob-storage';
 import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads-private', 'tickets');
 
 /**
  * POST /api/tickets/photo
@@ -60,13 +57,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This ticket is on an invoice and cannot be modified' }, { status: 403 });
     }
 
-    // Save the image to disk
-    await mkdir(UPLOAD_DIR, { recursive: true });
+    // Upload to Vercel Blob
     const ext = file.type === 'image/png' ? '.png' : file.type === 'image/webp' ? '.webp' : '.jpg';
     const filename = `${ticketId}-${randomUUID().slice(0, 8)}${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(UPLOAD_DIR, filename), buffer);
-    const photoUrl = `/api/uploads/tickets/${filename}`;
+    const blob = await uploadBlob({
+      pathname: `tickets/${filename}`,
+      body: buffer,
+      contentType: file.type,
+    });
+    const photoUrl = blob.url;
 
     // Run AI extraction
     const base64 = buffer.toString('base64');
