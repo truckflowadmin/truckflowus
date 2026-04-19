@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireSuperadmin } from '@/lib/auth';
@@ -211,15 +212,17 @@ export default async function TenantAuditPage({
       </div>
 
       {/* ── FILTERS ─────────────────────────────────────────────── */}
-      <AuditFilters
-        tenantId={params.id}
-        currentAction={filterAction}
-        currentFrom={filterFrom}
-        currentTo={filterTo}
-        currentSearch={filterSearch}
-        availableActions={availableActions}
-        actionLabels={ACTION_LABELS}
-      />
+      <Suspense fallback={<div className="panel-sa p-4 text-purple-400 text-sm">Loading filters...</div>}>
+        <AuditFilters
+          tenantId={params.id}
+          currentAction={filterAction}
+          currentFrom={filterFrom}
+          currentTo={filterTo}
+          currentSearch={filterSearch}
+          availableActions={availableActions}
+          actionLabels={ACTION_LABELS}
+        />
+      </Suspense>
 
       {/* ── PASSWORD & PIN ACTIVITY ──────────────────────────────── */}
       {(!filterAction || passwordActions.has(filterAction)) && (
