@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createPasswordResetToken, sendResetEmail } from '@/lib/password-reset';
+import { prisma } from '@/lib/prisma';
+import { audit } from '@/lib/audit';
 
 export const metadata: Metadata = {
   title: 'Forgot Password',
@@ -37,6 +39,23 @@ export default function ForgotPasswordPage({
     if (token) {
       const appUrl = process.env.APP_URL || 'http://localhost:3000';
       await sendResetEmail(email, token, appUrl);
+
+      // Audit: password reset email requested
+      const user = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, companyId: true },
+      });
+      if (user?.companyId) {
+        await audit({
+          companyId: user.companyId,
+          entityType: 'user',
+          entityId: user.id,
+          action: 'update',
+          actor: email,
+          actorRole: 'DISPATCHER',
+          summary: `${email} requested password reset email`,
+        });
+      }
     }
 
     // Always show success to prevent email enumeration

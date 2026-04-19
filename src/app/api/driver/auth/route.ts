@@ -13,6 +13,7 @@ import {
   SECURITY_QUESTIONS,
 } from '@/lib/driver-auth';
 import { checkRateLimit, recordAttempt, clearAttempts } from '@/lib/rate-limit';
+import { audit } from '@/lib/audit';
 
 const MAX_ATTEMPTS = 3;
 const LOCKOUT_MS = 15 * 60 * 1000;
@@ -172,6 +173,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await audit({
+      companyId: driver.companyId,
+      entityType: 'driver',
+      entityId: driver.id,
+      action: 'create',
+      actor: driver.name,
+      actorRole: 'DISPATCHER',
+      summary: `Driver ${driver.name} (${driver.phone}) completed first-time PIN setup`,
+    });
+
     // Auto-login after setup
     const session = {
       driverId: driver.id,
@@ -308,6 +319,20 @@ export async function POST(req: NextRequest) {
       WHERE "id" = ${driver.id}
     `;
 
+    // Audit log
+    const driverInfo = await prisma.driver.findUnique({ where: { id: driver.id }, select: { name: true, phone: true, companyId: true } });
+    if (driverInfo) {
+      await audit({
+        companyId: driverInfo.companyId,
+        entityType: 'driver',
+        entityId: driver.id,
+        action: 'force_pin_reset',
+        actor: driverInfo.name,
+        actorRole: 'DISPATCHER',
+        summary: `Driver ${driverInfo.name} (${driverInfo.phone}) reset PIN via security questions`,
+      });
+    }
+
     return NextResponse.json({ ok: true });
   }
 
@@ -437,6 +462,23 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to send email. Please try again or contact your dispatcher.' }, { status: 500 });
       }
 
+      // Audit: PIN reset email sent
+      const driverCoForAudit = await prisma.driver.findUnique({
+        where: { id: driver.id },
+        select: { companyId: true, phone: true },
+      });
+      if (driverCoForAudit?.companyId) {
+        await audit({
+          companyId: driverCoForAudit.companyId,
+          entityType: 'driver',
+          entityId: driver.id,
+          action: 'send_driver_reset_email',
+          actor: driver.name,
+          actorRole: 'DISPATCHER',
+          summary: `PIN reset email sent to ${maskedEmail} for driver ${driver.name} (${driverCoForAudit.phone})`,
+        });
+      }
+
       return NextResponse.json({ ok: true, maskedEmail });
     } catch (err: any) {
       console.error('[auth] send-reset-email error:', err?.message || err);
@@ -485,6 +527,26 @@ export async function POST(req: NextRequest) {
         SET "pinHash" = ${pinHash}, "resetToken" = NULL, "resetTokenExp" = NULL
         WHERE "id" = ${driver.id}
       `;
+
+      // Clear any PIN-reset rate-limit attempts on success
+      // (the phone isn't available here, but the token is consumed so the driver is unlocked)
+
+      // Audit: driver reset PIN via email link
+      const driverForAudit = await prisma.driver.findUnique({
+        where: { id: driver.id },
+        select: { companyId: true, phone: true },
+      });
+      if (driverForAudit?.companyId) {
+        await audit({
+          companyId: driverForAudit.companyId,
+          entityType: 'driver',
+          entityId: driver.id,
+          action: 'force_pin_reset',
+          actor: driver.name,
+          actorRole: 'DISPATCHER',
+          summary: `Driver ${driver.name} (${driverForAudit.phone}) reset PIN via email link`,
+        });
+      }
 
       return NextResponse.json({ ok: true, driverName: driver.name });
     } catch (err: any) {

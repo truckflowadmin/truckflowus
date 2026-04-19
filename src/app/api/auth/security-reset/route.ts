@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyAnswer } from '@/lib/driver-auth';
 import { createPasswordResetToken } from '@/lib/password-reset';
 import { checkRateLimit, recordAttempt, clearAttempts } from '@/lib/rate-limit';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -126,6 +127,19 @@ export async function POST(req: Request) {
       await clearAttempts(email, RATE_TYPE);
       await recordAttempt(email, RATE_TYPE, true);
 
+      const userForAudit = await prisma.user.findUnique({ where: { email }, select: { id: true, companyId: true } });
+      if (userForAudit?.companyId) {
+        await audit({
+          companyId: userForAudit.companyId,
+          entityType: 'user',
+          entityId: userForAudit.id,
+          action: 'update',
+          actor: email,
+          actorRole: 'DISPATCHER',
+          summary: `${email} verified security questions for password reset`,
+        });
+      }
+
       const token = await createPasswordResetToken(email);
       if (!token) {
         return NextResponse.json({ error: 'Failed to create reset token' }, { status: 500 });
@@ -148,9 +162,25 @@ export async function POST(req: Request) {
       }
 
       const { consumeResetToken } = await import('@/lib/password-reset');
+      // Look up user before consuming token so we can audit
+      const resetRecord = await prisma.passwordReset.findFirst({
+        where: { token, usedAt: null, expiresAt: { gt: new Date() } },
+        include: { user: { select: { id: true, email: true, companyId: true } } },
+      });
       const ok = await consumeResetToken(token, newPassword);
       if (!ok) {
         return NextResponse.json({ error: 'Token expired or already used' }, { status: 400 });
+      }
+      if (resetRecord?.user?.companyId) {
+        await audit({
+          companyId: resetRecord.user.companyId,
+          entityType: 'user',
+          entityId: resetRecord.user.id,
+          action: 'force_password_reset',
+          actor: resetRecord.user.email,
+          actorRole: 'DISPATCHER',
+          summary: `${resetRecord.user.email} reset password via security questions`,
+        });
       }
 
       return NextResponse.json({ ok: true });

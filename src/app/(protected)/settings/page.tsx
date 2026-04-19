@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { FEATURE_CATALOG, featuresBySide, getEffectiveFeatures, formatPrice } from '@/lib/features';
 import { SECURITY_QUESTIONS, hashAnswer } from '@/lib/driver-auth';
+import { audit } from '@/lib/audit';
 
 async function saveCompanyAction(formData: FormData) {
   'use server';
@@ -47,6 +48,15 @@ async function changePasswordAction(formData: FormData) {
   await prisma.user.update({
     where: { id: session.userId },
     data: { passwordHash: await hashPassword(newPw), lastPasswordChange: new Date() },
+  });
+  await audit({
+    companyId: session.companyId,
+    entityType: 'user',
+    entityId: session.userId,
+    action: 'update',
+    actor: session.email,
+    actorRole: session.role as 'ADMIN' | 'DISPATCHER',
+    summary: `${session.email} changed their own password`,
   });
   redirect('/settings?pwOk=1');
 }
@@ -96,6 +106,15 @@ async function saveSecurityQuestionsAction(formData: FormData) {
       securityQ2: q2, securityA2: h2,
       securityQ3: q3, securityA3: h3,
     },
+  });
+  await audit({
+    companyId: session.companyId,
+    entityType: 'user',
+    entityId: session.userId,
+    action: 'update',
+    actor: session.email,
+    actorRole: session.role as 'ADMIN' | 'DISPATCHER',
+    summary: `${session.email} updated their security questions`,
   });
 
   redirect('/settings?sqOk=1');

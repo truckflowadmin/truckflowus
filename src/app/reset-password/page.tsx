@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { validateResetToken, consumeResetToken } from '@/lib/password-reset';
+import { prisma } from '@/lib/prisma';
+import { audit } from '@/lib/audit';
 
 export default async function ResetPasswordPage({
   searchParams,
@@ -58,9 +60,28 @@ export default async function ResetPasswordPage({
       redirect(`/reset-password?token=${tkn}&error=Passwords do not match`);
     }
 
+    // Look up user before consuming token for audit
+    const resetRecord = await prisma.passwordReset.findFirst({
+      where: { token: tkn, usedAt: null, expiresAt: { gt: new Date() } },
+      include: { user: { select: { id: true, email: true, companyId: true } } },
+    });
+
     const ok = await consumeResetToken(tkn, newPw);
     if (!ok) {
       redirect(`/reset-password?token=${tkn}&error=Token expired or already used`);
+    }
+
+    // Audit: password reset via email link
+    if (resetRecord?.user?.companyId) {
+      await audit({
+        companyId: resetRecord.user.companyId,
+        entityType: 'user',
+        entityId: resetRecord.user.id,
+        action: 'force_password_reset',
+        actor: resetRecord.user.email,
+        actorRole: 'DISPATCHER',
+        summary: `${resetRecord.user.email} reset password via email link`,
+      });
     }
 
     redirect('/reset-password?success=1');
