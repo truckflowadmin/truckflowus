@@ -9,16 +9,21 @@ import { useEffect, useRef, useCallback } from 'react';
  * Autocomplete to the input. When a place is selected the full formatted
  * address is written into the input's value (and fires onChange).
  *
- * Falls back to a plain text input when the API key is missing.
+ * Falls back to a plain text input when the API key is missing or invalid.
  */
 
 // ---------------------------------------------------------------------------
 // Script loader — shared across all instances
 // ---------------------------------------------------------------------------
 let loadPromise: Promise<void> | null = null;
+let googleMapsAuthFailed = false;
 
 function loadGoogleMaps(): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve();
+
+  // If we already know the API key is bad, don't even try
+  if (googleMapsAuthFailed) return Promise.reject(new Error('Auth failed'));
+
   if ((window as any).google?.maps?.places) return Promise.resolve();
 
   if (!loadPromise) {
@@ -29,6 +34,15 @@ function loadGoogleMaps(): Promise<void> {
         reject(new Error('No API key'));
         return;
       }
+
+      // Google calls this global function when the API key is invalid
+      (window as any).gm_authFailure = () => {
+        googleMapsAuthFailed = true;
+        console.warn('[AddressAutocomplete] Google Maps API key error — falling back to plain input');
+        // Remove Google's error overlays that block inputs
+        document.querySelectorAll('.gm-err-container, .gm-err-autocomplete, .gm-style-pbc').forEach((el) => el.remove());
+        reject(new Error('Auth failed'));
+      };
 
       const existing = document.querySelector('script[src*="maps.googleapis.com"]');
       if (existing) {
@@ -42,7 +56,12 @@ function loadGoogleMaps(): Promise<void> {
       script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
       script.async = true;
       script.defer = true;
-      script.onload = () => resolve();
+      script.onload = () => {
+        // Give Google a moment to check auth — if gm_authFailure fires, it'll reject
+        setTimeout(() => {
+          if (!googleMapsAuthFailed) resolve();
+        }, 500);
+      };
       script.onerror = () => reject(new Error('Failed to load Google Maps'));
       document.head.appendChild(script);
     });
@@ -132,7 +151,11 @@ export default function AddressAutocomplete({
         }
       })
       .catch(() => {
-        // No API key or script failed — input works as plain text
+        // No API key, auth failed, or script failed — remove any error overlays
+        // Google injects .gm-err-container divs that block the page
+        setTimeout(() => {
+          document.querySelectorAll('.gm-err-container, .gm-err-autocomplete, .gm-style-pbc, [class*="gm-err"]').forEach((el) => el.remove());
+        }, 100);
       });
 
     return () => {
