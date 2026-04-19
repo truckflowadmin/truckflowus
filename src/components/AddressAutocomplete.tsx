@@ -119,12 +119,17 @@ export default function AddressAutocomplete({
         if (cancelled || !inputRef.current) return;
         if (autocompleteRef.current) return; // already attached
 
-        const ac = new google.maps.places.Autocomplete(inputRef.current, {
-          types: ['geocode', 'establishment'],
-          fields: ['formatted_address', 'name', 'geometry'],
-        });
-        ac.addListener('place_changed', handlePlaceChanged);
-        autocompleteRef.current = ac;
+        try {
+          const ac = new google.maps.places.Autocomplete(inputRef.current, {
+            types: ['geocode', 'establishment'],
+            fields: ['formatted_address', 'name', 'geometry'],
+          });
+          ac.addListener('place_changed', handlePlaceChanged);
+          autocompleteRef.current = ac;
+        } catch {
+          // Google Maps loaded but Places failed — input stays plain text
+          console.warn('[AddressAutocomplete] Places API init failed, using plain input');
+        }
       })
       .catch(() => {
         // No API key or script failed — input works as plain text
