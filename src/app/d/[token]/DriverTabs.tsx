@@ -78,6 +78,7 @@ interface CompletedJobData {
   truckNumber: string | null;
   quantityType: string;
   totalLoads: number;
+  ticketCount: number;
   completedLoads: number;
   ratePerUnit: number | null;
   date: string | null;
