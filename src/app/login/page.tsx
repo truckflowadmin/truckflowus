@@ -119,6 +119,11 @@ export default async function LoginPage({
           </a>
         </p>
         <p className="text-center mt-3">
+          <a href="/d/login" className="text-sm text-steel-400 hover:text-steel-200">
+            Are you a driver? <span className="text-safety">Driver Sign In</span>
+          </a>
+        </p>
+        <p className="text-center mt-3">
           <a
             href="mailto:truckflowadmin@gmail.com?subject=TruckFlowUS%20Sign%20In%20Support%20Request&body=Please%20describe%20your%20issue%20below%3A%0A%0A"
             className="text-sm text-steel-500 hover:text-steel-300"
