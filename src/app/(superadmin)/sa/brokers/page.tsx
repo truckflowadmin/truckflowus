@@ -19,7 +19,7 @@ async function createBrokerAction(formData: FormData) {
   await prisma.broker.create({
     data: {
       name,
-      contacts,
+      contacts: contacts as any,
       email: String(formData.get('email') || '').trim() || null,
       commissionPct: Number(formData.get('commissionPct') || '0') || 0,
     },

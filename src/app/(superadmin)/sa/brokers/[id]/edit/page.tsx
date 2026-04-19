@@ -24,7 +24,7 @@ async function updateBrokerAction(formData: FormData) {
     where: { id: brokerId },
     data: {
       name: String(formData.get('name') || '').trim() || broker.name,
-      contacts,
+      contacts: contacts as any,
       email: String(formData.get('email') || '').trim() || null,
       phone: String(formData.get('phone') || '').trim() || null,
       commissionPct: Number(formData.get('commissionPct') || '0') || 0,
