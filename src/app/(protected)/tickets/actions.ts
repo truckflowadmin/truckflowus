@@ -168,7 +168,7 @@ export async function assignDriverAction(formData: FormData) {
   const message = composeAssignmentSms({
     ticketNumber: ticket.ticketNumber,
     material: ticket.material,
-    quantity: ticket.quantity,
+    quantity: Number(ticket.quantity),
     quantityType: ticket.quantityType,
     hauledFrom: ticket.hauledFrom,
     hauledTo: ticket.hauledTo,
