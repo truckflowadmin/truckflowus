@@ -91,12 +91,13 @@ export function Sidebar({ user, unlockedTabs }: SidebarProps) {
           );
         })}
       </nav>
-      <div className="p-3 border-t border-steel-800 text-xs">
-        <div className="px-3 py-2 flex items-center justify-between">
-          <div>
-            <div className="text-white font-medium">{user.name}</div>
-            <div className="text-steel-500">{user.email}</div>
-          </div>
+      <div className="p-3 border-t border-steel-800 text-xs space-y-2">
+        <div className="px-3 py-2">
+          <div className="text-white font-medium">{user.name}</div>
+          <div className="text-steel-500">{user.email}</div>
+        </div>
+        <div className="px-3 flex items-center justify-between">
+          <span className="text-steel-500 text-[10px] uppercase tracking-wider">Language</span>
           <LanguageToggle variant="dispatcher" />
         </div>
         <form action="/api/logout" method="post">

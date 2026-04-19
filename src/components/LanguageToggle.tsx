@@ -1,52 +1,64 @@
 'use client';
 
-import { useLanguage } from './LanguageProvider';
-
 /**
- * A small EN / ES toggle for the sidebar.
- * `variant` controls colour scheme:
- *   - "dispatcher" (dark steel sidebar)
- *   - "superadmin" (dark purple sidebar)
- *   - "driver" (light mobile theme)
+ * Standalone EN / ES toggle that sets a cookie and hard-navigates.
+ * Does NOT depend on LanguageProvider context — reads/writes the cookie directly
+ * so it works even if the provider isn't mounted or context is stale.
  */
 export default function LanguageToggle({ variant = 'dispatcher' }: { variant?: 'dispatcher' | 'superadmin' | 'driver' }) {
-  const { lang, setLang } = useLanguage();
+  // Read current lang directly from the cookie (not from context)
+  function getLang(): 'en' | 'es' {
+    if (typeof document === 'undefined') return 'en';
+    const match = document.cookie.match(/(?:^|;\s*)lang=(en|es)/);
+    return (match?.[1] as 'en' | 'es') ?? 'en';
+  }
 
-  const baseClasses = 'px-2.5 py-1 text-xs font-semibold rounded transition-colors';
+  function switchTo(l: 'en' | 'es') {
+    // Set the cookie
+    document.cookie = `lang=${l};path=/;max-age=${365 * 86400};SameSite=Lax`;
+    // Force full page reload with cache-bust to ensure server reads the new cookie
+    window.location.href = window.location.pathname + window.location.search;
+  }
 
-  const styles = {
+  const lang = getLang();
+
+  const themes = {
     dispatcher: {
-      active: 'bg-safety text-diesel',
-      inactive: 'bg-steel-800 text-steel-400 hover:text-steel-200',
-      container: '',
+      wrapper: 'bg-steel-800/60 border border-steel-700',
+      active: 'bg-safety text-diesel shadow-sm',
+      inactive: 'text-steel-400 hover:text-white hover:bg-steel-700',
     },
     superadmin: {
-      active: 'bg-purple-600 text-white',
-      inactive: 'bg-purple-950 text-purple-400 hover:text-purple-200',
-      container: '',
+      wrapper: 'bg-purple-950/60 border border-purple-800',
+      active: 'bg-purple-500 text-white shadow-sm',
+      inactive: 'text-purple-400 hover:text-white hover:bg-purple-800',
     },
     driver: {
-      active: 'bg-safety text-diesel',
-      inactive: 'bg-steel-200 text-steel-600 hover:text-steel-800',
-      container: '',
+      wrapper: 'bg-steel-100 border border-steel-300',
+      active: 'bg-safety text-diesel shadow-sm',
+      inactive: 'text-steel-500 hover:text-steel-800 hover:bg-steel-200',
     },
   };
 
-  const s = styles[variant];
+  const th = themes[variant];
 
   return (
-    <div className={`flex items-center gap-1 ${s.container}`}>
+    <div className={`inline-flex items-center rounded-lg p-0.5 gap-0.5 ${th.wrapper}`}>
       <button
-        onClick={() => lang !== 'en' && setLang('en')}
-        className={`${baseClasses} ${lang === 'en' ? s.active : s.inactive}`}
-        aria-label="English"
+        type="button"
+        onClick={() => switchTo('en')}
+        className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all duration-150 cursor-pointer ${
+          lang === 'en' ? th.active : th.inactive
+        }`}
       >
         EN
       </button>
       <button
-        onClick={() => lang !== 'es' && setLang('es')}
-        className={`${baseClasses} ${lang === 'es' ? s.active : s.inactive}`}
-        aria-label="Español"
+        type="button"
+        onClick={() => switchTo('es')}
+        className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all duration-150 cursor-pointer ${
+          lang === 'es' ? th.active : th.inactive
+        }`}
       >
         ES
       </button>

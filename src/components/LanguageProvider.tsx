@@ -25,8 +25,8 @@ export function LanguageProvider({ initialLang, children }: { initialLang: Lang;
     setLangState(l);
     // Persist to cookie so server components pick it up on next request
     document.cookie = `lang=${l};path=/;max-age=${365 * 86400};SameSite=Lax`;
-    // Reload so server components re-render with new language
-    window.location.reload();
+    // Hard navigate (not reload) so the browser makes a fresh request with the new cookie
+    window.location.href = window.location.pathname + window.location.search;
   }, []);
 
   const tFn = useCallback(

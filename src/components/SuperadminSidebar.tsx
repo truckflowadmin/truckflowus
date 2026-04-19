@@ -52,11 +52,12 @@ export function SuperadminSidebar({ user }: { user: { name: string; email: strin
         ))}
       </nav>
       <div className="p-3 border-t border-purple-900 text-xs">
-        <div className="px-3 py-2 flex items-center justify-between">
-          <div>
-            <div className="text-white font-medium">{user.name}</div>
-            <div className="text-purple-300">{user.email}</div>
-          </div>
+        <div className="px-3 py-2">
+          <div className="text-white font-medium">{user.name}</div>
+          <div className="text-purple-300">{user.email}</div>
+        </div>
+        <div className="px-3 py-1 flex items-center justify-between">
+          <span className="text-purple-400 text-[10px] uppercase tracking-wider">Language</span>
           <LanguageToggle variant="superadmin" />
         </div>
         <form action="/api/logout" method="post">
