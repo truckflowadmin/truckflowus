@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     await clearAttempts(normalizedKey, 'driver_login');
     const token = signDriverSession(loginResult);
     setDriverSessionCookie(token);
-    return NextResponse.json({ ok: true, driverName: session.name });
+    return NextResponse.json({ ok: true, driverName: loginResult.name });
   }
 
   // ---- FIRST-TIME SETUP (via token) ----
