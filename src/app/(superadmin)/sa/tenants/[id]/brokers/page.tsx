@@ -186,7 +186,7 @@ export default async function TenantBrokersPage({ params }: { params: { id: stri
             </thead>
             <tbody>
               {brokers.map((b) => {
-                const contacts = Array.isArray(b.contacts) ? (b.contacts as BrokerContact[]) : [];
+                const contacts = Array.isArray(b.contacts) ? (b.contacts as unknown as BrokerContact[]) : [];
                 const pc = contacts[0] ?? null;
                 return (
                 <tr key={b.id} className="border-b border-purple-500/20 hover:bg-purple-500/10">

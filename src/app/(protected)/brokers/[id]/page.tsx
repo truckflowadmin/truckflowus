@@ -37,7 +37,7 @@ export default async function BrokerDetailPage({ params }: { params: { id: strin
             <h1 className="text-3xl font-bold tracking-tight">{broker.name}</h1>
             <div className="text-sm text-steel-500 mt-0.5">
               {(() => {
-                const contacts = Array.isArray(broker.contacts) ? (broker.contacts as BrokerContact[]) : [];
+                const contacts = Array.isArray(broker.contacts) ? (broker.contacts as unknown as BrokerContact[]) : [];
                 const pc = contacts[0];
                 return pc ? <>{pc.name}{pc.jobTitle ? ` (${pc.jobTitle})` : ''} · {pc.phone} · </> : null;
               })()}

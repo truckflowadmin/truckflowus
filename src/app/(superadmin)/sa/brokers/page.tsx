@@ -43,7 +43,7 @@ async function deleteBrokerAction(formData: FormData) {
 }
 
 function getContacts(broker: { contacts: unknown }): BrokerContact[] {
-  if (Array.isArray(broker.contacts)) return broker.contacts as BrokerContact[];
+  if (Array.isArray(broker.contacts)) return broker.contacts as unknown as BrokerContact[];
   return [];
 }
 

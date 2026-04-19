@@ -55,7 +55,7 @@ export default async function BrokersPage() {
             <tbody>
               {brokers.map((b) => {
                 const s = statsMap[b.id];
-                const contacts = Array.isArray(b.contacts) ? (b.contacts as BrokerContact[]) : [];
+                const contacts = Array.isArray(b.contacts) ? (b.contacts as unknown as BrokerContact[]) : [];
                 const pc = contacts[0] ?? null;
                 return (
                   <tr key={b.id} className="border-b border-steel-100 hover:bg-steel-50">

@@ -52,7 +52,7 @@ export default async function SuperadminEditGlobalBrokerPage({
   const broker = await prisma.broker.findUnique({ where: { id: params.id } });
   if (!broker) notFound();
 
-  const existingContacts = Array.isArray(broker.contacts) ? (broker.contacts as BrokerContact[]) : [];
+  const existingContacts = Array.isArray(broker.contacts) ? (broker.contacts as unknown as BrokerContact[]) : [];
 
   return (
     <div className="p-8 max-w-3xl">

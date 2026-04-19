@@ -59,7 +59,7 @@ export default async function SuperadminEditBrokerPage({
   });
   if (!broker) notFound();
 
-  const existingContacts = Array.isArray(broker.contacts) ? (broker.contacts as BrokerContact[]) : [];
+  const existingContacts = Array.isArray(broker.contacts) ? (broker.contacts as unknown as BrokerContact[]) : [];
 
   return (
     <div className="p-8 max-w-3xl">
