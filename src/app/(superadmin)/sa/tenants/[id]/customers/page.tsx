@@ -130,7 +130,7 @@ export default async function TenantCustomersPage({ params }: { params: { id: st
   const tMap: Record<string, number> = {};
   ticketCounts.forEach((tc) => { if (tc.customerId) tMap[tc.customerId] = tc._count.id; });
   const iMap: Record<string, number> = {};
-  invoiceCounts.forEach((ic) => { iMap[ic.customerId] = ic._count.id; });
+  invoiceCounts.forEach((ic) => { if (ic.customerId) iMap[ic.customerId] = ic._count.id; });
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
