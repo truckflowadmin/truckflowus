@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireSuperadmin } from '@/lib/auth';
 import TenantNav from '@/components/TenantNav';
-import { format } from 'date-fns';
 import AuditFilters from './AuditFilters';
+import LocalTime from '@/components/LocalTime';
 
 export const dynamic = 'force-dynamic';
 
@@ -268,7 +268,7 @@ export default async function TenantAuditPage({
                           </td>
                           <td className="py-2 pr-4 text-purple-300 font-mono text-xs">{a.key}</td>
                           <td className="py-2 pr-4 text-purple-400">
-                            {format(a.createdAt, 'MMM d, h:mm:ss a')}
+                            <LocalTime date={a.createdAt} />
                           </td>
                         </tr>
                       );
@@ -318,7 +318,7 @@ export default async function TenantAuditPage({
                         )}
                       </div>
                       <div className="text-xs text-purple-500 whitespace-nowrap">
-                        {format(log.createdAt, 'MMM d, h:mm a')}
+                        <LocalTime date={log.createdAt} />
                       </div>
                     </div>
                   );
@@ -381,7 +381,7 @@ export default async function TenantAuditPage({
                       )}
                     </div>
                     <div className="text-xs text-purple-500 whitespace-nowrap">
-                      {format(log.createdAt, 'MMM d, h:mm a')}
+                      <LocalTime date={log.createdAt} />
                     </div>
                   </div>
                 );

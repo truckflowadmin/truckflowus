@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { Sidebar } from '@/components/Sidebar';
 import { NotificationBell } from '@/components/NotificationBell';
 import { loadCompanyFeatures, NAV_FEATURE_MAP } from '@/lib/features';
@@ -17,6 +18,18 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   // Superadmins live at /sa/*; bounce them there so they can't accidentally
   // edit a single tenant's data via dispatcher routes.
   if (session.role === 'SUPERADMIN') redirect('/sa/overview');
+
+  // Check if user must re-set security questions (cleared by superadmin)
+  try {
+    const rows = await prisma.$queryRaw<{ mustSetSecurityQuestions: boolean }[]>`
+      SELECT "mustSetSecurityQuestions" FROM "User" WHERE "id" = ${session.userId} LIMIT 1
+    `;
+    if (rows[0]?.mustSetSecurityQuestions) {
+      redirect('/settings?setupSQ=1');
+    }
+  } catch {
+    // Column may not exist yet — skip check
+  }
 
   // Resolve which sidebar tabs the company's plan unlocks.
   const has = await loadCompanyFeatures(session.companyId!);

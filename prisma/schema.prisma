@@ -120,6 +120,8 @@ model User {
   securityA3  String?
   // Session invalidation — all JWTs issued before this timestamp are rejected
   sessionInvalidatedAt DateTime?
+  // Force re-setup of security questions (set by superadmin after clearing them)
+  mustSetSecurityQuestions Boolean @default(false)
   createdAt    DateTime @default(now())
 
   company        Company?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -180,6 +182,8 @@ model Driver {
   // Login tracking & session management
   lastLoginAt          DateTime?
   sessionInvalidatedAt DateTime?
+  // Force re-setup of security questions (set by superadmin after clearing them)
+  mustSetSecurityQuestions Boolean @default(false)
   // Profile fields (editable by driver and dispatcher)
   address              String?  // street address
   city                 String?

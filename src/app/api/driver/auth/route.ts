@@ -319,9 +319,13 @@ export async function POST(req: NextRequest) {
       WHERE "id" = ${driver.id}
     `;
 
-    // Audit log
+    // Audit log + clear login lockout so driver can log in immediately
     const driverInfo = await prisma.driver.findUnique({ where: { id: driver.id }, select: { name: true, phone: true, companyId: true } });
     if (driverInfo) {
+      // Clear login lockout — the driver just proved identity via security questions
+      const normalizedPhone = driverInfo.phone.replace(/\D/g, '');
+      await clearAttempts(normalizedPhone, 'driver_login');
+
       await audit({
         companyId: driverInfo.companyId,
         entityType: 'driver',
@@ -528,24 +532,28 @@ export async function POST(req: NextRequest) {
         WHERE "id" = ${driver.id}
       `;
 
-      // Clear any PIN-reset rate-limit attempts on success
-      // (the phone isn't available here, but the token is consumed so the driver is unlocked)
-
-      // Audit: driver reset PIN via email link
+      // Audit + clear login lockout so driver can log in immediately
       const driverForAudit = await prisma.driver.findUnique({
         where: { id: driver.id },
         select: { companyId: true, phone: true },
       });
-      if (driverForAudit?.companyId) {
-        await audit({
-          companyId: driverForAudit.companyId,
-          entityType: 'driver',
-          entityId: driver.id,
-          action: 'force_pin_reset',
-          actor: driver.name,
-          actorRole: 'DISPATCHER',
-          summary: `Driver ${driver.name} (${driverForAudit.phone}) reset PIN via email link`,
-        });
+      if (driverForAudit) {
+        // Clear login lockout — the driver just proved identity via email link
+        const normalizedPhone = driverForAudit.phone.replace(/\D/g, '');
+        await clearAttempts(normalizedPhone, 'driver_login');
+        await clearAttempts(normalizedPhone, 'driver_pin_reset');
+
+        if (driverForAudit.companyId) {
+          await audit({
+            companyId: driverForAudit.companyId,
+            entityType: 'driver',
+            entityId: driver.id,
+            action: 'force_pin_reset',
+            actor: driver.name,
+            actorRole: 'DISPATCHER',
+            summary: `Driver ${driver.name} (${driverForAudit.phone}) reset PIN via email link`,
+          });
+        }
       }
 
       return NextResponse.json({ ok: true, driverName: driver.name });

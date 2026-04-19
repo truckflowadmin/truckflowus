@@ -1,12 +1,14 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireSuperadmin } from '@/lib/auth';
 import { forceResetPassword, triggerResetEmail } from '@/lib/password-reset';
 import { hashPin } from '@/lib/driver-auth';
 import { audit } from '@/lib/audit';
+import { clearAttempts } from '@/lib/rate-limit';
 import { randomBytes } from 'crypto';
 import TenantNav from '@/components/TenantNav';
+import LocalTime from '@/components/LocalTime';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,13 +26,15 @@ async function forceResetAction(formData: FormData) {
 
   // Verify entity belongs to claimed company
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.companyId !== companyId) throw new Error('User not found in this company');
+  if (!user || user.companyId !== companyId) {
+    redirect(`/sa/tenants/${companyId}/passwords?pwError=User+not+found`);
+  }
 
   if (!newPassword || newPassword.length < 6) {
-    throw new Error('Password must be at least 6 characters');
+    redirect(`/sa/tenants/${companyId}/passwords?pwError=Password+must+be+at+least+6+characters`);
   }
   if (newPassword !== confirmPassword) {
-    throw new Error('Passwords do not match');
+    redirect(`/sa/tenants/${companyId}/passwords?pwError=Passwords+do+not+match`);
   }
 
   await forceResetPassword(userId, newPassword);
@@ -44,7 +48,7 @@ async function forceResetAction(formData: FormData) {
     summary: `Force-reset password for ${user?.email ?? userId}`,
   });
 
-  revalidatePath(`/sa/tenants/${companyId}/passwords`);
+  redirect(`/sa/tenants/${companyId}/passwords?pwSuccess=${encodeURIComponent(user.email)}`);
 }
 
 async function sendResetEmailAction(formData: FormData) {
@@ -55,9 +59,15 @@ async function sendResetEmailAction(formData: FormData) {
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.companyId !== companyId) throw new Error('User not found in this company');
+  if (!user || user.companyId !== companyId) {
+    redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent('User not found')}&msgType=error`);
+  }
 
-  await triggerResetEmail(userId, appUrl);
+  const sent = await triggerResetEmail(userId, appUrl);
+  if (!sent) {
+    redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent('Failed to send reset email — check SMTP settings')}&msgType=error`);
+  }
+
   await audit({
     companyId,
     entityType: 'user',
@@ -68,7 +78,7 @@ async function sendResetEmailAction(formData: FormData) {
     summary: `Sent password reset email to ${user?.email ?? userId}`,
   });
 
-  revalidatePath(`/sa/tenants/${companyId}/passwords`);
+  redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent(`Password reset email sent to ${user.email}`)}&msgType=success`);
 }
 
 async function clearUserSecurityQuestionsAction(formData: FormData) {
@@ -78,7 +88,9 @@ async function clearUserSecurityQuestionsAction(formData: FormData) {
   const companyId = String(formData.get('companyId') || '');
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.companyId !== companyId) throw new Error('User not found in this company');
+  if (!user || user.companyId !== companyId) {
+    redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent('User not found')}&msgType=error`);
+  }
 
   await prisma.user.update({
     where: { id: userId },
@@ -88,8 +100,11 @@ async function clearUserSecurityQuestionsAction(formData: FormData) {
       securityQ3: null, securityA3: null,
     },
   });
+  // Set flag via raw SQL — safe if column doesn't exist yet (pre-migration)
+  try {
+    await prisma.$executeRaw`UPDATE "User" SET "mustSetSecurityQuestions" = true WHERE "id" = ${userId}`;
+  } catch { /* column may not exist yet */ }
 
-  const updatedUser = await prisma.user.findUnique({ where: { id: userId } });
   await audit({
     companyId,
     entityType: 'user',
@@ -97,10 +112,10 @@ async function clearUserSecurityQuestionsAction(formData: FormData) {
     action: 'clear_security_questions',
     actor: 'Platform Admin',
     actorRole: 'SUPERADMIN',
-    summary: `Cleared security questions for ${user?.email ?? userId}`,
+    summary: `Cleared security questions for ${user?.email ?? userId} — will be required to re-set at next login`,
   });
 
-  revalidatePath(`/sa/tenants/${companyId}/passwords`);
+  redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent(`Cleared security questions for ${user.email}. They will be required to set new ones at next login.`)}&msgType=success`);
 }
 
 // ---------------------------------------------------------------------------
@@ -116,13 +131,15 @@ async function forceResetDriverPinAction(formData: FormData) {
   const confirmPin = String(formData.get('confirmPin') || '');
 
   const driver = await prisma.driver.findUnique({ where: { id: driverId } });
-  if (!driver || driver.companyId !== companyId) throw new Error('Driver not found in this company');
+  if (!driver || driver.companyId !== companyId) {
+    redirect(`/sa/tenants/${companyId}/passwords?pinError=Driver+not+found`);
+  }
 
   if (!/^\d{4,6}$/.test(newPin)) {
-    throw new Error('PIN must be 4-6 digits');
+    redirect(`/sa/tenants/${companyId}/passwords?pinError=PIN+must+be+4-6+digits`);
   }
   if (newPin !== confirmPin) {
-    throw new Error('PINs do not match');
+    redirect(`/sa/tenants/${companyId}/passwords?pinError=PINs+do+not+match`);
   }
 
   const hash = await hashPin(newPin);
@@ -130,6 +147,11 @@ async function forceResetDriverPinAction(formData: FormData) {
     where: { id: driverId },
     data: { pinHash: hash, pinSet: true },
   });
+
+  // Clear any login lockout so the driver can log in immediately with the new PIN
+  const normalizedPhone = driver.phone.replace(/\D/g, '');
+  await clearAttempts(normalizedPhone, 'driver_login');
+
   await audit({
     companyId,
     entityType: 'driver',
@@ -140,7 +162,7 @@ async function forceResetDriverPinAction(formData: FormData) {
     summary: `Force-reset PIN for driver ${driver?.name ?? driverId} (${driver?.phone ?? ''})`,
   });
 
-  revalidatePath(`/sa/tenants/${companyId}/passwords`);
+  redirect(`/sa/tenants/${companyId}/passwords?pinSuccess=${encodeURIComponent(driver.name)}`);
 }
 
 async function sendDriverResetEmailAction(formData: FormData) {
@@ -150,12 +172,13 @@ async function sendDriverResetEmailAction(formData: FormData) {
   const companyId = String(formData.get('companyId') || '');
 
   const driver = await prisma.driver.findUnique({ where: { id: driverId } });
-  if (!driver || driver.companyId !== companyId) throw new Error('Driver not found in this company');
+  if (!driver || driver.companyId !== companyId) {
+    redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent('Driver not found')}&msgType=error`);
+  }
   if (!driver.email) {
-    throw new Error('Driver has no email on file');
+    redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent(`Driver ${driver.name} has no email on file`)}&msgType=error`);
   }
 
-  const { randomBytes } = await import('crypto');
   const token = randomBytes(32).toString('hex');
   const exp = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
@@ -168,7 +191,7 @@ async function sendDriverResetEmailAction(formData: FormData) {
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
   const resetUrl = `${appUrl}/d/reset-email/${token}`;
 
-  await sendEmail({
+  const result = await sendEmail({
     to: driver.email,
     subject: 'TruckFlowUS — Reset Your Driver PIN',
     text: `Your PIN has been flagged for reset by an administrator.\n\nClick the link below to set a new PIN:\n\n${resetUrl}\n\nThis link expires in 1 hour.\n\n— TruckFlowUS`,
@@ -188,6 +211,10 @@ async function sendDriverResetEmailAction(formData: FormData) {
     `,
   });
 
+  if (!result.success) {
+    redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent('Failed to send email — check SMTP settings')}&msgType=error`);
+  }
+
   await audit({
     companyId,
     entityType: 'driver',
@@ -198,7 +225,7 @@ async function sendDriverResetEmailAction(formData: FormData) {
     summary: `Sent PIN reset email to driver ${driver.name} (${driver.email})`,
   });
 
-  revalidatePath(`/sa/tenants/${companyId}/passwords`);
+  redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent(`PIN reset email sent to ${driver.name} (${driver.email})`)}&msgType=success`);
 }
 
 async function clearDriverSecurityQuestionsAction(formData: FormData) {
@@ -208,7 +235,9 @@ async function clearDriverSecurityQuestionsAction(formData: FormData) {
   const companyId = String(formData.get('companyId') || '');
 
   const driverCheck = await prisma.driver.findUnique({ where: { id: driverId } });
-  if (!driverCheck || driverCheck.companyId !== companyId) throw new Error('Driver not found in this company');
+  if (!driverCheck || driverCheck.companyId !== companyId) {
+    redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent('Driver not found')}&msgType=error`);
+  }
 
   await prisma.driver.update({
     where: { id: driverId },
@@ -218,8 +247,11 @@ async function clearDriverSecurityQuestionsAction(formData: FormData) {
       securityQ3: null, securityA3: null,
     },
   });
+  // Set flag via raw SQL — safe if column doesn't exist yet (pre-migration)
+  try {
+    await prisma.$executeRaw`UPDATE "Driver" SET "mustSetSecurityQuestions" = true WHERE "id" = ${driverId}`;
+  } catch { /* column may not exist yet */ }
 
-  const driver = await prisma.driver.findUnique({ where: { id: driverId } });
   await audit({
     companyId,
     entityType: 'driver',
@@ -227,10 +259,10 @@ async function clearDriverSecurityQuestionsAction(formData: FormData) {
     action: 'clear_security_questions',
     actor: 'Platform Admin',
     actorRole: 'SUPERADMIN',
-    summary: `Cleared security questions for driver ${driver?.name ?? driverId}`,
+    summary: `Cleared security questions for driver ${driverCheck.name} — will be required to re-set at next login`,
   });
 
-  revalidatePath(`/sa/tenants/${companyId}/passwords`);
+  redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent(`Cleared security questions for ${driverCheck.name}. They will be required to set new ones at next login.`)}&msgType=success`);
 }
 
 async function resetDriverSetupAction(formData: FormData) {
@@ -240,7 +272,14 @@ async function resetDriverSetupAction(formData: FormData) {
   const companyId = String(formData.get('companyId') || '');
 
   const driverCheck = await prisma.driver.findUnique({ where: { id: driverId } });
-  if (!driverCheck || driverCheck.companyId !== companyId) throw new Error('Driver not found in this company');
+  if (!driverCheck || driverCheck.companyId !== companyId) {
+    redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent('Driver not found')}&msgType=error`);
+  }
+
+  // Clear login lockout too
+  const normalizedPhone = driverCheck.phone.replace(/\D/g, '');
+  await clearAttempts(normalizedPhone, 'driver_login');
+  await clearAttempts(normalizedPhone, 'driver_pin_reset');
 
   await prisma.driver.update({
     where: { id: driverId },
@@ -255,8 +294,11 @@ async function resetDriverSetupAction(formData: FormData) {
       resetTokenExp: null,
     },
   });
+  // Clear the flag via raw SQL — fresh setup will require them anyway
+  try {
+    await prisma.$executeRaw`UPDATE "Driver" SET "mustSetSecurityQuestions" = false WHERE "id" = ${driverId}`;
+  } catch { /* column may not exist yet */ }
 
-  const driver = await prisma.driver.findUnique({ where: { id: driverId } });
   await audit({
     companyId,
     entityType: 'driver',
@@ -264,10 +306,10 @@ async function resetDriverSetupAction(formData: FormData) {
     action: 'reset_driver_setup',
     actor: 'Platform Admin',
     actorRole: 'SUPERADMIN',
-    summary: `Full auth reset for driver ${driver?.name ?? driverId} — must redo first-time setup`,
+    summary: `Full auth reset for driver ${driverCheck.name} — must redo first-time setup`,
   });
 
-  revalidatePath(`/sa/tenants/${companyId}/passwords`);
+  redirect(`/sa/tenants/${companyId}/passwords?msg=${encodeURIComponent(`Full auth reset for ${driverCheck.name}. They must redo first-time setup via their new access link.`)}&msgType=success`);
 }
 
 // ---------------------------------------------------------------------------
@@ -276,8 +318,10 @@ async function resetDriverSetupAction(formData: FormData) {
 
 export default async function PasswordManagementPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { pinSuccess?: string; pinError?: string; pwSuccess?: string; pwError?: string; msg?: string; msgType?: string };
 }) {
   await requireSuperadmin();
 
@@ -336,12 +380,35 @@ export default async function PasswordManagementPage({
         </p>
       </header>
 
+      {/* General success/error banner */}
+      {searchParams.msg && (
+        <div className={`p-3 rounded-lg text-sm ${
+          searchParams.msgType === 'error'
+            ? 'bg-red-900/50 border border-red-700 text-red-200'
+            : 'bg-green-900/50 border border-green-700 text-green-200'
+        }`}>
+          {searchParams.msg}
+        </div>
+      )}
+
       {/* ── DISPATCHERS / ADMINS ────────────────────────────────────────── */}
       <section>
         <h2 className="text-lg font-semibold text-purple-200 mb-3 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-purple-400" />
           Dispatchers &amp; Admins
         </h2>
+
+        {searchParams.pwSuccess && (
+          <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
+            Password successfully reset for <strong>{searchParams.pwSuccess}</strong>.
+          </div>
+        )}
+        {searchParams.pwError && (
+          <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+            {searchParams.pwError}
+          </div>
+        )}
+
         <div className="space-y-4">
           {company.users.map((user) => (
             <div key={user.id} className="panel-sa">
@@ -373,23 +440,19 @@ export default async function PasswordManagementPage({
                 <div className="bg-purple-950/50 rounded p-2">
                   <div className="text-purple-400 uppercase tracking-wider">Last Login</div>
                   <div className="text-white mt-1">
-                    {user.lastLoginAt
-                      ? user.lastLoginAt.toLocaleString()
-                      : 'Never'}
+                    <LocalTime date={user.lastLoginAt} fallback="Never" />
                   </div>
                 </div>
                 <div className="bg-purple-950/50 rounded p-2">
                   <div className="text-purple-400 uppercase tracking-wider">Password Changed</div>
                   <div className="text-white mt-1">
-                    {user.lastPasswordChange
-                      ? user.lastPasswordChange.toLocaleString()
-                      : 'Never (using original)'}
+                    <LocalTime date={user.lastPasswordChange} fallback="Never (using original)" />
                   </div>
                 </div>
                 <div className="bg-purple-950/50 rounded p-2">
                   <div className="text-purple-400 uppercase tracking-wider">Account Created</div>
                   <div className="text-white mt-1">
-                    {user.createdAt.toLocaleString()}
+                    <LocalTime date={user.createdAt} />
                   </div>
                 </div>
               </div>
@@ -470,6 +533,18 @@ export default async function PasswordManagementPage({
           <span className="w-2 h-2 rounded-full bg-green-400" />
           Drivers ({company.drivers.length})
         </h2>
+
+        {searchParams.pinSuccess && (
+          <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
+            PIN successfully reset for <strong>{searchParams.pinSuccess}</strong>. The driver can now log in with the new PIN.
+          </div>
+        )}
+        {searchParams.pinError && (
+          <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+            {searchParams.pinError}
+          </div>
+        )}
+
         <div className="space-y-4">
           {company.drivers.map((driver) => (
             <div key={driver.id} className={`panel-sa ${!driver.active ? 'opacity-60' : ''}`}>
@@ -509,9 +584,7 @@ export default async function PasswordManagementPage({
                 <div className="bg-purple-950/50 rounded p-2">
                   <div className="text-purple-400 uppercase tracking-wider">Last Login</div>
                   <div className="text-white mt-1">
-                    {driver.lastLoginAt
-                      ? driver.lastLoginAt.toLocaleString()
-                      : 'Never'}
+                    <LocalTime date={driver.lastLoginAt} fallback="Never" />
                   </div>
                 </div>
                 <div className="bg-purple-950/50 rounded p-2">
@@ -523,7 +596,7 @@ export default async function PasswordManagementPage({
                 <div className="bg-purple-950/50 rounded p-2">
                   <div className="text-purple-400 uppercase tracking-wider">Created</div>
                   <div className="text-white mt-1">
-                    {driver.createdAt.toLocaleString()}
+                    <LocalTime date={driver.createdAt} />
                   </div>
                 </div>
               </div>
@@ -648,8 +721,8 @@ export default async function PasswordManagementPage({
                   return (
                     <tr key={r.id}>
                       <td className="py-2 pr-4 text-white">{r.user.email}</td>
-                      <td className="py-2 pr-4 text-purple-300">{r.createdAt.toLocaleString()}</td>
-                      <td className="py-2 pr-4 text-purple-300">{r.expiresAt.toLocaleString()}</td>
+                      <td className="py-2 pr-4 text-purple-300"><LocalTime date={r.createdAt} /></td>
+                      <td className="py-2 pr-4 text-purple-300"><LocalTime date={r.expiresAt} /></td>
                       <td className="py-2 pr-4">
                         <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusClass}`}>
                           {status}

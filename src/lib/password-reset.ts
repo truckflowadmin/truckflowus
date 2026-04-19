@@ -79,7 +79,7 @@ export async function consumeResetToken(token: string, newPassword: string): Pro
  * Send the reset email via SMTP (uses the same nodemailer transport as invoices/driver reset).
  * Falls back to console log if SMTP is not configured.
  */
-export async function sendResetEmail(email: string, token: string, appUrl: string) {
+export async function sendResetEmail(email: string, token: string, appUrl: string): Promise<boolean> {
   const resetUrl = `${appUrl}/reset-password?token=${token}`;
 
   // Mask email in logs to avoid PII exposure
@@ -110,7 +110,9 @@ export async function sendResetEmail(email: string, token: string, appUrl: strin
 
   if (!result.success) {
     console.error('[email] Failed to send password reset:', result.error);
+    return false;
   }
+  return true;
 }
 
 /**
@@ -145,6 +147,6 @@ export async function triggerResetEmail(userId: string, appUrl: string): Promise
     },
   });
 
-  await sendResetEmail(user.email, reset.token, appUrl);
-  return true;
+  const sent = await sendResetEmail(user.email, reset.token, appUrl);
+  return sent;
 }

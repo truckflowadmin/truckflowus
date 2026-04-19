@@ -107,6 +107,16 @@ async function saveSecurityQuestionsAction(formData: FormData) {
       securityQ3: q3, securityA3: h3,
     },
   });
+
+  // Clear the mustSetSecurityQuestions flag if it was set (by superadmin clearing questions)
+  try {
+    await prisma.$executeRaw`
+      UPDATE "User" SET "mustSetSecurityQuestions" = false WHERE "id" = ${session.userId}
+    `;
+  } catch {
+    // Column may not exist yet — skip
+  }
+
   await audit({
     companyId: session.companyId,
     entityType: 'user',
@@ -163,7 +173,7 @@ async function removeUserAction(formData: FormData) {
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: { pwOk?: string; sqOk?: string; sqErr?: string };
+  searchParams: { pwOk?: string; sqOk?: string; sqErr?: string; setupSQ?: string };
 }) {
   const session = await requireSession();
   const [company, users, plan, currentUser] = await Promise.all([
@@ -336,6 +346,11 @@ export default async function SettingsPage({
       {/* Security Questions */}
       <form action={saveSecurityQuestionsAction} className="panel p-6 space-y-4 mb-6">
         <h2 className="font-semibold text-lg">Security Questions</h2>
+        {searchParams.setupSQ && (
+          <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm">
+            Your security questions were cleared by an administrator. Please set up new ones below to continue using your account.
+          </div>
+        )}
         <p className="text-sm text-steel-600">
           Set up 3 security questions so you can reset your password without email.
           {hasSecurityQuestions && (

@@ -5,6 +5,7 @@ import { requireSuperadmin, signSession, setSessionCookie, backupSuperadminSessi
 import { signDriverSession, setDriverSessionCookie } from '@/lib/driver-auth';
 import { audit } from '@/lib/audit';
 import TenantNav from '@/components/TenantNav';
+import LocalTime from '@/components/LocalTime';
 
 export const dynamic = 'force-dynamic';
 
@@ -292,19 +293,19 @@ export default async function DebugPage({
                     <div>
                       <span className="text-purple-500">Last login: </span>
                       <span className="text-purple-200">
-                        {user.lastLoginAt ? user.lastLoginAt.toLocaleString() : 'Never'}
+                        <LocalTime date={user.lastLoginAt} fallback="Never" />
                       </span>
                     </div>
                     <div>
                       <span className="text-purple-500">PW changed: </span>
                       <span className="text-purple-200">
-                        {user.lastPasswordChange ? user.lastPasswordChange.toLocaleString() : 'Never'}
+                        <LocalTime date={user.lastPasswordChange} fallback="Never" />
                       </span>
                     </div>
                     <div>
                       <span className="text-purple-500">Sessions invalidated: </span>
                       <span className="text-purple-200">
-                        {user.sessionInvalidatedAt ? user.sessionInvalidatedAt.toLocaleString() : 'Never'}
+                        <LocalTime date={user.sessionInvalidatedAt} fallback="Never" />
                       </span>
                     </div>
                   </div>
@@ -380,19 +381,19 @@ export default async function DebugPage({
                     <div>
                       <span className="text-purple-500">Last login: </span>
                       <span className="text-purple-200">
-                        {driver.lastLoginAt ? driver.lastLoginAt.toLocaleString() : 'Never'}
+                        <LocalTime date={driver.lastLoginAt} fallback="Never" />
                       </span>
                     </div>
                     <div>
                       <span className="text-purple-500">Created: </span>
                       <span className="text-purple-200">
-                        {driver.createdAt.toLocaleString()}
+                        <LocalTime date={driver.createdAt} />
                       </span>
                     </div>
                     <div>
                       <span className="text-purple-500">Sessions invalidated: </span>
                       <span className="text-purple-200">
-                        {driver.sessionInvalidatedAt ? driver.sessionInvalidatedAt.toLocaleString() : 'Never'}
+                        <LocalTime date={driver.sessionInvalidatedAt} fallback="Never" />
                       </span>
                     </div>
                   </div>
@@ -455,7 +456,7 @@ export default async function DebugPage({
                 </span>
                 <span className="text-purple-200 flex-1">{log.summary}</span>
                 <span className="text-purple-500 whitespace-nowrap">
-                  {log.createdAt.toLocaleString()}
+                  <LocalTime date={log.createdAt} />
                 </span>
               </div>
             ))}
