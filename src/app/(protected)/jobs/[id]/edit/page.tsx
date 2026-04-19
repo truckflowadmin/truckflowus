@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import EditJobForm from './EditJobForm';
+import JobPhotoUpload from '@/components/JobPhotoUpload';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,10 @@ export default async function EditJobPage({
   ]);
 
   if (!job) notFound();
+
+  // Fetch photoUrl via raw SQL (generated client may not know this column yet)
+  const photoRows: any[] = await prisma.$queryRaw`SELECT "photoUrl" FROM "Job" WHERE id = ${id}`;
+  const jobPhotoUrl: string | null = photoRows[0]?.photoUrl ?? null;
 
   // Block editing invoiced jobs
   const invoicedCount = await prisma.ticket.count({
@@ -89,6 +94,10 @@ export default async function EditJobPage({
           materials={materials.map((m) => m.name)}
           brokers={brokers}
         />
+      </div>
+
+      <div className="mt-6">
+        <JobPhotoUpload jobId={id} currentPhotoUrl={jobPhotoUrl} />
       </div>
     </div>
   );

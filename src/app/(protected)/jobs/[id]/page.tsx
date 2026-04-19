@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import JobDetail from './JobDetail';
+import JobPhotoUpload from '@/components/JobPhotoUpload';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,10 @@ export default async function JobDetailPage({
   });
 
   if (!job) notFound();
+
+  // Fetch photoUrl via raw SQL (generated client may not know this column yet)
+  const photoRows: any[] = await prisma.$queryRaw`SELECT "photoUrl" FROM "Job" WHERE id = ${id}`;
+  const jobPhotoUrl: string | null = photoRows[0]?.photoUrl ?? null;
 
   const invoiced = job.tickets.some(t => t.invoiceId != null);
 
@@ -114,6 +119,11 @@ export default async function JobDetailPage({
       <div className="mt-3">
         <JobDetail job={serialized} invoiced={invoiced} />
       </div>
+      {!invoiced && (
+        <div className="mt-6 max-w-5xl mx-auto">
+          <JobPhotoUpload jobId={id} currentPhotoUrl={jobPhotoUrl} />
+        </div>
+      )}
     </div>
   );
 }

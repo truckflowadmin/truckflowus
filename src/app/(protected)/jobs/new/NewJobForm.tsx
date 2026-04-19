@@ -279,7 +279,6 @@ export default function NewJobForm({ customers, drivers, materials, brokers }: P
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             onChange={handleScan}
             className="hidden"
             id="job-scan-input"

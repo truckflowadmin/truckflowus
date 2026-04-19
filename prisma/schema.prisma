@@ -368,6 +368,7 @@ model Job {
   ratePerUnit   Decimal?     @db.Decimal(10, 2)
   date          DateTime?    // target start date
   notes         String?      @db.Text
+  photoUrl      String?      // job-level photo (e.g. work order, dispatch sheet)
   // Allow drivers to self-assign from available jobs
   openForDrivers Boolean     @default(false)
   // Driver time tracking (pause/resume)
