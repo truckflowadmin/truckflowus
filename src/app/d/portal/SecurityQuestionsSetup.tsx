@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { SECURITY_QUESTIONS } from '@/lib/driver-auth';
+import { SECURITY_QUESTIONS } from '@/lib/security-questions';
 
 export default function DriverSecurityQuestionsSetup({ driverName }: { driverName: string }) {
   const router = useRouter();
