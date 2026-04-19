@@ -27,6 +27,14 @@ export const metadata: Metadata = {
       'Ticketing, dispatch, and invoicing software for dump truck operators.',
     images: ['/og-image.png'],
   },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/apple-icon.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
