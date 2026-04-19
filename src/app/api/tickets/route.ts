@@ -97,6 +97,14 @@ export async function DELETE(req: NextRequest) {
     if (!ticket) return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     if (ticket.invoiceId) return NextResponse.json({ error: 'Cannot delete invoiced ticket' }, { status: 403 });
 
+    // Block deletion if ticket belongs to a PAID trip sheet
+    if (ticket.tripSheetId) {
+      const sheet = await prisma.tripSheet.findUnique({ where: { id: ticket.tripSheetId }, select: { status: true } });
+      if (sheet?.status === 'PAID') {
+        return NextResponse.json({ error: 'This ticket belongs to a paid trip sheet and cannot be deleted' }, { status: 403 });
+      }
+    }
+
     await prisma.ticket.delete({ where: { id } });
 
     revalidatePath('/tickets');

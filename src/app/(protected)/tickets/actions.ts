@@ -239,6 +239,15 @@ export async function deleteTicketAction(formData: FormData) {
   });
   if (!ticket) throw new Error('Ticket not found');
   if (ticket.invoiceId) throw new Error('Cannot delete ticket on an invoice');
+
+  // Block deletion if ticket belongs to a PAID trip sheet
+  if (ticket.tripSheetId) {
+    const sheet = await prisma.tripSheet.findUnique({ where: { id: ticket.tripSheetId }, select: { status: true } });
+    if (sheet?.status === 'PAID') {
+      throw new Error('This ticket belongs to a paid trip sheet and cannot be deleted');
+    }
+  }
+
   await prisma.ticket.delete({ where: { id: ticketId } });
   revalidatePath('/tickets');
   redirect('/tickets');
