@@ -73,11 +73,11 @@ const SECURITY_HEADERS: Record<string, string> = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires inline scripts
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com", // Next.js + Google Maps
     "style-src 'self' 'unsafe-inline'", // Tailwind
-    "img-src 'self' data: blob: https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com",
-    "font-src 'self'",
-    "connect-src 'self' https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com",
+    "img-src 'self' data: blob: https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "connect-src 'self' https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://maps.googleapis.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
