@@ -650,18 +650,18 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
     throw new Error('Photo upload is not available on this plan');
   }
 
-  // Verify the job belongs to this driver and is completed
+  // Verify the job belongs to this driver
   const job = await prisma.job.findFirst({
     where: {
       id: jobId,
-      status: 'COMPLETED',
+      status: { in: ['COMPLETED', 'IN_PROGRESS', 'ASSIGNED', 'PARTIALLY_COMPLETED'] },
       OR: [
         { driverId: driver.id },
         { assignments: { some: { driverId: driver.id } } },
       ],
     },
   });
-  if (!job) throw new Error('Job not found or not completed');
+  if (!job) throw new Error('Job not found');
 
   // Block if job has invoiced tickets
   const invoicedCheck = await prisma.ticket.count({ where: { jobId, invoiceId: { not: null } } });
