@@ -33,6 +33,23 @@ export async function POST(req: NextRequest) {
     }
 
     const normalizedKey = phone.replace(/\D/g, '');
+
+    // Helper: check if driver has security questions by phone
+    async function driverHasSecurityQuestions(phoneKey: string): Promise<boolean> {
+      const phoneVariants = [
+        phoneKey,
+        `+${phoneKey}`,
+        `+1${phoneKey}`,
+        phoneKey.startsWith('1') ? `+${phoneKey}` : null,
+        phoneKey.startsWith('1') ? phoneKey.slice(1) : null,
+      ].filter(Boolean) as string[];
+      const d = await prisma.driver.findFirst({
+        where: { phone: { in: phoneVariants } },
+        select: { securityQ1: true },
+      });
+      return !!d?.securityQ1;
+    }
+
     const limit = await checkRateLimit({
       key: normalizedKey,
       type: 'driver_login',
@@ -40,8 +57,10 @@ export async function POST(req: NextRequest) {
       windowMs: LOCKOUT_MS,
     });
     if (!limit.allowed) {
+      const hasSQ = await driverHasSecurityQuestions(normalizedKey);
       return NextResponse.json({
         error: 'locked',
+        hasSecurityQuestions: hasSQ,
         message: 'Account locked due to too many failed attempts. Please reset your PIN.',
       }, { status: 429 });
     }
@@ -66,8 +85,10 @@ export async function POST(req: NextRequest) {
         windowMs: LOCKOUT_MS,
       });
       if (!afterLimit.allowed) {
+        const hasSQ = await driverHasSecurityQuestions(normalizedKey);
         return NextResponse.json({
           error: 'locked',
+          hasSecurityQuestions: hasSQ,
           message: 'Account locked due to too many failed attempts. Please reset your PIN.',
         }, { status: 429 });
       }

@@ -159,23 +159,35 @@ export async function loginWithCredentials(email: string, password: string) {
     maxAttempts: 3,
     windowMs: 15 * 60 * 1000,
   });
-  if (!limit.allowed) return { locked: true as const };
+  // Helper: check if user has security questions set
+  async function hasSecurityQuestions(email: string): Promise<boolean> {
+    const u = await prisma.user.findUnique({
+      where: { email },
+      select: { securityQ1: true },
+    });
+    return !!u?.securityQ1;
+  }
+
+  if (!limit.allowed) {
+    const hasSQ = await hasSecurityQuestions(normalizedEmail);
+    return { locked: true as const, hasSecurityQuestions: hasSQ };
+  }
 
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
-    select: { id: true, email: true, name: true, role: true, companyId: true, passwordHash: true },
+    select: { id: true, email: true, name: true, role: true, companyId: true, passwordHash: true, securityQ1: true },
   });
   if (!user) {
     await recordAttempt(normalizedEmail, 'dispatcher_login', false);
     const afterLimit = await checkRateLimit({ key: normalizedEmail, type: 'dispatcher_login', maxAttempts: 3, windowMs: 15 * 60 * 1000 });
-    if (!afterLimit.allowed) return { locked: true as const };
+    if (!afterLimit.allowed) return { locked: true as const, hasSecurityQuestions: false };
     return { notFound: true as const, attemptsLeft: afterLimit.attemptsLeft };
   }
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
     await recordAttempt(normalizedEmail, 'dispatcher_login', false);
     const afterLimit = await checkRateLimit({ key: normalizedEmail, type: 'dispatcher_login', maxAttempts: 3, windowMs: 15 * 60 * 1000 });
-    if (!afterLimit.allowed) return { locked: true as const };
+    if (!afterLimit.allowed) return { locked: true as const, hasSecurityQuestions: !!user.securityQ1 };
     return { failed: true as const, attemptsLeft: afterLimit.attemptsLeft };
   }
 

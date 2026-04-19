@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; next?: string; suspended?: string; signedout?: string; locked?: string; attempts?: string; notfound?: string };
+  searchParams: { error?: string; next?: string; suspended?: string; signedout?: string; locked?: string; attempts?: string; notfound?: string; sq?: string };
 }) {
   const session = await getSession();
   if (session) {
@@ -34,7 +34,8 @@ export default async function LoginPage({
       redirect(`/login?error=1${next ? `&next=${encodeURIComponent(next)}` : ''}`);
     }
     if ('locked' in result && result.locked) {
-      redirect('/login?locked=1');
+      const sq = result.hasSecurityQuestions ? '1' : '0';
+      redirect(`/login?locked=1&sq=${sq}`);
     }
     if ('notFound' in result && result.notFound) {
       redirect(`/login?notfound=1${next ? `&next=${encodeURIComponent(next)}` : ''}`);
@@ -77,7 +78,16 @@ export default async function LoginPage({
           {searchParams.locked && (
             <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
               <p className="font-medium">Account locked</p>
-              <p className="mt-1">Too many failed login attempts. Please <a href="/forgot-password" className="underline font-medium">reset your password</a> to unlock your account.</p>
+              <p className="mt-1">Too many failed login attempts. Please reset your password to unlock your account.</p>
+              {searchParams.sq === '1' ? (
+                <a href="/forgot-password/security" className="mt-2 inline-block w-full text-center py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors text-sm">
+                  Reset via Security Questions
+                </a>
+              ) : (
+                <a href="/forgot-password" className="mt-2 inline-block w-full text-center py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors text-sm">
+                  Reset via Email
+                </a>
+              )}
             </div>
           )}
           {searchParams.notfound && !searchParams.locked && (
