@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; next?: string; suspended?: string };
+  searchParams: { error?: string; next?: string; suspended?: string; signedout?: string };
 }) {
   const session = await getSession();
   if (session) {
@@ -62,6 +62,9 @@ export default async function LoginPage({
             <label className="label" htmlFor="password">Password</label>
             <input id="password" name="password" type="password" required className="input" />
           </div>
+          {searchParams.signedout && (
+            <p className="text-sm text-green-600">You have been signed out successfully.</p>
+          )}
           {searchParams.error && (
             <p className="text-sm text-red-600">Invalid email or password.</p>
           )}
