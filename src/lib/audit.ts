@@ -19,7 +19,14 @@ export type AuditAction =
   | 'plan_change'
   | 'feature_override'
   | 'force_password_reset'
-  | 'send_reset_email';
+  | 'send_reset_email'
+  | 'force_pin_reset'
+  | 'send_driver_reset_email'
+  | 'clear_security_questions'
+  | 'reset_driver_setup'
+  | 'impersonate'
+  | 'force_logout'
+  | 'force_logout_all';
 
 interface AuditEntry {
   companyId: string;
