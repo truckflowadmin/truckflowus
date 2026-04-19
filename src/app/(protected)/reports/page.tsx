@@ -210,13 +210,12 @@ export default async function ReportsPage({
 
   // 11) Document compliance
   const allDrivers = await prisma.driver.count({ where: { companyId: session.companyId, active: true } });
-  const driversWithAllDocs = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
-    `SELECT COUNT(DISTINCT d."id") as cnt
-     FROM "Driver" d
-     WHERE d."companyId" = $1 AND d."active" = true
-       AND (SELECT COUNT(DISTINCT dd."docType") FROM "DriverDocument" dd WHERE dd."driverId" = d."id" AND dd."docType" IN ('LICENSE_FRONT','LICENSE_BACK','MEDICAL_CERT','VOID_CHECK')) = 4`,
-    session.companyId
-  );
+  const driversWithAllDocs = await prisma.$queryRaw<{ cnt: bigint }[]>`
+    SELECT COUNT(DISTINCT d."id") as cnt
+    FROM "Driver" d
+    WHERE d."companyId" = ${session.companyId} AND d."active" = true
+      AND (SELECT COUNT(DISTINCT dd."docType") FROM "DriverDocument" dd WHERE dd."driverId" = d."id" AND dd."docType" IN ('LICENSE_FRONT','LICENSE_BACK','MEDICAL_CERT','VOID_CHECK')) = 4
+  `;
   const compliantDrivers = Number(driversWithAllDocs[0]?.cnt ?? 0);
 
   return (

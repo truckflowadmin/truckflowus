@@ -34,9 +34,8 @@ export async function POST(req: NextRequest) {
     }
     console.warn('[sms-webhook] TEXTBELT_WEBHOOK_SECRET not set — allowing in dev mode');
   } else {
-    const provided =
-      req.nextUrl.searchParams.get('secret') ||
-      req.headers.get('x-webhook-secret');
+    // Only accept secret via header — query strings leak in logs
+    const provided = req.headers.get('x-webhook-secret');
     if (provided !== webhookSecret) {
       console.warn('[sms-webhook] Rejected: invalid or missing webhook secret');
       return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });

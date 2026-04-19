@@ -31,7 +31,11 @@ async function verifyJwtEdge(token: string, secret: string): Promise<boolean> {
 }
 
 function getJwtSecretForMiddleware(): string {
-  return process.env.JWT_SECRET || 'dev-insecure-secret-change-me';
+  const secret = process.env.JWT_SECRET;
+  if (!secret && process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be set in production');
+  }
+  return secret || 'dev-insecure-secret-change-me';
 }
 
 // Tenant-scoped dispatcher/admin routes.
