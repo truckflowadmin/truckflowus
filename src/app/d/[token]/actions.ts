@@ -493,11 +493,11 @@ export async function uploadTicketPhoto(formData: FormData) {
     throw new Error('Photo upload is not available on this plan');
   }
 
-  // Verify the ticket belongs to this driver and is completed
+  // Verify the ticket belongs to this driver
   const ticket = await prisma.ticket.findFirst({
-    where: { id: ticketId, driverId: driver.id, status: 'COMPLETED' },
+    where: { id: ticketId, driverId: driver.id, status: { in: ['COMPLETED', 'IN_PROGRESS', 'DISPATCHED'] } },
   });
-  if (!ticket) throw new Error('Ticket not found or not completed');
+  if (!ticket) throw new Error('Ticket not found');
   if (ticket.invoiceId) throw new Error('This ticket is on an invoice and cannot be modified');
 
   // Read file into buffer
