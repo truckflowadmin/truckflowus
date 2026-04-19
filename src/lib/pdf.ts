@@ -33,6 +33,7 @@ interface InvoiceForPdf {
     completedAt: Date | null;
     material: string | null;
     quantity: number;
+    quantityType: string;
     ratePerUnit: any;
   }[];
 }
