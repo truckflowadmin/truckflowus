@@ -6,6 +6,7 @@ import { requireSuperadmin } from '@/lib/auth';
 import { FEATURE_LABELS, featuresBySide, formatPrice } from '@/lib/features';
 import TenantNav from '@/components/TenantNav';
 import { audit } from '@/lib/audit';
+import { getServerLang, t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -144,6 +145,7 @@ export default async function TenantDetailPage({
   searchParams: { deleteError?: string };
 }) {
   await requireSuperadmin();
+  const lang = getServerLang();
 
   const [company, plans, dispatcherCount, driverCount, ticketCount, invoiceCount] =
     await Promise.all([
@@ -195,45 +197,45 @@ export default async function TenantDetailPage({
             {[company.city, company.state, company.zip].filter(Boolean).join(', ') || '—'}
           </p>
           <p className="text-purple-300 text-xs mt-1">
-            Tenant since {company.createdAt.toLocaleDateString()}
+            {t('sa.tenantSince', lang)} {company.createdAt.toLocaleDateString()}
           </p>
         </div>
         {company.suspended ? (
-          <span className="badge bg-red-900 text-red-200">Suspended</span>
+          <span className="badge bg-red-900 text-red-200">{t('sa.suspended', lang)}</span>
         ) : (
-          <span className="badge bg-emerald-900 text-emerald-200">Active</span>
+          <span className="badge bg-emerald-900 text-emerald-200">{t('common.active', lang)}</span>
         )}
       </header>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Dispatchers" value={dispatcherCount} />
-        <Stat label="Drivers" value={driverCount} />
-        <Stat label="Tickets" value={ticketCount} />
-        <Stat label="Invoices" value={invoiceCount} />
+        <Stat label={t('sa.dispatchers', lang)} value={dispatcherCount} />
+        <Stat label={t('sa.drivers', lang)} value={driverCount} />
+        <Stat label={t('nav.tickets', lang)} value={ticketCount} />
+        <Stat label={t('nav.invoices', lang)} value={invoiceCount} />
       </div>
 
       {/* Usage this month */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Stat label="Tickets (30d)" value={ticketsThisMonth} />
-        <Stat label="Photo uploads" value={photoUploads} />
-        <Stat label="Active drivers" value={driverCount} />
+        <Stat label={t('sa.tickets30d', lang)} value={ticketsThisMonth} />
+        <Stat label={t('sa.photoUploads', lang)} value={photoUploads} />
+        <Stat label={t('sa.activeDrivers', lang)} value={driverCount} />
       </div>
 
       {/* Subscription */}
       <section className="panel-sa">
-        <h2 className="font-semibold text-white mb-3">Subscription</h2>
+        <h2 className="font-semibold text-white mb-3">{t('sa.subscription', lang)}</h2>
         <form action={changePlan} className="flex items-end gap-3 flex-wrap">
           <input type="hidden" name="companyId" value={company.id} />
           <div className="flex-1 min-w-[200px]">
-            <label className="label-sa" htmlFor="planId">Plan</label>
+            <label className="label-sa" htmlFor="planId">{t('sa.plan', lang)}</label>
             <select
               id="planId"
               name="planId"
               defaultValue={company.planId ?? ''}
               className="input-sa"
             >
-              <option value="">— No plan —</option>
+              <option value="">{t('sa.noPlan', lang)}</option>
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} · {formatPrice(p.priceMonthlyCents)}
@@ -241,14 +243,14 @@ export default async function TenantDetailPage({
               ))}
             </select>
           </div>
-          <button type="submit" className="btn-purple">Update plan</button>
+          <button type="submit" className="btn-purple">{t('sa.updatePlan', lang)}</button>
         </form>
         {company.plan && (
           <p className="text-purple-300 text-xs mt-2">
-            Limits: drivers {company.plan.maxDrivers ?? 'unlimited'} · tickets/mo{' '}
-            {company.plan.maxTicketsPerMonth ?? 'unlimited'}.{' '}
+            {t('sa.limits', lang)}: {t('sa.driversLabel', lang)} {company.plan.maxDrivers ?? t('sa.unlimited', lang)} · {t('sa.ticketsLabel', lang)}{' '}
+            {company.plan.maxTicketsPerMonth ?? t('sa.unlimited', lang)}.{' '}
             <Link href={`/sa/plans/${company.plan.id}/edit`} className="text-purple-400 hover:text-purple-200">
-              Edit plan template →
+              {t('sa.editPlanTemplate', lang)}
             </Link>
           </p>
         )}
@@ -256,19 +258,18 @@ export default async function TenantDetailPage({
 
       {/* Unified Feature Management */}
       <section className="panel-sa">
-        <h2 className="font-semibold text-white mb-1">Feature Management</h2>
+        <h2 className="font-semibold text-white mb-1">{t('sa.featureManagement', lang)}</h2>
         <p className="text-xs text-purple-300 mb-4">
-          Checkboxes reflect the effective state: plan baseline + per-tenant overrides.
-          Changes here create per-tenant overrides without modifying the plan template.
+          {t('sa.featureDesc', lang)}
         </p>
         <form action={saveFeatureOverrides}>
           <input type="hidden" name="companyId" value={company.id} />
 
           {([
-            { title: 'Dispatcher Features', hint: 'Web app for dispatchers and admins', items: grouped.dispatcher },
-            { title: 'Dispatcher View Access', hint: 'Controls which sidebar tabs dispatchers can see. Unchecked tabs show a locked upgrade prompt.', items: grouped.dispatcher_views },
-            { title: 'Driver App Features', hint: 'Mobile view at /d/[token]', items: grouped.driver },
-            { title: 'Driver View Access', hint: 'Controls which tabs drivers see in their mobile app. Unchecked tabs are hidden.', items: grouped.driver_views },
+            { title: t('sa.dispatcherFeatures', lang), hint: t('sa.webApp', lang), items: grouped.dispatcher },
+            { title: t('sa.dispatcherViewAccess', lang), hint: t('sa.viewAccessHint', lang), items: grouped.dispatcher_views },
+            { title: t('sa.driverAppFeatures', lang), hint: t('sa.driverMobileHint', lang), items: grouped.driver },
+            { title: t('sa.driverViewAccess', lang), hint: t('sa.driverViewHint', lang), items: grouped.driver_views },
           ]).map((section) => (
             <div key={section.title} className="mb-6">
               <div className="label-sa">{section.title}</div>
@@ -311,15 +312,15 @@ export default async function TenantDetailPage({
             </div>
           ))}
 
-          <button type="submit" className="btn-purple">Save feature overrides</button>
+          <button type="submit" className="btn-purple">{t('sa.saveFeatureOverrides', lang)}</button>
         </form>
       </section>
 
       {/* Dispatchers */}
       <section className="panel-sa">
-        <h2 className="font-semibold text-white mb-3">Dispatchers</h2>
+        <h2 className="font-semibold text-white mb-3">{t('sa.dispatchers', lang)}</h2>
         {company.users.length === 0 ? (
-          <p className="text-purple-300 text-sm italic">No dispatchers yet.</p>
+          <p className="text-purple-300 text-sm italic">{t('sa.noDispatchers', lang)}</p>
         ) : (
           <ul className="divide-y divide-purple-900/40 text-sm">
             {company.users.map((u) => (
@@ -337,23 +338,23 @@ export default async function TenantDetailPage({
 
       {/* Tenant status */}
       <section className="panel-sa">
-        <h2 className="font-semibold text-white mb-3">Tenant status</h2>
+        <h2 className="font-semibold text-white mb-3">{t('sa.tenantStatus', lang)}</h2>
         <form action={toggleSuspended}>
           <input type="hidden" name="companyId" value={company.id} />
           <input type="hidden" name="next" value={(!company.suspended).toString()} />
           {company.suspended ? (
             <>
               <p className="text-sm text-purple-200 mb-3">
-                This tenant is currently suspended. Their admins and dispatchers cannot log in.
+                {t('sa.suspendedDesc', lang)}
               </p>
-              <button type="submit" className="btn-purple">Unsuspend tenant</button>
+              <button type="submit" className="btn-purple">{t('sa.unsuspendTenant', lang)}</button>
             </>
           ) : (
             <>
               <p className="text-sm text-purple-200 mb-3">
-                Suspending blocks login for this tenant's dispatchers. Data is preserved.
+                {t('sa.suspendDesc', lang)}
               </p>
-              <button type="submit" className="btn-danger">Suspend tenant</button>
+              <button type="submit" className="btn-danger">{t('sa.suspendTenant', lang)}</button>
             </>
           )}
         </form>
@@ -361,21 +362,20 @@ export default async function TenantDetailPage({
 
       {/* Danger zone */}
       <section className="panel-sa border-red-900/60">
-        <h2 className="font-semibold text-white mb-3">Danger zone</h2>
+        <h2 className="font-semibold text-white mb-3">{t('sa.dangerZone', lang)}</h2>
         <form action={deleteTenant} className="space-y-3">
           <input type="hidden" name="companyId" value={company.id} />
           {searchParams.deleteError && (
             <p className="text-sm text-red-300 bg-red-950 border border-red-800 rounded px-3 py-2">
-              Confirmation name did not match. Type the exact company name to delete.
+              {t('sa.confirmNameError', lang)}
             </p>
           )}
           <p className="text-sm text-purple-200">
-            Deleting removes this tenant and <strong className="text-red-300">all</strong> of their
-            users, drivers, customers, tickets, and invoices. This cannot be undone. Type{' '}
-            <code className="text-red-300">{company.name}</code> to confirm.
+            {t('sa.deleteWarning', lang)} <strong className="text-red-300">{t('sa.allData', lang)}</strong> {t('sa.deleteDataList', lang)}{' '}
+            <code className="text-red-300">{company.name}</code> {t('sa.toConfirm', lang)}
           </p>
           <input name="confirmName" className="input-sa" placeholder={company.name} required />
-          <button type="submit" className="btn-danger">Permanently delete tenant</button>
+          <button type="submit" className="btn-danger">{t('sa.permanentlyDelete', lang)}</button>
         </form>
       </section>
     </div>

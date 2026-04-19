@@ -3,18 +3,21 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLanguage } from './LanguageProvider';
+import LanguageToggle from './LanguageToggle';
 
 const NAV = [
-  { href: '/sa/overview', label: 'Overview', icon: '◆' },
-  { href: '/sa/tenants', label: 'Tenants', icon: '▦' },
-  { href: '/sa/plans', label: 'Plans', icon: '$' },
-  { href: '/sa/requests', label: 'Requests', icon: '⬆' },
-  { href: '/sa/brokers', label: 'Brokers', icon: '⇆' },
+  { href: '/sa/overview', labelKey: 'nav.overview', icon: '◆' },
+  { href: '/sa/tenants', labelKey: 'nav.tenants', icon: '▦' },
+  { href: '/sa/plans', labelKey: 'nav.plans', icon: '$' },
+  { href: '/sa/requests', labelKey: 'nav.requests', icon: '⬆' },
+  { href: '/sa/brokers', labelKey: 'nav.brokers', icon: '⇆' },
 ];
 
 export function SuperadminSidebar({ user }: { user: { name: string; email: string } }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { t } = useLanguage();
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/');
 
@@ -44,18 +47,21 @@ export function SuperadminSidebar({ user }: { user: { name: string; email: strin
             }`}
           >
             <span className="text-purple-400 w-5 text-center">{item.icon}</span>
-            {item.label}
+            {t(item.labelKey)}
           </Link>
         ))}
       </nav>
       <div className="p-3 border-t border-purple-900 text-xs">
-        <div className="px-3 py-2">
-          <div className="text-white font-medium">{user.name}</div>
-          <div className="text-purple-300">{user.email}</div>
+        <div className="px-3 py-2 flex items-center justify-between">
+          <div>
+            <div className="text-white font-medium">{user.name}</div>
+            <div className="text-purple-300">{user.email}</div>
+          </div>
+          <LanguageToggle variant="superadmin" />
         </div>
         <form action="/api/logout" method="post">
           <button className="w-full text-left px-3 py-2 rounded hover:bg-purple-900 text-purple-300 hover:text-white">
-            Sign out
+            {t('common.signOut')}
           </button>
         </form>
       </div>

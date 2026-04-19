@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { requireSuperadmin } from '@/lib/auth';
 import { formatPrice } from '@/lib/features';
+import { getServerLang, t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PlansPage() {
   await requireSuperadmin();
+  const lang = getServerLang();
 
   const plans = await prisma.plan.findMany({
     orderBy: { sortOrder: 'asc' },
@@ -16,9 +18,9 @@ export default async function PlansPage() {
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
       <header>
-        <h1 className="text-xl md:text-2xl font-bold text-white">Subscription Plans</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">{t('sa.subscriptionPlans', lang)}</h1>
         <p className="text-purple-300 text-sm">
-          Prices and feature sets. Changes apply to every tenant on that plan immediately.
+          {t('sa.plansSubtitle', lang)}
         </p>
       </header>
 
@@ -34,7 +36,7 @@ export default async function PlansPage() {
                 <div className="text-2xl font-bold text-white">
                   {formatPrice(p.priceMonthlyCents)}
                 </div>
-                {!p.active && <div className="text-xs text-red-400">Inactive</div>}
+                {!p.active && <div className="text-xs text-red-400">{t('common.inactive', lang)}</div>}
               </div>
             </div>
             {p.description && (
@@ -42,22 +44,22 @@ export default async function PlansPage() {
             )}
             <ul className="text-xs text-purple-300 space-y-1 mb-3">
               <li>
-                Drivers: <span className="text-white">{p.maxDrivers ?? 'unlimited'}</span>
+                {t('sa.drivers', lang)}: <span className="text-white">{p.maxDrivers ?? t('sa.unlimited', lang)}</span>
               </li>
               <li>
-                Tickets/mo:{' '}
-                <span className="text-white">{p.maxTicketsPerMonth ?? 'unlimited'}</span>
+                {t('sa.ticketsPerMonth', lang)}:{' '}
+                <span className="text-white">{p.maxTicketsPerMonth ?? t('sa.unlimited', lang)}</span>
               </li>
               <li>
-                Features: <span className="text-white">{p.features.length}</span>
+                {t('sa.features', lang)}: <span className="text-white">{p.features.length}</span>
               </li>
               <li>
-                Tenants on this plan: <span className="text-white">{p._count.companies}</span>
+                {t('sa.tenantsOnPlan', lang)}: <span className="text-white">{p._count.companies}</span>
               </li>
             </ul>
             <div className="mt-auto pt-2">
               <Link href={`/sa/plans/${p.id}/edit`} className="btn-purple w-full">
-                Edit
+                {t('common.edit', lang)}
               </Link>
             </div>
           </div>

@@ -2,10 +2,13 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useLanguage } from '@/components/LanguageProvider';
+import LanguageToggle from '@/components/LanguageToggle';
 
 function DriverLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const signedOut = searchParams.get('signedout') === '1';
   const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
@@ -61,15 +64,15 @@ function DriverLoginForm() {
       {/* Logo / Brand */}
       <div className="text-center mb-8">
         <div className="text-4xl font-black text-white tracking-tight">TruckFlowUS</div>
-        <p className="text-steel-400 text-sm mt-1">Driver Portal</p>
+        <p className="text-steel-400 text-sm mt-1">{t('driver.login')}</p>
       </div>
 
       {/* Login Card */}
       <form onSubmit={handleLogin} className="bg-white rounded-xl shadow-lg p-6 space-y-4">
-        <h2 className="text-lg font-bold text-center text-steel-900">Sign In</h2>
+        <h2 className="text-lg font-bold text-center text-steel-900">{t('driver.login')}</h2>
 
         <div>
-          <label className="block text-xs font-medium text-steel-600 mb-1">Phone Number</label>
+          <label className="block text-xs font-medium text-steel-600 mb-1">{t('common.phone')}</label>
           <input
             type="tel"
             value={phone}
@@ -141,12 +144,12 @@ function DriverLoginForm() {
           disabled={loading || !phone || pin.length < 4}
           className="w-full py-3 bg-safety text-diesel font-bold text-lg rounded-lg hover:bg-safety-dark transition-colors disabled:opacity-50"
         >
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? 'Signing in...' : t('driver.login')}
         </button>
 
         <div className="text-center">
           <a href="/d/reset" className="text-sm text-blue-600 hover:text-blue-800">
-            Forgot your PIN?
+            {t('driver.forgotPin')}
           </a>
         </div>
       </form>
@@ -154,14 +157,19 @@ function DriverLoginForm() {
       <p className="text-center text-steel-500 text-xs mt-6">
         First time? Use the link your dispatcher sent you.
       </p>
+
+      <div className="mt-4 flex justify-center">
+        <LanguageToggle variant="driver" />
+      </div>
     </div>
   );
 }
 
 export default function DriverLoginPage() {
+  const { t } = useLanguage();
   return (
     <div className="min-h-screen bg-diesel flex items-center justify-center p-4">
-      <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <Suspense fallback={<div className="text-white">{t('common.loading')}</div>}>
         <DriverLoginForm />
       </Suspense>
     </div>

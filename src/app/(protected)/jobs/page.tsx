@@ -5,11 +5,13 @@ export const revalidate = 0;
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
+import { getServerLang, t } from '@/lib/i18n';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import JobDashboard from './JobDashboard';
 
 export default async function JobsPage() {
   const session = await requireSession();
+  const lang = getServerLang();
   const companyId = session.companyId;
   const lastWeekStart = startOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 });
   const lastWeekEnd = endOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 });
@@ -72,11 +74,11 @@ export default async function JobsPage() {
     <div className="p-4 md:p-8 max-w-7xl">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Operations</div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Jobs</h1>
+          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('jobs.operations', lang)}</div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('jobs.title', lang)}</h1>
         </div>
         <div className="flex gap-2">
-          <Link href="/jobs/new" className="btn-accent">+ New Job</Link>
+          <Link href="/jobs/new" className="btn-accent">{t('jobs.newJob', lang)}</Link>
         </div>
       </header>
 

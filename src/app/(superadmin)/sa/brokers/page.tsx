@@ -4,6 +4,7 @@ import { requireSuperadmin } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import BrokerContactsEditor from '@/components/BrokerContactsEditor';
 import type { BrokerContact } from '@/lib/broker-types';
+import { getServerLang, t } from '@/lib/i18n';
 
 async function createBrokerAction(formData: FormData) {
   'use server';
@@ -54,6 +55,7 @@ function primaryContact(broker: { contacts: unknown }): BrokerContact | null {
 
 export default async function SuperadminBrokersPage() {
   await requireSuperadmin();
+  const lang = getServerLang();
 
   const brokers = await prisma.broker.findMany({
     orderBy: { createdAt: 'desc' },
@@ -78,8 +80,8 @@ export default async function SuperadminBrokersPage() {
   return (
     <div className="p-4 md:p-8 max-w-6xl">
       <header className="mb-6">
-        <div className="text-xs uppercase tracking-widest text-purple-400 font-semibold">Platform</div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Brokers</h1>
+        <div className="text-xs uppercase tracking-widest text-purple-400 font-semibold">{t('sa.platform', lang)}</div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">{t('brokers.title', lang)}</h1>
         <p className="text-sm text-purple-300 mt-1">{brokers.length} brokers total — {unassigned.length} unassigned, {assigned.length} assigned across {byCompany.size} tenants</p>
       </header>
 
@@ -87,37 +89,37 @@ export default async function SuperadminBrokersPage() {
       <form action={createBrokerAction} className="panel-sa p-5 mb-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="label-sa">Broker Name *</label>
+            <label className="label-sa">{t('sa.brokerName', lang)}</label>
             <input name="name" required className="input-sa" />
           </div>
           <div>
-            <label className="label-sa">Primary Email</label>
+            <label className="label-sa">{t('sa.primaryEmail', lang)}</label>
             <input name="email" type="email" className="input-sa" />
           </div>
           <div>
-            <label className="label-sa">Commission %</label>
+            <label className="label-sa">{t('brokers.commissionPct', lang)}</label>
             <input name="commissionPct" type="number" step="0.01" min="0" max="100" defaultValue="0" className="input-sa" />
           </div>
         </div>
         <BrokerContactsEditor />
-        <button className="btn-purple" type="submit">+ Add Broker</button>
+        <button className="btn-purple" type="submit">{t('sa.addBroker', lang)}</button>
       </form>
 
       {/* Unassigned brokers */}
       {unassigned.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-white mb-2">Unassigned Brokers</h2>
+          <h2 className="text-lg font-semibold text-white mb-2">{t('sa.unassignedBrokers', lang)}</h2>
           <div className="panel-sa overflow-hidden overflow-x-auto">
             <table className="w-full text-sm text-white min-w-[700px]">
               <thead className="text-xs uppercase tracking-wide text-purple-300 border-b border-purple-500/30">
                 <tr>
-                  <th className="text-left px-5 py-2">Name</th>
-                  <th className="text-left px-5 py-2">Primary Contact</th>
-                  <th className="text-left px-5 py-2">Job Title</th>
-                  <th className="text-left px-5 py-2">Phone</th>
-                  <th className="text-right px-5 py-2">Commission %</th>
-                  <th className="text-right px-5 py-2">Contacts</th>
-                  <th className="text-left px-5 py-2">Status</th>
+                  <th className="text-left px-5 py-2">{t('common.name', lang)}</th>
+                  <th className="text-left px-5 py-2">{t('brokers.primaryContact', lang)}</th>
+                  <th className="text-left px-5 py-2">{t('brokers.jobTitle', lang)}</th>
+                  <th className="text-left px-5 py-2">{t('common.phone', lang)}</th>
+                  <th className="text-right px-5 py-2">{t('brokers.commissionPct', lang)}</th>
+                  <th className="text-right px-5 py-2">{t('sa.contacts', lang)}</th>
+                  <th className="text-left px-5 py-2">{t('common.status', lang)}</th>
                   <th className="text-right px-5 py-2"></th>
                 </tr>
               </thead>
@@ -134,16 +136,16 @@ export default async function SuperadminBrokersPage() {
                       <td className="px-5 py-3 text-right tabular-nums text-purple-100">{Number(b.commissionPct).toFixed(1)}%</td>
                       <td className="px-5 py-3 text-right tabular-nums text-purple-100">{total}</td>
                       <td className="px-5 py-3">
-                        <span className="badge bg-yellow-500/20 text-yellow-300">Unassigned</span>
+                        <span className="badge bg-yellow-500/20 text-yellow-300">{t('sa.unassigned', lang)}</span>
                       </td>
                       <td className="px-5 py-3 text-right flex items-center justify-end gap-3">
                         <Link href={`/sa/brokers/${b.id}/edit`} className="text-xs text-purple-400 hover:text-purple-200">
-                          Edit
+                          {t('common.edit', lang)}
                         </Link>
                         <form action={deleteBrokerAction}>
                           <input type="hidden" name="brokerId" value={b.id} />
                           <button type="submit" className="text-xs text-red-400 hover:text-red-300">
-                            Delete
+                            {t('common.delete', lang)}
                           </button>
                         </form>
                       </td>
@@ -158,27 +160,27 @@ export default async function SuperadminBrokersPage() {
 
       {/* Assigned brokers grouped by company */}
       {brokers.length === 0 ? (
-        <div className="panel-sa p-10 text-center text-purple-300">No brokers have been created yet. Add one above.</div>
+        <div className="panel-sa p-10 text-center text-purple-300">{t('sa.noBrokersYet', lang)}</div>
       ) : (
         Array.from(byCompany.values()).map(({ companyName, companyId, brokers: companyBrokers }) => (
           <div key={companyId} className="mb-6">
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-lg font-semibold text-white">{companyName}</h2>
               <Link href={`/sa/tenants/${companyId}/brokers`} className="text-xs text-purple-400 hover:text-purple-200">
-                Manage →
+                {t('sa.manage', lang)} →
               </Link>
             </div>
             <div className="panel-sa overflow-hidden">
               <table className="w-full text-sm text-white">
                 <thead className="text-xs uppercase tracking-wide text-purple-300 border-b border-purple-500/30">
                   <tr>
-                    <th className="text-left px-5 py-2">Name</th>
-                    <th className="text-left px-5 py-2">Primary Contact</th>
-                    <th className="text-left px-5 py-2">Job Title</th>
-                    <th className="text-left px-5 py-2">Phone</th>
-                    <th className="text-right px-5 py-2">Commission %</th>
-                    <th className="text-right px-5 py-2">Tickets</th>
-                    <th className="text-left px-5 py-2">Status</th>
+                    <th className="text-left px-5 py-2">{t('common.name', lang)}</th>
+                    <th className="text-left px-5 py-2">{t('brokers.primaryContact', lang)}</th>
+                    <th className="text-left px-5 py-2">{t('brokers.jobTitle', lang)}</th>
+                    <th className="text-left px-5 py-2">{t('common.phone', lang)}</th>
+                    <th className="text-right px-5 py-2">{t('brokers.commissionPct', lang)}</th>
+                    <th className="text-right px-5 py-2">{t('nav.tickets', lang)}</th>
+                    <th className="text-left px-5 py-2">{t('common.status', lang)}</th>
                     <th className="text-right px-5 py-2"></th>
                   </tr>
                 </thead>
@@ -195,17 +197,17 @@ export default async function SuperadminBrokersPage() {
                         <td className="px-5 py-3 text-right tabular-nums text-purple-100">{b._count.tickets}</td>
                         <td className="px-5 py-3">
                           <span className={`badge ${b.active ? 'bg-green-500/20 text-green-300' : 'bg-steel-500/20 text-steel-400'}`}>
-                            {b.active ? 'Active' : 'Inactive'}
+                            {b.active ? t('common.active', lang) : t('common.inactive', lang)}
                           </span>
                         </td>
                         <td className="px-5 py-3 text-right flex items-center justify-end gap-3">
                           <Link href={`/sa/tenants/${companyId}/brokers/${b.id}/edit`} className="text-xs text-purple-400 hover:text-purple-200">
-                            Edit
+                            {t('common.edit', lang)}
                           </Link>
                           <form action={deleteBrokerAction}>
                             <input type="hidden" name="brokerId" value={b.id} />
                             <button type="submit" className="text-xs text-red-400 hover:text-red-300">
-                              Delete
+                              {t('common.delete', lang)}
                             </button>
                           </form>
                         </td>

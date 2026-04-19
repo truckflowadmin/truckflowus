@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import RotatableImage from '@/components/RotatableImage';
 import { driverUpdateStatus, uploadTicketPhoto, claimJob, driverUpdateJobStatus, requestTimeOff, cancelTimeOff, driverSubmitReviewedTickets, driverEditTicket } from './actions';
+import { useLanguage } from '@/components/LanguageProvider';
+import LanguageToggle from '@/components/LanguageToggle';
 
 // ---- Types ----------------------------------------------------------------
 interface TicketData {
@@ -269,6 +271,7 @@ function CancelJobButton({ loading, onCancel }: { loading: boolean; onCancel: ()
 // ---- Main Component -------------------------------------------------------
 export default function DriverTabs(props: DriverTabsProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [tab, setTab] = useState<'active' | 'available' | 'upcoming' | 'completed' | 'calendar' | 'expenses' | 'profile'>('active');
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -306,15 +309,16 @@ export default function DriverTabs(props: DriverTabsProps) {
           </div>
           {props.canSeeDailyStats && (
             <div className="text-right">
-              <div className="text-xs text-steel-400 uppercase tracking-wider">Done Today</div>
+              <div className="text-xs text-steel-400 uppercase tracking-wider">{t('driver.doneToday')}</div>
               <div className="font-bold text-safety tabular-nums">{props.completedToday}</div>
             </div>
           )}
+          <LanguageToggle variant="driver" />
           <button
             onClick={handleLogout}
             disabled={loggingOut}
             className="ml-2 p-2 rounded-lg text-steel-400 hover:text-white hover:bg-steel-700 transition-colors"
-            title="Sign out"
+            title={t('driver.logOut')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -335,7 +339,7 @@ export default function DriverTabs(props: DriverTabsProps) {
                   : 'text-steel-500 hover:text-steel-700'
               }`}
             >
-              Active
+              {t('driver.myJobs')}
             </button>
             {showAvailable && (
               <button
@@ -346,7 +350,7 @@ export default function DriverTabs(props: DriverTabsProps) {
                     : 'text-steel-500 hover:text-steel-700'
                 }`}
               >
-                Available
+                {t('driver.availableJobs')}
                 {props.availableJobs.length > 0 && (
                   <span className="absolute top-1 right-0.5 w-2 h-2 bg-safety rounded-full animate-pulse" />
                 )}
@@ -373,7 +377,7 @@ export default function DriverTabs(props: DriverTabsProps) {
                     : 'text-steel-500 hover:text-steel-700'
                 }`}
               >
-                Done
+                {t('driver.history')}
               </button>
             )}
             <button
@@ -507,6 +511,7 @@ function UpcomingJobCard({
   token: string;
   canUseMaps: boolean;
 }) {
+  const { t } = useLanguage();
   const [jobStatus, setJobStatus] = useState(job.status);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -541,7 +546,7 @@ function UpcomingJobCard({
     } else if (action === 'pause' || action === 'complete' || action === 'cancel') {
       if (resumedAt) {
         const elapsed = Math.max(0, Math.round((Date.now() - new Date(resumedAt).getTime()) / 1000));
-        setTimeSeconds((t) => t + elapsed);
+        setTimeSeconds((prev) => prev + elapsed);
       }
       setResumedAt(null);
     }
@@ -682,7 +687,7 @@ function UpcomingJobCard({
             disabled={loading}
             className="btn-primary w-full py-3 text-base"
           >
-            {loading ? (job.startedAt ? 'Resuming...' : 'Starting...') : job.startedAt ? '▶ Resume Job' : '▶ Start Early'}
+            {loading ? '...' : job.startedAt ? `▶ ${t('driver.resumeJob')}` : `▶ ${t('driver.startJob')}`}
           </button>
         )}
         {isInProgress && (
@@ -693,20 +698,20 @@ function UpcomingJobCard({
                 disabled={loading}
                 className="btn-ghost flex-1 py-3 text-base"
               >
-                {loading ? '...' : '⏸ Pause'}
+                {loading ? '...' : `⏸ ${t('driver.pauseJob')}`}
               </button>
               <button
                 onClick={() => handleAction('complete')}
                 disabled={loading}
                 className="btn-accent flex-1 py-3 text-base font-bold"
               >
-                {loading ? '...' : '✓ End Job'}
+                {loading ? '...' : `✓ ${t('driver.completeJob')}`}
               </button>
             </div>
             {/* Report Issue */}
             {issueSent ? (
               <div className="text-center text-sm text-amber-700 bg-amber-50 rounded-lg py-2 font-medium">
-                ✓ Issue reported — dispatcher notified
+                ✓ {t('driver.reportIssue')}
               </div>
             ) : showIssueForm ? (
               <form
@@ -745,14 +750,14 @@ function UpcomingJobCard({
                     onClick={() => setShowIssueForm(false)}
                     className="btn-ghost flex-1 py-2 text-sm"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
                     className="flex-1 py-2 text-sm font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors"
                   >
-                    {loading ? 'Sending...' : 'Send Report'}
+                    {loading ? '...' : t('common.submit')}
                   </button>
                 </div>
               </form>
@@ -761,14 +766,14 @@ function UpcomingJobCard({
                 onClick={() => setShowIssueForm(true)}
                 className="w-full py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
               >
-                ⚠ Report Issue
+                ⚠ {t('driver.reportIssue')}
               </button>
             )}
           </>
         )}
         {isCompleted && (
           <div className="text-center text-sm text-green-700 font-semibold py-2">
-            ✓ Job Completed
+            ✓ {t('driver.completeJob')}
           </div>
         )}
         {!isCompleted && !isCancelled && (
@@ -793,14 +798,15 @@ function ActiveJobsTab({
   canReportIssues: boolean;
   canUseMaps: boolean;
 }) {
+  const { t } = useLanguage();
   const totalCount = tickets.length + todaysJobs.length;
 
   if (totalCount === 0) {
     return (
       <div className="panel p-8 text-center">
         <div className="text-5xl mb-3">✓</div>
-        <h2 className="font-bold text-lg mb-1">All clear!</h2>
-        <p className="text-sm text-steel-500">No active jobs right now.</p>
+        <h2 className="font-bold text-lg mb-1">{t('driver.noAvailableJobs')}</h2>
+        <p className="text-sm text-steel-500">{t('driver.noActiveTickets')}</p>
       </div>
     );
   }
@@ -808,17 +814,17 @@ function ActiveJobsTab({
   return (
     <div className="space-y-3">
       <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
-        {totalCount} active job{totalCount === 1 ? '' : 's'}
+        {totalCount} {t('driver.myJobs').toLowerCase()}
       </h2>
       {/* Today's jobs (promoted from upcoming) */}
       {todaysJobs.map((j) => (
         <TodaysJobCard key={j.id} job={j} token={token} canUseMaps={canUseMaps} />
       ))}
       {/* Active tickets */}
-      {tickets.map((t) => (
+      {tickets.map((tk) => (
         <JobCard
-          key={t.id}
-          ticket={t}
+          key={tk.id}
+          ticket={tk}
           token={token}
           canReportIssues={canReportIssues}
           canUseMaps={canUseMaps}
@@ -842,12 +848,14 @@ function CompletedTab({
   canUploadPhotos: boolean;
   canAiExtract: boolean;
 }) {
+  const { t } = useLanguage();
+
   if (tickets.length === 0 && completedJobs.length === 0) {
     return (
       <div className="panel p-8 text-center">
         <div className="text-5xl mb-3">📋</div>
-        <h2 className="font-bold text-lg mb-1">No completed jobs yet</h2>
-        <p className="text-sm text-steel-500">Completed jobs will show up here.</p>
+        <h2 className="font-bold text-lg mb-1">{t('driver.noCompletedJobs')}</h2>
+        <p className="text-sm text-steel-500">{t('driver.noCompletedTickets')}</p>
       </div>
     );
   }
@@ -858,7 +866,7 @@ function CompletedTab({
       {completedJobs.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
-            Completed Jobs ({completedJobs.length})
+            {t('driver.completedJobs')} ({completedJobs.length})
           </h2>
           {completedJobs.map((j) => (
             <CompletedJobCard
@@ -876,12 +884,12 @@ function CompletedTab({
       {tickets.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
-            Completed Tickets — Last 7 days ({tickets.length})
+            {t('driver.completedTickets')} ({tickets.length})
           </h2>
-          {tickets.map((t) => (
+          {tickets.map((tk) => (
             <CompletedCard
-              key={t.id}
-              ticket={t}
+              key={tk.id}
+              ticket={tk}
               token={token}
               canUploadPhotos={canUploadPhotos}
               canAiExtract={canAiExtract}
@@ -931,6 +939,7 @@ function CompletedJobCard({
   canUploadPhotos: boolean;
   canAiExtract: boolean;
 }) {
+  const { t } = useLanguage();
   const [items, setItems] = useState<ScannedTicketItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ count: number; tickets: any[] } | null>(null);
@@ -1122,7 +1131,7 @@ function CompletedJobCard({
 
         {/* Missing photo reminder for completed job */}
         {(() => {
-          const missingCount = job.tickets.filter((t) => !t.photoUrl).length;
+          const missingCount = job.tickets.filter((tk) => !tk.photoUrl).length;
           return missingCount > 0 ? (
             <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
               <span className="text-lg leading-none">📷</span>
@@ -1137,10 +1146,10 @@ function CompletedJobCard({
         {job.tickets.length > 0 && (
           <div className="mt-3 space-y-2">
             <h3 className="text-xs uppercase tracking-widest text-steel-500 font-semibold">
-              Submitted Tickets ({job.tickets.length})
+              {t('driver.submitTicket')} ({job.tickets.length})
             </h3>
-            {job.tickets.map((t) => (
-              <SubmittedTicketCard key={t.id} ticket={t} token={token} />
+            {job.tickets.map((tk) => (
+              <SubmittedTicketCard key={tk.id} ticket={tk} token={token} />
             ))}
           </div>
         )}
@@ -1152,7 +1161,7 @@ function CompletedJobCard({
               ✓ {submitResult.count} Ticket{submitResult.count !== 1 ? 's' : ''} Submitted
             </div>
             <div className="text-xs text-blue-700">
-              Ticket numbers: {submitResult.tickets.map((t: any) => `#${String(t.ticketNumber).padStart(4, '0')}`).join(', ')}
+              Ticket numbers: {submitResult.tickets.map((tk: any) => `#${String(tk.ticketNumber).padStart(4, '0')}`).join(', ')}
             </div>
           </div>
         )}
@@ -1391,8 +1400,8 @@ function CompletedJobCard({
                   className="btn-accent w-full py-3 text-base font-bold disabled:opacity-50"
                 >
                   {submitting
-                    ? 'Submitting...'
-                    : `Submit ${readyCount} Ticket${readyCount !== 1 ? 's' : ''} for Review`}
+                    ? '...'
+                    : `${t('driver.submitTicket')} (${readyCount})`}
                 </button>
                 {readyCount === 0 && scannedCount > 0 && (
                   <p className="text-xs text-amber-600 text-center mt-1">
@@ -1906,12 +1915,14 @@ function AvailableJobsTab({
   canUseMaps: boolean;
   hasAssignedTruck: boolean;
 }) {
+  const { t } = useLanguage();
+
   if (jobs.length === 0) {
     return (
       <div className="panel p-8 text-center">
         <div className="text-5xl mb-3">📋</div>
-        <h2 className="font-bold text-lg mb-1">No available jobs</h2>
-        <p className="text-sm text-steel-500">Check back later for open jobs.</p>
+        <h2 className="font-bold text-lg mb-1">{t('driver.noAvailableJobs')}</h2>
+        <p className="text-sm text-steel-500">{t('driver.noAvailableJobs')}</p>
       </div>
     );
   }
@@ -1920,11 +1931,11 @@ function AvailableJobsTab({
     <div className="space-y-3">
       {!hasAssignedTruck && (
         <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800">
-          <span className="font-semibold">No truck assigned.</span> You cannot claim jobs until your dispatcher assigns a truck to your profile.
+          <span className="font-semibold">{t('driver.truck')}: —</span> You cannot claim jobs until your dispatcher assigns a truck to your profile.
         </div>
       )}
       <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
-        {jobs.length} job{jobs.length === 1 ? '' : 's'} available to claim
+        {jobs.length} {t('driver.availableJobs').toLowerCase()}
       </h2>
       {jobs.map((j) => (
         <AvailableJobCard key={j.id} job={j} token={token} canUseMaps={canUseMaps} hasAssignedTruck={hasAssignedTruck} />
@@ -1945,6 +1956,7 @@ function AvailableJobCard({
   canUseMaps: boolean;
   hasAssignedTruck: boolean;
 }) {
+  const { t } = useLanguage();
   const [claiming, setClaiming] = useState(false);
   const [claimed, setClaimed] = useState(false);
   const [error, setError] = useState('');
@@ -2081,7 +2093,7 @@ function AvailableJobCard({
             disabled={claiming}
             className="btn-accent w-full py-3 text-base font-bold"
           >
-            {claiming ? 'Claiming...' : '✋ Claim This Job'}
+            {claiming ? '...' : `✋ ${t('driver.claimJob')}`}
           </button>
         )}
       </div>
@@ -2099,6 +2111,7 @@ function TodaysJobCard({
   token: string;
   canUseMaps: boolean;
 }) {
+  const { t } = useLanguage();
   const [jobStatus, setJobStatus] = useState(initialJob.status);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -2136,7 +2149,7 @@ function TodaysJobCard({
     } else if (action === 'pause' || action === 'complete' || action === 'cancel') {
       if (resumedAt) {
         const elapsed = Math.max(0, Math.round((Date.now() - new Date(resumedAt).getTime()) / 1000));
-        setTimeSeconds((t) => t + elapsed);
+        setTimeSeconds((prev) => prev + elapsed);
       }
       setResumedAt(null);
     }
@@ -2272,7 +2285,7 @@ function TodaysJobCard({
             disabled={loading}
             className="btn-primary w-full py-3 text-base font-bold"
           >
-            {loading ? (job.startedAt ? 'Resuming...' : 'Starting...') : job.startedAt ? '▶ Resume Job' : '▶ Start Job'}
+            {loading ? '...' : job.startedAt ? `▶ ${t('driver.resumeJob')}` : `▶ ${t('driver.startJob')}`}
           </button>
         )}
         {isInProgress && (
@@ -2283,20 +2296,20 @@ function TodaysJobCard({
                 disabled={loading}
                 className="btn-ghost flex-1 py-3 text-base"
               >
-                {loading ? '...' : '⏸ Pause'}
+                {loading ? '...' : `⏸ ${t('driver.pauseJob')}`}
               </button>
               <button
                 onClick={() => handleAction('complete')}
                 disabled={loading}
                 className="btn-accent flex-1 py-3 text-base font-bold"
               >
-                {loading ? '...' : '✓ End Job'}
+                {loading ? '...' : `✓ ${t('driver.completeJob')}`}
               </button>
             </div>
             {/* Report Issue */}
             {issueSent ? (
               <div className="text-center text-sm text-amber-700 bg-amber-50 rounded-lg py-2 font-medium">
-                ✓ Issue reported — dispatcher notified
+                ✓ {t('driver.reportIssue')}
               </div>
             ) : showIssueForm ? (
               <form
@@ -2335,14 +2348,14 @@ function TodaysJobCard({
                     onClick={() => setShowIssueForm(false)}
                     className="btn-ghost flex-1 py-2 text-sm"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
                     className="flex-1 py-2 text-sm font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors"
                   >
-                    {loading ? 'Sending...' : 'Send Report'}
+                    {loading ? '...' : t('common.submit')}
                   </button>
                 </div>
               </form>
@@ -2351,14 +2364,14 @@ function TodaysJobCard({
                 onClick={() => setShowIssueForm(true)}
                 className="w-full py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
               >
-                ⚠ Report Issue
+                ⚠ {t('driver.reportIssue')}
               </button>
             )}
           </>
         )}
         {isCompleted && (
           <div className="text-center text-sm text-green-700 font-semibold py-2">
-            ✓ Job Completed
+            ✓ {t('driver.completeJob')}
           </div>
         )}
         {!isCompleted && !isCancelled && (
@@ -2381,6 +2394,7 @@ function JobCard({
   canReportIssues: boolean;
   canUseMaps: boolean;
 }) {
+  const { t } = useLanguage();
   const [ticket, setTicket] = useState(initialTicket);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -2400,7 +2414,7 @@ function JobCard({
     setLoading(true);
     setError('');
     // Optimistic update
-    setTicket((t) => ({ ...t, status: newStatus }));
+    setTicket((prev) => ({ ...prev, status: newStatus }));
     try {
       const fd = new FormData();
       fd.set('token', token);
@@ -2411,7 +2425,7 @@ function JobCard({
     } catch (err: any) {
       setError(err.message || 'Action failed');
       // Rollback
-      setTicket((t) => ({ ...t, status: prevStatus }));
+      setTicket((prev) => ({ ...prev, status: prevStatus }));
     } finally {
       setLoading(false);
     }
@@ -2525,7 +2539,7 @@ function JobCard({
             disabled={loading}
             className="btn-primary w-full py-3 text-base"
           >
-            {loading ? 'Starting...' : '▶ Start Job'}
+            {loading ? '...' : `▶ ${t('driver.startJob')}`}
           </button>
         )}
         {ticket.status === 'IN_PROGRESS' && (
@@ -2534,19 +2548,19 @@ function JobCard({
             disabled={loading}
             className="btn-accent w-full py-3 text-base font-bold"
           >
-            {loading ? 'Completing...' : '✓ Mark Done'}
+            {loading ? '...' : `✓ ${t('driver.completeJob')}`}
           </button>
         )}
         {ticket.status === 'COMPLETED' && (
           <div className="text-center text-sm text-green-700 font-semibold py-2">
-            ✓ Completed
+            ✓ {t('driver.completeJob')}
           </div>
         )}
         {canReportIssues &&
           (ticket.status === 'DISPATCHED' || ticket.status === 'IN_PROGRESS') && (
             <details>
               <summary className="text-center text-sm text-red-700 cursor-pointer py-2">
-                Report an issue
+                {t('driver.reportIssue')}
               </summary>
               <form
                 onSubmit={(e) => {
@@ -2585,6 +2599,7 @@ function CalendarTab({
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const { t } = useLanguage();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   // -- Build calendar grid --
@@ -2756,17 +2771,17 @@ function CalendarTab({
           onClick={() => setShowForm(true)}
           className="btn-primary w-full py-3 text-base"
         >
-          + Request Time Off
+          + {t('driver.requestTimeOff')}
         </button>
       )}
 
       {/* Request form */}
       {showForm && (
         <div className="panel p-4 space-y-3">
-          <h3 className="font-bold text-sm text-steel-800">New Time-Off Request</h3>
+          <h3 className="font-bold text-sm text-steel-800">{t('driver.requestTimeOff')}</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-steel-500 block mb-1">Start Date</label>
+              <label className="text-xs text-steel-500 block mb-1">{t('driver.startDate')}</label>
               <input
                 type="date"
                 value={startDate}
@@ -2779,7 +2794,7 @@ function CalendarTab({
               />
             </div>
             <div>
-              <label className="text-xs text-steel-500 block mb-1">End Date</label>
+              <label className="text-xs text-steel-500 block mb-1">{t('driver.endDate')}</label>
               <input
                 type="date"
                 value={endDate}
@@ -2790,7 +2805,7 @@ function CalendarTab({
             </div>
           </div>
           <div>
-            <label className="text-xs text-steel-500 block mb-1">Reason (optional)</label>
+            <label className="text-xs text-steel-500 block mb-1">{t('common.reason')}</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -2806,13 +2821,13 @@ function CalendarTab({
               disabled={submitting}
               className="btn-accent flex-1 py-2"
             >
-              {submitting ? 'Submitting...' : 'Submit Request'}
+              {submitting ? '...' : t('common.submit')}
             </button>
             <button
               onClick={() => { setShowForm(false); setError(''); }}
               className="btn-ghost flex-1 py-2"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -2853,7 +2868,7 @@ function CalendarTab({
                     disabled={cancellingId === r.id}
                     className="text-xs text-red-500 hover:text-red-700"
                   >
-                    {cancellingId === r.id ? 'Cancelling...' : 'Cancel Request'}
+                    {cancellingId === r.id ? '...' : t('driver.cancelRequest')}
                   </button>
                 )}
               </div>
@@ -2941,17 +2956,18 @@ function ExpensesTab({
   const catIcon = (cat: string) => EXPENSE_CATEGORIES.find((c) => c.value === cat)?.icon ?? '📋';
   const catLabel = (cat: string) => EXPENSE_CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
 
+  const { t } = useLanguage();
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-diesel">My Expenses</h2>
+        <h2 className="text-lg font-bold text-diesel">{t('driver.expenses')}</h2>
         <button
           onClick={() => setShowForm(!showForm)}
           className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-safety text-diesel hover:bg-safety/80 transition-colors"
         >
-          {showForm ? 'Cancel' : '+ Add Expense'}
+          {showForm ? t('common.cancel') : `+ ${t('driver.expenses')}`}
         </button>
       </div>
 
@@ -3065,7 +3081,7 @@ function ExpensesTab({
             disabled={submitting}
             className="w-full py-2.5 rounded-lg text-sm font-bold bg-safety text-diesel hover:bg-safety/90 disabled:opacity-50 transition-colors"
           >
-            {submitting ? 'Submitting...' : 'Submit Expense'}
+            {submitting ? '...' : t('common.submit')}
           </button>
         </div>
       )}
@@ -3146,6 +3162,7 @@ function ProfileTab({
   const [docs, setDocs] = useState<DocumentData[]>(documents);
   const [uploading, setUploading] = useState<string | null>(null); // docType being uploaded
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLanguage();
   const [otherLabel, setOtherLabel] = useState('');
   const otherFileRef = useRef<HTMLInputElement>(null);
 
@@ -3279,7 +3296,7 @@ function ProfileTab({
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-bold text-lg text-steel-900">{driverName}</div>
-              {truckNumber && <div className="text-sm text-steel-500">Truck {truckNumber}</div>}
+              {truckNumber && <div className="text-sm text-steel-500">{t('driver.truck')} {truckNumber}</div>}
             </div>
             {!editingProfile && (
               <button
@@ -3395,7 +3412,7 @@ function ProfileTab({
                 onClick={() => { setEditingProfile(false); setProfileForm(profileData); setError(null); }}
                 className="flex-1 py-2.5 border border-steel-300 rounded-lg text-steel-700 text-sm font-medium hover:bg-steel-50"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -3403,7 +3420,7 @@ function ProfileTab({
                 disabled={profileSaving}
                 className="flex-1 py-2.5 bg-safety text-diesel text-sm font-bold rounded-lg hover:bg-safety-dark transition-colors disabled:opacity-50"
               >
-                {profileSaving ? 'Saving...' : 'Save'}
+                {profileSaving ? '...' : t('common.save')}
               </button>
             </div>
           </div>
@@ -3450,7 +3467,7 @@ function ProfileTab({
 
       {/* Required Documents */}
       <div>
-        <h3 className="text-sm font-bold text-steel-700 uppercase tracking-wider mb-3">Required Documents</h3>
+        <h3 className="text-sm font-bold text-steel-700 uppercase tracking-wider mb-3">{t('driver.documents')}</h3>
         <div className="space-y-3">
           {REQUIRED_DOCS.map((req) => {
             const doc = getDoc(req.type);

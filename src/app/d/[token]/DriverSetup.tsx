@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/components/LanguageProvider';
+import LanguageToggle from '@/components/LanguageToggle';
 
 const SECURITY_QUESTIONS = [
   'What is the name of your first pet?',
@@ -24,6 +26,7 @@ export default function DriverSetup({
   driverName: string;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [step, setStep] = useState(1); // 1: PIN, 2: Security Questions
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -101,16 +104,16 @@ export default function DriverSetup({
         {/* Brand */}
         <div className="text-center mb-6">
           <div className="text-4xl font-black text-white tracking-tight">TruckFlowUS</div>
-          <p className="text-steel-400 text-sm mt-1">Driver Portal Setup</p>
+          <p className="text-steel-400 text-sm mt-1">{t('driver.setupAccount')}</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="text-center mb-5">
-            <h2 className="text-lg font-bold text-steel-900">Welcome, {driverName}!</h2>
+            <h2 className="text-lg font-bold text-steel-900">{t('driver.welcome')}, {driverName}!</h2>
             <p className="text-sm text-steel-500 mt-1">
               {step === 1
-                ? 'Create a PIN to secure your account.'
-                : 'Set up security questions for PIN recovery.'}
+                ? t('driver.createPinDesc')
+                : t('driver.securityQuestionsDesc')}
             </p>
           </div>
 
@@ -124,7 +127,7 @@ export default function DriverSetup({
             <form onSubmit={handleStep1} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-steel-600 mb-1">
-                  Create a PIN (4-6 digits)
+                  {t('driver.createPin')}
                 </label>
                 <input
                   type="password"
@@ -141,7 +144,7 @@ export default function DriverSetup({
 
               <div>
                 <label className="block text-xs font-medium text-steel-600 mb-1">
-                  Confirm PIN
+                  {t('driver.confirmPin')}
                 </label>
                 <input
                   type="password"
@@ -158,7 +161,7 @@ export default function DriverSetup({
 
               <div>
                 <label className="block text-xs font-medium text-steel-600 mb-1">
-                  Email <span className="text-steel-400">(optional, for PIN reset)</span>
+                  {t('common.email')} <span className="text-steel-400">(optional, for PIN reset)</span>
                 </label>
                 <input
                   type="email"
@@ -186,7 +189,7 @@ export default function DriverSetup({
               {/* Question 1 */}
               <div>
                 <label className="block text-xs font-medium text-steel-600 mb-1">
-                  Security Question 1
+                  {t('settings.securityQuestions')} 1
                 </label>
                 <select
                   value={q1}
@@ -194,7 +197,7 @@ export default function DriverSetup({
                   className="w-full px-3 py-2.5 rounded-lg border border-steel-300 text-sm focus:outline-none focus:ring-2 focus:ring-safety"
                   required
                 >
-                  <option value="">Select a question...</option>
+                  <option value="">{t('settings.selectQuestion')}</option>
                   {availableQuestions([q2, q3]).map((q) => (
                     <option key={q} value={q}>{q}</option>
                   ))}
@@ -203,7 +206,7 @@ export default function DriverSetup({
                   type="text"
                   value={a1}
                   onChange={(e) => setA1(e.target.value)}
-                  placeholder="Your answer"
+                  placeholder={t('settings.answer')}
                   className="w-full px-3 py-2.5 rounded-lg border border-steel-300 text-sm mt-1.5 focus:outline-none focus:ring-2 focus:ring-safety"
                   required
                 />
@@ -212,7 +215,7 @@ export default function DriverSetup({
               {/* Question 2 */}
               <div>
                 <label className="block text-xs font-medium text-steel-600 mb-1">
-                  Security Question 2
+                  {t('settings.securityQuestions')} 2
                 </label>
                 <select
                   value={q2}
@@ -220,7 +223,7 @@ export default function DriverSetup({
                   className="w-full px-3 py-2.5 rounded-lg border border-steel-300 text-sm focus:outline-none focus:ring-2 focus:ring-safety"
                   required
                 >
-                  <option value="">Select a question...</option>
+                  <option value="">{t('settings.selectQuestion')}</option>
                   {availableQuestions([q1, q3]).map((q) => (
                     <option key={q} value={q}>{q}</option>
                   ))}
@@ -229,7 +232,7 @@ export default function DriverSetup({
                   type="text"
                   value={a2}
                   onChange={(e) => setA2(e.target.value)}
-                  placeholder="Your answer"
+                  placeholder={t('settings.answer')}
                   className="w-full px-3 py-2.5 rounded-lg border border-steel-300 text-sm mt-1.5 focus:outline-none focus:ring-2 focus:ring-safety"
                   required
                 />
@@ -238,7 +241,7 @@ export default function DriverSetup({
               {/* Question 3 */}
               <div>
                 <label className="block text-xs font-medium text-steel-600 mb-1">
-                  Security Question 3
+                  {t('settings.securityQuestions')} 3
                 </label>
                 <select
                   value={q3}
@@ -246,7 +249,7 @@ export default function DriverSetup({
                   className="w-full px-3 py-2.5 rounded-lg border border-steel-300 text-sm focus:outline-none focus:ring-2 focus:ring-safety"
                   required
                 >
-                  <option value="">Select a question...</option>
+                  <option value="">{t('settings.selectQuestion')}</option>
                   {availableQuestions([q1, q2]).map((q) => (
                     <option key={q} value={q}>{q}</option>
                   ))}
@@ -255,7 +258,7 @@ export default function DriverSetup({
                   type="text"
                   value={a3}
                   onChange={(e) => setA3(e.target.value)}
-                  placeholder="Your answer"
+                  placeholder={t('settings.answer')}
                   className="w-full px-3 py-2.5 rounded-lg border border-steel-300 text-sm mt-1.5 focus:outline-none focus:ring-2 focus:ring-safety"
                   required
                 />
@@ -271,18 +274,22 @@ export default function DriverSetup({
                   onClick={() => { setStep(1); setError(''); }}
                   className="flex-1 py-3 border border-steel-300 rounded-lg text-steel-700 font-medium hover:bg-steel-50"
                 >
-                  ← Back
+                  ← {t('common.back')}
                 </button>
                 <button
                   type="submit"
                   disabled={loading || !q1 || !a1 || !q2 || !a2 || !q3 || !a3}
                   className="flex-1 py-3 bg-safety text-diesel font-bold rounded-lg hover:bg-safety-dark transition-colors disabled:opacity-50"
                 >
-                  {loading ? 'Setting up...' : 'Complete Setup'}
+                  {loading ? `${t('driver.setup')}...` : t('driver.setup')}
                 </button>
               </div>
             </form>
           )}
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <LanguageToggle variant="driver" />
         </div>
       </div>
     </div>

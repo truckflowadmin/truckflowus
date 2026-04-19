@@ -4,20 +4,22 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NotificationBell } from './NotificationBell';
+import { useLanguage } from './LanguageProvider';
+import LanguageToggle from './LanguageToggle';
 
 const NAV = [
-  { href: '/dashboard', label: 'Dashboard', icon: '▦' },
-  { href: '/jobs', label: 'Jobs', icon: '◧' },
-  { href: '/tickets', label: 'Tickets', icon: '▤' },
-  { href: '/drivers', label: 'Drivers', icon: '▲' },
-  { href: '/fleet', label: 'Fleet', icon: '🚛' },
-  { href: '/customers', label: 'Customers', icon: '◉' },
-  { href: '/invoices', label: 'Invoices', icon: '$' },
-  { href: '/reports', label: 'Reports', icon: '◈' },
-  { href: '/sms', label: 'SMS Log', icon: '⌯' },
-  { href: '/brokers', label: 'Brokers', icon: '⇆' },
-  { href: '/calendar', label: 'Calendar', icon: '📆' },
-  { href: '/settings', label: 'Settings', icon: '⚙' },
+  { href: '/dashboard', labelKey: 'nav.dashboard', icon: '▦' },
+  { href: '/jobs', labelKey: 'nav.jobs', icon: '◧' },
+  { href: '/tickets', labelKey: 'nav.tickets', icon: '▤' },
+  { href: '/drivers', labelKey: 'nav.drivers', icon: '▲' },
+  { href: '/fleet', labelKey: 'nav.fleet', icon: '🚛' },
+  { href: '/customers', labelKey: 'nav.customers', icon: '◉' },
+  { href: '/invoices', labelKey: 'nav.invoices', icon: '$' },
+  { href: '/reports', labelKey: 'nav.reports', icon: '◈' },
+  { href: '/sms', labelKey: 'nav.sms', icon: '⌯' },
+  { href: '/brokers', labelKey: 'nav.brokers', icon: '⇆' },
+  { href: '/calendar', labelKey: 'nav.calendar', icon: '📆' },
+  { href: '/settings', labelKey: 'nav.settings', icon: '⚙' },
 ];
 
 interface SidebarProps {
@@ -29,6 +31,7 @@ interface SidebarProps {
 export function Sidebar({ user, unlockedTabs }: SidebarProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   const isActive = (href: string) =>
     pathname === href || (href !== '/dashboard' && pathname.startsWith(href + '/'));
@@ -58,14 +61,14 @@ export function Sidebar({ user, unlockedTabs }: SidebarProps) {
             return (
               <Link
                 key={item.href}
-                href={`/locked?tab=${encodeURIComponent(item.label)}`}
+                href={`/locked?tab=${encodeURIComponent(t(item.labelKey))}`}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-3 py-2 rounded text-sm text-steel-600 cursor-pointer hover:bg-steel-800/50 group"
               >
                 <span className="w-5 text-center text-steel-600 group-hover:text-steel-500">{item.icon}</span>
-                <span className="flex-1">{item.label}</span>
+                <span className="flex-1">{t(item.labelKey)}</span>
                 <span className="text-[10px] text-steel-600 bg-steel-800 rounded px-1.5 py-0.5">
-                  Locked
+                  {t('common.locked')}
                 </span>
               </Link>
             );
@@ -83,19 +86,22 @@ export function Sidebar({ user, unlockedTabs }: SidebarProps) {
               }`}
             >
               <span className="text-safety w-5 text-center">{item.icon}</span>
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
       </nav>
       <div className="p-3 border-t border-steel-800 text-xs">
-        <div className="px-3 py-2">
-          <div className="text-white font-medium">{user.name}</div>
-          <div className="text-steel-500">{user.email}</div>
+        <div className="px-3 py-2 flex items-center justify-between">
+          <div>
+            <div className="text-white font-medium">{user.name}</div>
+            <div className="text-steel-500">{user.email}</div>
+          </div>
+          <LanguageToggle variant="dispatcher" />
         </div>
         <form action="/api/logout" method="post">
           <button className="w-full text-left px-3 py-2 rounded hover:bg-steel-800 text-steel-400 hover:text-white">
-            Sign out
+            {t('common.signOut')}
           </button>
         </form>
       </div>

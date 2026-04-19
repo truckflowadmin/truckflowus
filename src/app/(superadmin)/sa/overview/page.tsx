@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { requireSuperadmin } from '@/lib/auth';
 import { formatPrice } from '@/lib/features';
+import { getServerLang, t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
 export default async function OverviewPage() {
   await requireSuperadmin();
+  const lang = getServerLang();
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
@@ -84,36 +86,36 @@ export default async function OverviewPage() {
     });
   }
 
-  for (const t of trialEndingSoon) {
+  for (const te of trialEndingSoon) {
     const daysLeft = Math.ceil(
-      (t.trialEndsAt!.getTime() - Date.now()) / 86400000,
+      (te.trialEndsAt!.getTime() - Date.now()) / 86400000,
     );
     billingAlerts.push({
       type: 'warning',
-      message: `${t.name}'s trial ends in ${daysLeft} day(s)`,
-      link: `/sa/tenants/${t.id}/billing`,
+      message: `${te.name}'s trial ends in ${daysLeft} day(s)`,
+      link: `/sa/tenants/${te.id}/billing`,
     });
   }
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <header>
-        <h1 className="text-xl md:text-2xl font-bold text-white">Platform Overview</h1>
-        <p className="text-purple-300 text-sm">Tenants, subscriptions, and revenue.</p>
+        <h1 className="text-xl md:text-2xl font-bold text-white">{t('sa.platformOverview', lang)}</h1>
+        <p className="text-purple-300 text-sm">{t('sa.tenantsSubtitle', lang)}</p>
       </header>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
-        <StatCard label="Tenants" value={companyCount} />
-        <StatCard label="Active" value={activeCount} />
-        <StatCard label="Suspended" value={suspendedCount} />
-        <StatCard label="MRR" value={`$${(mrrCents / 100).toFixed(0)}`} />
-        <StatCard label="Collected (30d)" value={`$${(collectedCents / 100).toFixed(0)}`} />
+        <StatCard label={t('sa.tenants', lang)} value={companyCount} />
+        <StatCard label={t('sa.active', lang)} value={activeCount} />
+        <StatCard label={t('sa.suspended', lang)} value={suspendedCount} />
+        <StatCard label={t('sa.mrr', lang)} value={`$${(mrrCents / 100).toFixed(0)}`} />
+        <StatCard label={t('sa.collected30d', lang)} value={`$${(collectedCents / 100).toFixed(0)}`} />
       </div>
 
       {/* ── Billing Alerts ── */}
       {billingAlerts.length > 0 && (
         <section className="panel-sa">
-          <h2 className="font-semibold text-white mb-3">Billing Alerts</h2>
+          <h2 className="font-semibold text-white mb-3">{t('sa.billingAlerts', lang)}</h2>
           <ul className="space-y-2">
             {billingAlerts.map((alert, i) => (
               <li
@@ -133,7 +135,7 @@ export default async function OverviewPage() {
                     href={alert.link}
                     className="text-xs underline hover:no-underline ml-3 whitespace-nowrap"
                   >
-                    View →
+                    {t('sa.view', lang)}
                   </Link>
                 )}
               </li>
@@ -144,17 +146,17 @@ export default async function OverviewPage() {
 
       <section className="panel-sa">
         <header className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-white">Plan distribution</h2>
+          <h2 className="font-semibold text-white">{t('sa.planDistribution', lang)}</h2>
           <Link href="/sa/plans" className="text-sm text-purple-400 hover:text-purple-200">
-            Manage plans →
+            {t('sa.managePlans', lang)} →
           </Link>
         </header>
         <table className="w-full text-sm">
           <thead className="text-purple-400 text-left">
             <tr>
-              <th className="py-2">Plan</th>
-              <th className="py-2">Price</th>
-              <th className="py-2">Tenants</th>
+              <th className="py-2">{t('sa.plan', lang)}</th>
+              <th className="py-2">{t('common.price', lang)}</th>
+              <th className="py-2">{t('sa.tenants', lang)}</th>
             </tr>
           </thead>
           <tbody className="text-steel-100">
@@ -171,9 +173,9 @@ export default async function OverviewPage() {
 
       <section className="panel-sa">
         <header className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-white">Recent signups</h2>
+          <h2 className="font-semibold text-white">{t('sa.recentSignups', lang)}</h2>
           <Link href="/sa/tenants" className="text-sm text-purple-400 hover:text-purple-200">
-            All tenants →
+            {t('sa.allTenants', lang)} →
           </Link>
         </header>
         <ul className="divide-y divide-purple-900/40 text-sm">

@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
+import { getServerLang, t } from '@/lib/i18n';
 import type { BrokerContact } from '@/lib/broker-types';
 
 export default async function BrokersPage() {
   const session = await requireSession();
+  const lang = getServerLang();
   const brokers = await prisma.broker.findMany({
     where: { companyId: session.companyId },
     orderBy: { name: 'asc' },
@@ -30,13 +32,13 @@ export default async function BrokersPage() {
   return (
     <div className="p-4 md:p-8 max-w-6xl">
       <header className="mb-6">
-        <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Partners</div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Brokers</h1>
+        <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('brokers.partners', lang)}</div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('brokers.title', lang)}</h1>
       </header>
 
       <div className="panel overflow-hidden">
         {brokers.length === 0 ? (
-          <div className="p-10 text-center text-steel-500">No brokers yet. Contact your administrator to add brokers.</div>
+          <div className="p-10 text-center text-steel-500">{t('brokers.noBrokers', lang)}</div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[800px]">

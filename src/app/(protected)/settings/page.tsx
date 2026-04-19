@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireSession, hashPassword, verifyPassword } from '@/lib/auth';
+import { getServerLang, t } from '@/lib/i18n';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { FEATURE_CATALOG, featuresBySide, getEffectiveFeatures, formatPrice } from '@/lib/features';
@@ -176,6 +177,7 @@ export default async function SettingsPage({
   searchParams: { pwOk?: string; sqOk?: string; sqErr?: string; setupSQ?: string };
 }) {
   const session = await requireSession();
+  const lang = getServerLang();
   const [company, users, plan, currentUser] = await Promise.all([
     prisma.company.findUnique({ where: { id: session.companyId } }),
     prisma.user.findMany({ where: { companyId: session.companyId }, orderBy: { createdAt: 'asc' } }),
@@ -197,8 +199,8 @@ export default async function SettingsPage({
   return (
     <div className="p-4 md:p-8 max-w-3xl">
       <header className="mb-6">
-        <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Configuration</div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Settings</h1>
+        <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('settings.configuration', lang)}</div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('settings.title', lang)}</h1>
       </header>
 
       {/* My Plan & Features */}

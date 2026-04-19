@@ -4,11 +4,13 @@ export const revalidate = 0;
 
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
+import { getServerLang, t } from '@/lib/i18n';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import InvoiceDashboard from './InvoiceDashboard';
 
 export default async function InvoicesPage() {
   const session = await requireSession();
+  const lang = getServerLang();
   const [invoices, customers, brokers] = await Promise.all([
     prisma.invoice.findMany({
       where: { companyId: session.companyId },
@@ -45,8 +47,8 @@ export default async function InvoicesPage() {
   return (
     <div className="p-4 md:p-8 max-w-6xl">
       <header className="mb-6">
-        <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Billing</div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Invoices</h1>
+        <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('invoices.billing', lang)}</div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('invoices.title', lang)}</h1>
       </header>
 
       <InvoiceDashboard

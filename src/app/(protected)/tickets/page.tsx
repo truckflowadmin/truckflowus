@@ -5,6 +5,7 @@ export const revalidate = 0;
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
+import { getServerLang, t } from '@/lib/i18n';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import TicketDashboard from './TicketDashboard';
 import BillableTicketsTable from './BillableTicketsTable';
@@ -18,6 +19,7 @@ export default async function TicketsPage({
   const status = searchParams.status;
   const q = searchParams.q?.trim();
   const isBillable = status === 'BILLABLE';
+  const lang = getServerLang();
 
   // ── Billable mode: completed + reviewed + not yet on invoice/trip sheet ──
   if (isBillable) {
@@ -99,14 +101,14 @@ export default async function TicketsPage({
       <div className="p-4 md:p-8 max-w-7xl">
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Operations</div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Tickets</h1>
+            <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('tickets.operations', lang)}</div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('tickets.title', lang)}</h1>
             <p className="text-sm text-steel-500 mt-0.5">{billableTickets.length} ready to bill</p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Link href="/tickets/scan" className="btn-ghost text-sm">Bulk Scan</Link>
-            <Link href="/tickets/bulk" className="btn-ghost text-sm">Bulk Create</Link>
-            <Link href="/tickets/new" className="btn-accent">+ New Ticket</Link>
+            <Link href="/tickets/scan" className="btn-ghost text-sm">{t('tickets.bulkScan', lang)}</Link>
+            <Link href="/tickets/bulk" className="btn-ghost text-sm">{t('tickets.bulkCreate', lang)}</Link>
+            <Link href="/tickets/new" className="btn-accent">{t('tickets.newTicket', lang)}</Link>
           </div>
         </header>
 
@@ -116,17 +118,17 @@ export default async function TicketsPage({
             <input
               name="q"
               defaultValue={q ?? ''}
-              placeholder="Search material, location, customer, driver…"
+              placeholder={t('tickets.searchPlaceholder', lang)}
               className="input"
             />
-            <button className="btn-primary" type="submit">Search</button>
+            <button className="btn-primary" type="submit">{t('common.search', lang)}</button>
           </form>
           <div className="flex gap-1 flex-wrap">
             <Link
               href="/tickets"
               className="badge border bg-white border-steel-300 text-steel-700"
             >
-              All
+              {t('tickets.all', lang)}
             </Link>
             {statuses.map((s) => (
               <Link
@@ -141,7 +143,7 @@ export default async function TicketsPage({
               href="/tickets?status=BILLABLE"
               className="badge border bg-green-700 text-white border-green-700"
             >
-              Ready to Bill
+              {t('tickets.readyToBill', lang)}
             </Link>
           </div>
         </div>
@@ -201,15 +203,15 @@ export default async function TicketsPage({
     <div className="p-4 md:p-8 max-w-7xl">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Operations</div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Tickets</h1>
+          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('tickets.operations', lang)}</div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('tickets.title', lang)}</h1>
         </div>
         <div className="flex gap-2">
           <Link
             href="/tickets?status=BILLABLE"
             className="badge border bg-green-100 text-green-800 border-green-300 hover:bg-green-200 text-sm px-3 py-1.5"
           >
-            Ready to Bill
+            {t('tickets.readyToBill', lang)}
           </Link>
         </div>
       </header>

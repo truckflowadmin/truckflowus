@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
+import { getServerLang, t } from '@/lib/i18n';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns';
 import { ReportsCharts } from './charts';
 
@@ -9,6 +10,7 @@ export default async function ReportsPage({
   searchParams: { range?: string };
 }) {
   const session = await requireSession();
+  const lang = getServerLang();
   const range = searchParams.range || '30'; // days
   const days = Math.min(Math.max(parseInt(range, 10) || 30, 7), 365);
   const now = new Date();
@@ -221,8 +223,8 @@ export default async function ReportsPage({
     <div className="p-4 md:p-8 max-w-7xl">
       <header className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 mb-6">
         <div>
-          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Analytics</div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Reports</h1>
+          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('reports.analytics', lang)}</div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('reports.title', lang)}</h1>
         </div>
         <div className="flex gap-1">
           {[7, 14, 30, 90].map((d) => (
@@ -241,8 +243,8 @@ export default async function ReportsPage({
 
       {/* Summary cards — Row 1: Tickets & Revenue */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-        <SummaryCard label="Tickets Created" value={totalTickets} />
-        <SummaryCard label="Completed" value={totalCompleted} />
+        <SummaryCard label={t('reports.ticketsCreated', lang)} value={totalTickets} />
+        <SummaryCard label={t('reports.completed', lang)} value={totalCompleted} />
         <SummaryCard label="Total Qty" value={totalLoads} />
         <SummaryCard label="Revenue" value={`$${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} accent />
         <SummaryCard label="Invoices" value={invoiceStats._count} subtle={`$${Number(invoiceStats._sum.total ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />

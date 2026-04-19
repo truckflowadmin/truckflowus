@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireSuperadmin } from '@/lib/auth';
 import { formatPrice } from '@/lib/features';
 import { audit } from '@/lib/audit';
+import { getServerLang, t } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,6 +114,7 @@ async function rejectRequest(formData: FormData) {
 
 export default async function RequestsPage() {
   await requireSuperadmin();
+  const lang = getServerLang();
 
   const [pendingRequests, recentRequests] = await Promise.all([
     prisma.subscriptionRequest.findMany({
@@ -137,21 +139,21 @@ export default async function RequestsPage() {
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
       <header>
-        <h1 className="text-xl md:text-2xl font-bold text-white">Subscription Requests</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">{t('sa.subscriptionRequests', lang)}</h1>
         <p className="text-purple-300 text-sm mt-1">
-          Review and approve plan subscription requests from dispatchers.
+          {t('sa.reviewRequests', lang)}
         </p>
       </header>
 
       {/* Pending requests */}
       <section>
         <h2 className="text-xs uppercase tracking-widest text-purple-400 font-semibold mb-3">
-          Pending ({pendingRequests.length})
+          {t('common.pending', lang)} ({pendingRequests.length})
         </h2>
 
         {pendingRequests.length === 0 ? (
           <div className="panel-sa text-center py-8">
-            <p className="text-purple-300">No pending requests.</p>
+            <p className="text-purple-300">{t('sa.noPendingRequests', lang)}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -166,17 +168,17 @@ export default async function RequestsPage() {
                       {req.company.name}
                     </Link>
                     <div className="text-xs text-purple-300 mt-0.5">
-                      {[req.company.city, req.company.state].filter(Boolean).join(', ') || 'No location'}
+                      {[req.company.city, req.company.state].filter(Boolean).join(', ') || t('sa.noLocation', lang)}
                       {req.company.plan && (
-                        <> · Currently on <span className="text-purple-200">{req.company.plan.name}</span></>
+                        <> · {t('sa.currentlyOn', lang)} <span className="text-purple-200">{req.company.plan.name}</span></>
                       )}
                       {!req.company.planId && (
-                        <> · <span className="text-amber-400">No plan assigned</span></>
+                        <> · <span className="text-amber-400">{t('sa.noPlanAssigned', lang)}</span></>
                       )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-purple-400">Requested</div>
+                    <div className="text-xs text-purple-400">{t('sa.requested', lang)}</div>
                     <div className="text-xs text-purple-200">{req.createdAt.toLocaleDateString()}</div>
                   </div>
                 </div>
@@ -184,7 +186,7 @@ export default async function RequestsPage() {
                 {/* Requested plan */}
                 <div className="bg-purple-950/50 rounded-lg p-3 mb-3 flex items-center justify-between">
                   <div>
-                    <div className="text-xs text-purple-400 uppercase tracking-wider">Requesting</div>
+                    <div className="text-xs text-purple-400 uppercase tracking-wider">{t('sa.requesting', lang)}</div>
                     <div className="text-white font-semibold">{req.plan.name}</div>
                     <div className="text-xs text-purple-300">{req.plan.description}</div>
                   </div>
@@ -219,11 +221,11 @@ export default async function RequestsPage() {
                     <div className="flex gap-2">
                       <input
                         name="reviewNote"
-                        placeholder="Note (optional)"
+                        placeholder={t('sa.noteOptional', lang)}
                         className="input-sa text-xs flex-1"
                       />
                       <button type="submit" className="btn-purple text-xs whitespace-nowrap">
-                        Approve
+                        {t('common.approve', lang)}
                       </button>
                     </div>
                   </form>
@@ -231,16 +233,16 @@ export default async function RequestsPage() {
                     <input type="hidden" name="requestId" value={req.id} />
                     <details>
                       <summary className="btn-ghost text-xs cursor-pointer text-red-300 hover:text-red-200">
-                        Reject
+                        {t('common.reject', lang)}
                       </summary>
                       <div className="mt-2 flex gap-2">
                         <input
                           name="reviewNote"
-                          placeholder="Reason..."
+                          placeholder={t('common.reason', lang)}
                           className="input-sa text-xs flex-1"
                         />
                         <button type="submit" className="btn-danger text-xs whitespace-nowrap">
-                          Confirm Reject
+                          {t('sa.confirmReject', lang)}
                         </button>
                       </div>
                     </details>
@@ -256,17 +258,17 @@ export default async function RequestsPage() {
       {recentRequests.length > 0 && (
         <section>
           <h2 className="text-xs uppercase tracking-widest text-purple-400 font-semibold mb-3">
-            Recent Activity
+            {t('sa.recentActivity', lang)}
           </h2>
           <div className="panel-sa overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-xs uppercase tracking-wide text-purple-400 border-b border-purple-800">
                 <tr>
-                  <th className="text-left py-2 pr-4">Company</th>
-                  <th className="text-left py-2 pr-4">Plan</th>
-                  <th className="text-left py-2 pr-4">Status</th>
-                  <th className="text-left py-2 pr-4">Note</th>
-                  <th className="text-left py-2">Date</th>
+                  <th className="text-left py-2 pr-4">{t('common.company', lang)}</th>
+                  <th className="text-left py-2 pr-4">{t('sa.plan', lang)}</th>
+                  <th className="text-left py-2 pr-4">{t('common.status', lang)}</th>
+                  <th className="text-left py-2 pr-4">{t('common.notes', lang)}</th>
+                  <th className="text-left py-2">{t('common.date', lang)}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-purple-900/40">

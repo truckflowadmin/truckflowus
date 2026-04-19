@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
+import { getServerLang, t } from '@/lib/i18n';
 import { revalidatePath } from 'next/cache';
 import { randomBytes } from 'crypto';
 import DriversPageTabs from './DriversPageTabs';
@@ -223,11 +224,12 @@ async function PayrollContent() {
 // Page
 // ---------------------------------------------------------------------------
 export default async function DriversPage() {
+  const lang = getServerLang();
   return (
     <div className="p-4 md:p-8 max-w-5xl">
       <header className="mb-6">
-        <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">People</div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Drivers</h1>
+        <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('drivers.people', lang)}</div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('drivers.title', lang)}</h1>
       </header>
 
       <DriversPageTabs

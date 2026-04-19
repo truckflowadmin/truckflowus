@@ -4,10 +4,12 @@ import { requirePlan } from '@/lib/plan-gate';
 import { fmtQty, qtyUnit } from '@/lib/format';
 import { startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import InspectionAlerts from '../fleet/InspectionAlerts';
+import { getServerLang, t, statusLabel } from '@/lib/i18n';
 
 export default async function DashboardPage() {
   const session = await requireSession();
   await requirePlan(session.companyId);
+  const lang = getServerLang();
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
@@ -39,39 +41,43 @@ export default async function DashboardPage() {
     include: { driver: true, customer: true },
   });
 
+  const invoiceWord = lang === 'es'
+    ? (openInvoiceAgg._count === 1 ? t('dashboard.invoice', lang) : t('dashboard.invoices', lang))
+    : `invoice${openInvoiceAgg._count === 1 ? '' : 's'}`;
+
   return (
     <div className="p-4 md:p-8 max-w-7xl">
       <header className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 mb-6 md:mb-8">
         <div>
-          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Dispatch</div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('nav.dispatch', lang)}</div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('dashboard.title', lang)}</h1>
         </div>
-        <a href="/tickets/new" className="btn-accent self-start">+ New Ticket</a>
+        <a href="/tickets/new" className="btn-accent self-start">{t('dashboard.newTicket', lang)}</a>
       </header>
 
       <InspectionAlerts />
 
       <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <StatCard label="Pending" value={pending} accent />
-        <StatCard label="In Progress" value={inProgress} />
-        <StatCard label="Done Today" value={completedToday} />
-        <StatCard label="Done This Week" value={completedWeek} />
-        <StatCard label="Active Drivers" value={driversActive} />
+        <StatCard label={t('dashboard.pending', lang)} value={pending} accent />
+        <StatCard label={t('dashboard.inProgress', lang)} value={inProgress} />
+        <StatCard label={t('dashboard.doneToday', lang)} value={completedToday} />
+        <StatCard label={t('dashboard.doneThisWeek', lang)} value={completedWeek} />
+        <StatCard label={t('dashboard.activeDrivers', lang)} value={driversActive} />
         <StatCard
-          label="Open A/R"
+          label={t('dashboard.openAR', lang)}
           value={`$${Number(openInvoiceAgg._sum.total ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          subtle={`${openInvoiceAgg._count} invoice${openInvoiceAgg._count === 1 ? '' : 's'}`}
+          subtle={`${openInvoiceAgg._count} ${invoiceWord}`}
         />
       </section>
 
       <section className="panel">
         <div className="flex items-center justify-between px-5 py-4 border-b border-steel-200">
-          <h2 className="font-semibold">Recent Tickets</h2>
-          <a href="/tickets" className="text-sm text-steel-600 hover:text-steel-900">View all →</a>
+          <h2 className="font-semibold">{t('dashboard.recentTickets', lang)}</h2>
+          <a href="/tickets" className="text-sm text-steel-600 hover:text-steel-900">{t('common.viewAll', lang)} →</a>
         </div>
         {recent.length === 0 ? (
           <div className="p-10 text-center text-steel-500">
-            No tickets yet. <a href="/tickets/new" className="text-safety-dark font-medium">Create your first</a>.
+            {t('dashboard.noTickets', lang)} <a href="/tickets/new" className="text-safety-dark font-medium">{t('dashboard.createFirst', lang)}</a>.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -79,26 +85,26 @@ export default async function DashboardPage() {
               <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200">
                 <tr>
                   <th className="text-left px-3 md:px-5 py-2">#</th>
-                  <th className="text-left px-3 md:px-5 py-2">Customer</th>
-                  <th className="text-left px-3 md:px-5 py-2">Driver</th>
-                  <th className="text-left px-3 md:px-5 py-2">Material</th>
-                  <th className="text-left px-3 md:px-5 py-2">Qty</th>
-                  <th className="text-left px-3 md:px-5 py-2">Status</th>
+                  <th className="text-left px-3 md:px-5 py-2">{t('common.customer', lang)}</th>
+                  <th className="text-left px-3 md:px-5 py-2">{t('common.driver', lang)}</th>
+                  <th className="text-left px-3 md:px-5 py-2">{t('common.material', lang)}</th>
+                  <th className="text-left px-3 md:px-5 py-2">{t('common.quantity', lang)}</th>
+                  <th className="text-left px-3 md:px-5 py-2">{t('common.status', lang)}</th>
                 </tr>
               </thead>
               <tbody>
-                {recent.map((t) => (
-                  <tr key={t.id} className="border-b border-steel-100 hover:bg-steel-50">
+                {recent.map((tk) => (
+                  <tr key={tk.id} className="border-b border-steel-100 hover:bg-steel-50">
                     <td className="px-3 md:px-5 py-3 font-mono">
-                      <a href={`/tickets/${t.id}`} className="text-steel-900 hover:text-safety-dark">
-                        #{String(t.ticketNumber).padStart(4, '0')}
+                      <a href={`/tickets/${tk.id}`} className="text-steel-900 hover:text-safety-dark">
+                        #{String(tk.ticketNumber).padStart(4, '0')}
                       </a>
                     </td>
-                    <td className="px-3 md:px-5 py-3">{t.customer?.name ?? '—'}</td>
-                    <td className="px-3 md:px-5 py-3">{t.driver?.name ?? <span className="text-steel-400">unassigned</span>}</td>
-                    <td className="px-3 md:px-5 py-3">{t.material ?? '—'}</td>
-                    <td className="px-3 md:px-5 py-3">{fmtQty(t.quantity, t.quantityType)} {qtyUnit(t.quantityType)}</td>
-                    <td className="px-3 md:px-5 py-3"><StatusBadge status={t.status} /></td>
+                    <td className="px-3 md:px-5 py-3">{tk.customer?.name ?? '—'}</td>
+                    <td className="px-3 md:px-5 py-3">{tk.driver?.name ?? <span className="text-steel-400">{t('tickets.unassigned', lang)}</span>}</td>
+                    <td className="px-3 md:px-5 py-3">{tk.material ?? '—'}</td>
+                    <td className="px-3 md:px-5 py-3">{fmtQty(tk.quantity, tk.quantityType)} {qtyUnit(tk.quantityType)}</td>
+                    <td className="px-3 md:px-5 py-3"><StatusBadge status={tk.status} lang={lang} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -129,6 +135,6 @@ const STATUS_STYLES: Record<string, string> = {
   ISSUE: 'bg-red-100 text-red-800',
 };
 
-function StatusBadge({ status }: { status: string }) {
-  return <span className={`badge ${STATUS_STYLES[status] ?? ''}`}>{status.replace('_', ' ')}</span>;
+function StatusBadge({ status, lang }: { status: string; lang: 'en' | 'es' }) {
+  return <span className={`badge ${STATUS_STYLES[status] ?? ''}`}>{statusLabel(status, lang)}</span>;
 }

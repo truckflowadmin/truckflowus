@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
+import { getServerLang, t } from '@/lib/i18n';
 import { requirePlan } from '@/lib/plan-gate';
 import { loadCompanyFeatures, FEATURES } from '@/lib/features';
 import FleetPageTabs from './FleetPageTabs';
@@ -12,6 +13,7 @@ import InspectionAlerts from './InspectionAlerts';
 
 export default async function FleetPage() {
   const session = await requireSession();
+  const lang = getServerLang();
   const companyId = session.companyId;
   await requirePlan(companyId);
 
@@ -110,8 +112,8 @@ export default async function FleetPage() {
   return (
     <div className="p-4 md:p-8 max-w-6xl">
       <header className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Fleet</h1>
-        <p className="text-steel-500 mt-1">Manage your trucks, documents, and expenses</p>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('fleet.title', lang)}</h1>
+        <p className="text-steel-500 mt-1">{t('fleet.subtitle', lang)}</p>
       </header>
 
       <InspectionAlerts />

@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Sidebar } from '@/components/Sidebar';
 import { NotificationBell } from '@/components/NotificationBell';
 import { loadCompanyFeatures, NAV_FEATURE_MAP } from '@/lib/features';
+import { LanguageProvider } from '@/components/LanguageProvider';
+import type { Lang } from '@/lib/i18n';
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -38,16 +41,20 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     unlockedTabs[href] = has(featureKey);
   }
 
+  const lang = (cookies().get('lang')?.value === 'es' ? 'es' : 'en') as Lang;
+
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar user={{ name: session.name, email: session.email }} unlockedTabs={unlockedTabs} />
-      <main className="flex-1 overflow-x-hidden min-w-0 lg:pr-14">
-        {/* Desktop notification bell — fixed top right */}
-        <div className="hidden lg:block fixed top-4 right-4 z-50">
-          <NotificationBell />
-        </div>
-        {children}
-      </main>
-    </div>
+    <LanguageProvider initialLang={lang}>
+      <div className="min-h-screen lg:flex">
+        <Sidebar user={{ name: session.name, email: session.email }} unlockedTabs={unlockedTabs} />
+        <main className="flex-1 overflow-x-hidden min-w-0 lg:pr-14">
+          {/* Desktop notification bell — fixed top right */}
+          <div className="hidden lg:block fixed top-4 right-4 z-50">
+            <NotificationBell />
+          </div>
+          {children}
+        </main>
+      </div>
+    </LanguageProvider>
   );
 }
