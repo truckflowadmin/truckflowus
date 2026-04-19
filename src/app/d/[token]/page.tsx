@@ -206,12 +206,23 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
 
   // Fetch this driver's assignment-level status data via raw SQL
   // (generated Prisma client doesn't know about new columns: status, startedAt, etc.)
-  const rawAssignments: any[] = await prisma.$queryRaw`
-    SELECT ja.id, ja."jobId", ja."driverId", ja.status,
-           ja."startedAt", ja."completedAt", ja."driverTimeSeconds", ja."lastResumedAt"
-    FROM "JobAssignment" ja
-    WHERE ja."driverId" = ${driver.id}
-  `;
+  // Wrapped in try/catch in case the migration hasn't been applied yet
+  let rawAssignments: any[] = [];
+  try {
+    rawAssignments = await prisma.$queryRaw`
+      SELECT ja.id, ja."jobId", ja."driverId", ja.status,
+             ja."startedAt", ja."completedAt", ja."driverTimeSeconds", ja."lastResumedAt"
+      FROM "JobAssignment" ja
+      WHERE ja."driverId" = ${driver.id}
+    `;
+  } catch {
+    // Fallback: status columns may not exist yet — fetch basic assignment data
+    rawAssignments = await prisma.$queryRaw`
+      SELECT ja.id, ja."jobId", ja."driverId"
+      FROM "JobAssignment" ja
+      WHERE ja."driverId" = ${driver.id}
+    `;
+  }
   const assignmentsByJobId = new Map<string, any>();
   for (const a of rawAssignments) {
     assignmentsByJobId.set(a.jobId, a);
