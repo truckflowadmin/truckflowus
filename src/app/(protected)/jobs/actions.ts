@@ -133,7 +133,7 @@ export async function createJobAction(formData: FormData) {
       customerId,
       brokerId,
       driverId: primaryDriverId,
-      status,
+      status: status as any,
       hauledFrom,
       hauledFromAddress,
       hauledTo,
@@ -257,7 +257,7 @@ export async function updateJobAction(jobId: string, formData: FormData) {
 
   const formStatus = (formData.get('status') as string) || '';
   const validStatuses = ['CREATED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
-  let status = validStatuses.includes(formStatus) ? formStatus : job.status;
+  let status: string = validStatuses.includes(formStatus) ? formStatus : job.status;
   // Auto-promote to ASSIGNED if all slots filled and status wasn't manually changed
   if (!formStatus && allSlotsFilled && status === 'CREATED') {
     status = 'ASSIGNED';
@@ -270,7 +270,7 @@ export async function updateJobAction(jobId: string, formData: FormData) {
       customerId,
       brokerId,
       driverId: primaryDriverId,
-      status,
+      status: status as any,
       hauledFrom,
       hauledFromAddress,
       hauledTo,
