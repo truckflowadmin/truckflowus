@@ -46,10 +46,19 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    const session = await loginDriver(phone, pin);
-    if (!session) {
+    const loginResult = await loginDriver(phone, pin);
+
+    // Phone not found — tell driver to contact their dispatcher
+    if ('notFound' in loginResult) {
+      return NextResponse.json({
+        error: 'notFound',
+        message: 'No account found with this phone number. Please contact your dispatcher for assistance.',
+      }, { status: 401 });
+    }
+
+    // Wrong PIN — record attempt and check lockout
+    if ('wrongPin' in loginResult) {
       await recordAttempt(normalizedKey, 'driver_login', false);
-      // Check if this attempt triggered the lockout
       const afterLimit = await checkRateLimit({
         key: normalizedKey,
         type: 'driver_login',
@@ -62,11 +71,11 @@ export async function POST(req: NextRequest) {
           message: 'Account locked due to too many failed attempts. Please reset your PIN.',
         }, { status: 429 });
       }
-      return NextResponse.json({ error: 'Invalid phone number or PIN', attemptsLeft: afterLimit.attemptsLeft }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid PIN', attemptsLeft: afterLimit.attemptsLeft }, { status: 401 });
     }
 
     await clearAttempts(normalizedKey, 'driver_login');
-    const token = signDriverSession(session);
+    const token = signDriverSession(loginResult);
     setDriverSessionCookie(token);
     return NextResponse.json({ ok: true, driverName: session.name });
   }

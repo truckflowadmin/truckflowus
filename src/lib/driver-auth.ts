@@ -101,7 +101,7 @@ export async function getDriverSession(): Promise<DriverSession | null> {
 /**
  * Login a driver by phone + PIN. Returns session payload or null.
  */
-export async function loginDriver(phone: string, pin: string): Promise<DriverSession | null> {
+export async function loginDriver(phone: string, pin: string): Promise<DriverSession | { notFound: true } | { wrongPin: true }> {
   // Normalize phone
   const normalizedPhone = phone.replace(/\D/g, '');
   const phoneVariants = [
@@ -121,9 +121,9 @@ export async function loginDriver(phone: string, pin: string): Promise<DriverSes
     select: { id: true, companyId: true, name: true, phone: true, pinHash: true },
   });
 
-  if (!driver || !driver.pinHash) return null;
+  if (!driver || !driver.pinHash) return { notFound: true as const };
   const valid = await verifyPin(pin, driver.pinHash);
-  if (!valid) return null;
+  if (!valid) return { wrongPin: true as const };
 
   // Track last login time
   await prisma.driver.update({

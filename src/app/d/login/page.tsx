@@ -11,6 +11,7 @@ function DriverLoginForm() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [locked, setLocked] = useState(false);
+  const [notFound, setNotFound] = useState(false);
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -18,6 +19,7 @@ function DriverLoginForm() {
     e.preventDefault();
     setError('');
     setLocked(false);
+    setNotFound(false);
     setAttemptsLeft(null);
     setLoading(true);
     try {
@@ -30,6 +32,8 @@ function DriverLoginForm() {
       if (!res.ok) {
         if (data.error === 'locked') {
           setLocked(true);
+        } else if (data.error === 'notFound') {
+          setNotFound(true);
         } else {
           setError(data.error || 'Login failed');
           if (typeof data.attemptsLeft === 'number') {
@@ -96,7 +100,13 @@ function DriverLoginForm() {
             <p className="mt-1">Too many failed attempts. Please <a href="/d/reset" className="underline font-medium">reset your PIN</a> to unlock.</p>
           </div>
         )}
-        {error && !locked && (
+        {notFound && !locked && (
+          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg text-center">
+            <p>No account found with this phone number.</p>
+            <p className="mt-1">Please contact your dispatcher for assistance.</p>
+          </div>
+        )}
+        {error && !locked && !notFound && (
           <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg text-center">
             <p>{error}</p>
             {attemptsLeft !== null && (
