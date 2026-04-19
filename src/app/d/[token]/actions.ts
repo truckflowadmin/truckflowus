@@ -258,6 +258,10 @@ export async function driverUpdateJobStatus(formData: FormData) {
     assignmentPatch.status = 'IN_PROGRESS';
     if (!assignment.startedAt) assignmentPatch.startedAt = now;
     assignmentPatch.lastResumedAt = now;
+  } else if (action === 'resume') {
+    if (assignment.status !== 'ASSIGNED') throw new Error('Your assignment must be paused to resume');
+    assignmentPatch.status = 'IN_PROGRESS';
+    assignmentPatch.lastResumedAt = now;
   } else if (action === 'pause') {
     if (assignment.status !== 'IN_PROGRESS') throw new Error('Your assignment must be IN_PROGRESS to pause');
     assignmentPatch.status = 'ASSIGNED';
