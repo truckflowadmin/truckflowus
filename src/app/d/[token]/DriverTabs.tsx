@@ -900,6 +900,15 @@ function CompletedTab({
   }
 
   const [jobsOpen, setJobsOpen] = useState(false);
+
+  // Split completed jobs: un-reviewed (needs attention) vs reviewed (goes in dropdown)
+  const needsAttentionJobs = completedJobs.filter((j) =>
+    j.tickets.some((tk) => !tk.dispatcherReviewedAt),
+  );
+  const reviewedJobs = completedJobs.filter((j) =>
+    j.tickets.length > 0 && j.tickets.every((tk) => tk.dispatcherReviewedAt),
+  );
+
   const hasContent = completedJobs.length > 0 || tripSheets.length > 0;
 
   if (!hasContent) {
@@ -914,29 +923,24 @@ function CompletedTab({
 
   return (
     <div className="space-y-5">
-      {/* Estimated Pay Card — percentage contractors only */}
-      {isPercentageContractor && tripSheets.length > 0 && (
-        <div className="rounded-lg border-2 border-green-300 bg-green-50 p-5">
-          <h2 className="text-xs uppercase tracking-widest text-green-700 font-semibold mb-3">
-            Estimated Payment
-          </h2>
-          <div className="text-3xl font-bold text-green-800 tabular-nums">
-            ${estimatedPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      {/* Reminder Banner — upload tickets by Sunday midnight */}
+      <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">⏰</span>
+          <div>
+            <h2 className="text-sm font-bold text-amber-800">Reminder</h2>
+            <p className="text-sm text-amber-700 mt-0.5">
+              Please upload all weekly tickets by <strong>Sunday at 12:00 AM</strong> to avoid payment delays.
+            </p>
+            {nextPayDate && payroll.payDay && payroll.payFrequency && (
+              <p className="text-xs text-amber-600 mt-1.5">
+                Next pay date: {format(nextPayDate, 'EEEE, MMMM d, yyyy')}{' '}
+                ({payroll.payFrequency === 'BIWEEKLY' ? 'biweekly' : 'weekly'} every {DAY_LABEL[payroll.payDay!]})
+              </p>
+            )}
           </div>
-          <div className="text-sm text-green-700 mt-1">
-            {payroll.payRate}% of ${totalTripSheetRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total trip sheet revenue
-          </div>
-          {nextPayDate && payroll.payDay && payroll.payFrequency && (
-            <div className="mt-3 pt-3 border-t border-green-200 text-sm text-green-800 font-medium">
-              Your estimated payment of ${estimatedPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} will be paid on{' '}
-              {format(nextPayDate, 'EEEE, MMMM d, yyyy')}
-              <span className="text-green-600 text-xs ml-1">
-                ({payroll.payFrequency === 'BIWEEKLY' ? 'biweekly' : 'weekly'} every {DAY_LABEL[payroll.payDay]})
-              </span>
-            </div>
-          )}
         </div>
-      )}
+      </div>
 
       {/* Trip Sheets */}
       {tripSheets.length > 0 && (
@@ -977,7 +981,7 @@ function CompletedTab({
                 </div>
                 <div className="mt-3 pt-3 border-t border-steel-100">
                   <button
-                    onClick={() => window.print()}
+                    onClick={() => window.open(`/api/driver/trip-sheet-pdf?sheetId=${ts.id}`, '_blank')}
                     className="text-xs font-medium text-steel-600 bg-steel-100 hover:bg-steel-200 px-3 py-1.5 rounded-lg transition-colors"
                   >
                     Print Trip Sheet
@@ -989,8 +993,27 @@ function CompletedTab({
         </div>
       )}
 
-      {/* Completed Jobs — collapsible dropdown */}
-      {completedJobs.length > 0 && (
+      {/* Jobs needing attention — not yet reviewed, shown expanded */}
+      {needsAttentionJobs.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
+            Needs Attention ({needsAttentionJobs.length})
+          </h2>
+          {needsAttentionJobs.map((j) => (
+            <CompletedJobCard
+              key={j.id}
+              job={j}
+              token={token}
+              canUploadPhotos={canUploadPhotos}
+              canAiExtract={canAiExtract}
+              forceExpand={j.tickets.some((tk) => !tk.photoUrl)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Reviewed / Completed Jobs — collapsible dropdown */}
+      {reviewedJobs.length > 0 && (
         <div>
           <button
             type="button"
@@ -998,7 +1021,7 @@ function CompletedTab({
             className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-steel-200 bg-white hover:bg-steel-50 transition-colors"
           >
             <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold">
-              {t('driver.completedJobs')} ({completedJobs.length})
+              {t('driver.completedJobs')} ({reviewedJobs.length})
             </h2>
             <span className={`text-steel-400 transition-transform ${jobsOpen ? 'rotate-180' : ''}`}>
               ▼
@@ -1006,7 +1029,7 @@ function CompletedTab({
           </button>
           {jobsOpen && (
             <div className="space-y-3 mt-3">
-              {completedJobs.map((j) => (
+              {reviewedJobs.map((j) => (
                 <CompletedJobCard
                   key={j.id}
                   job={j}
@@ -1055,13 +1078,17 @@ function CompletedJobCard({
   token,
   canUploadPhotos,
   canAiExtract,
+  forceExpand,
 }: {
   job: CompletedJobData;
   token: string;
   canUploadPhotos: boolean;
   canAiExtract: boolean;
+  forceExpand?: boolean;
 }) {
   const { t } = useLanguage();
+  const hasMissingPhotos = job.tickets.some((tk) => !tk.photoUrl);
+  const [expanded, setExpanded] = useState(forceExpand && hasMissingPhotos ? true : false);
   const [items, setItems] = useState<ScannedTicketItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ count: number; tickets: any[] } | null>(null);
@@ -1213,13 +1240,27 @@ function CompletedJobCard({
     }
   }
 
+  const missingPhotoCount = job.tickets.filter((tk) => !tk.photoUrl).length;
+
   return (
-    <div className="rounded-lg border border-steel-200 bg-white overflow-hidden">
-      <div className="p-4">
-        {/* Header */}
+    <div className={`rounded-lg border ${hasMissingPhotos && forceExpand ? 'border-red-300' : 'border-steel-200'} bg-white overflow-hidden`}>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left p-4"
+      >
+        {/* Header — always visible */}
         <div className="flex items-center justify-between mb-1">
           <span className="font-mono font-bold text-sm">Job #{job.jobNumber}</span>
-          <span className="badge bg-green-100 text-green-800">COMPLETED</span>
+          <div className="flex items-center gap-2">
+            {missingPhotoCount > 0 && (
+              <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-red-100 text-red-700">
+                {missingPhotoCount} photo{missingPhotoCount !== 1 ? 's' : ''} needed
+              </span>
+            )}
+            <span className="badge bg-green-100 text-green-800">COMPLETED</span>
+            <span className={`text-steel-400 transition-transform text-xs ${expanded ? 'rotate-180' : ''}`}>▼</span>
+          </div>
         </div>
 
         <div className="font-semibold text-steel-800 text-sm mb-1">{job.name}</div>
@@ -1230,8 +1271,21 @@ function CompletedJobCard({
           {job.broker && <> · {job.broker.name}</>}
         </div>
 
+        {/* Red photo reminder — shown in collapsed header when photos missing */}
+        {!expanded && missingPhotoCount > 0 && (
+          <div className="mt-2 flex items-center gap-2 rounded-lg border-2 border-red-400 bg-red-50 px-3 py-2">
+            <span className="text-lg leading-none">📷</span>
+            <p className="text-xs text-red-800 font-bold">
+              Please upload ticket pictures to avoid payment delays
+            </p>
+          </div>
+        )}
+      </button>
+
+      {expanded && (
+      <div className="px-4 pb-4">
         {/* Job details */}
-        <div className="flex items-center gap-3 text-xs text-steel-600 mt-2 flex-wrap">
+        <div className="flex items-center gap-3 text-xs text-steel-600 flex-wrap">
           {job.material && <span>{job.material}</span>}
           <span>{job.totalLoads > 0 ? `${job.ticketCount}/${job.totalLoads} loads` : 'Open loads'}</span>
           {job.driverTimeSeconds > 0 && (
@@ -1251,18 +1305,15 @@ function CompletedJobCard({
           <span className="text-steel-700">{job.hauledTo}</span>
         </div>
 
-        {/* Missing photo reminder for completed job */}
-        {(() => {
-          const missingCount = job.tickets.filter((tk) => !tk.photoUrl).length;
-          return missingCount > 0 ? (
-            <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
-              <span className="text-lg leading-none">📷</span>
-              <p className="text-xs text-amber-800 font-medium">
-                {missingCount} ticket{missingCount !== 1 ? 's' : ''} missing photo — upload images to complete {missingCount !== 1 ? 'these loads' : 'this load'}
-              </p>
-            </div>
-          ) : null;
-        })()}
+        {/* Missing photo reminder — red alert for completed jobs without pictures */}
+        {missingPhotoCount > 0 && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg border-2 border-red-400 bg-red-50 px-3 py-2.5">
+            <span className="text-lg leading-none">📷</span>
+            <p className="text-xs text-red-800 font-bold">
+              {missingPhotoCount} ticket{missingPhotoCount !== 1 ? 's' : ''} missing photo — please upload ticket pictures to avoid payment delays
+            </p>
+          </div>
+        )}
 
         {/* Submitted tickets — editable if not reviewed, locked if reviewed */}
         {job.tickets.length > 0 && (
@@ -1539,6 +1590,7 @@ function CompletedJobCard({
           <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">{error}</div>
         )}
       </div>
+      )}
     </div>
   );
 }
