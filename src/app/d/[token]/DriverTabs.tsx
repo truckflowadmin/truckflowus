@@ -335,12 +335,6 @@ export default function DriverTabs(props: DriverTabsProps) {
               {props.companyName}
             </div>
           </div>
-          {props.canSeeDailyStats && (
-            <div className="text-right">
-              <div className="text-xs text-steel-400 uppercase tracking-wider">{t('driver.doneToday')}</div>
-              <div className="font-bold text-safety tabular-nums">{props.completedToday}</div>
-            </div>
-          )}
           <LanguageToggle variant="driver" />
           <button
             onClick={handleLogout}
