@@ -901,12 +901,20 @@ function CompletedTab({
 
   const [jobsOpen, setJobsOpen] = useState(false);
 
-  // Split completed jobs: un-reviewed (needs attention) vs reviewed (goes in dropdown)
-  const needsAttentionJobs = completedJobs.filter((j) =>
-    j.tickets.some((tk) => !tk.dispatcherReviewedAt),
+  // Split completed jobs into three buckets:
+  // 1. Missing photos — yellow, auto-expanded (driver must upload)
+  // 2. Photos uploaded but not reviewed — visible but collapsible
+  // 3. All tickets reviewed by dispatcher — collapsed dropdown
+  const missingPhotosJobs = completedJobs.filter((j) =>
+    j.tickets.some((tk) => !tk.photoUrl),
+  );
+  const pendingReviewJobs = completedJobs.filter((j) =>
+    j.tickets.length > 0
+    && j.tickets.every((tk) => tk.photoUrl)
+    && j.tickets.some((tk) => !tk.dispatcherReviewedAt),
   );
   const reviewedJobs = completedJobs.filter((j) =>
-    j.tickets.length > 0 && j.tickets.every((tk) => tk.dispatcherReviewedAt),
+    j.tickets.length > 0 && j.tickets.every((tk) => tk.photoUrl && tk.dispatcherReviewedAt),
   );
 
   const hasContent = completedJobs.length > 0 || tripSheets.length > 0;
@@ -993,20 +1001,39 @@ function CompletedTab({
         </div>
       )}
 
-      {/* Jobs needing attention — not yet reviewed, shown expanded */}
-      {needsAttentionJobs.length > 0 && (
+      {/* Jobs missing photos — yellow highlight, always expanded */}
+      {missingPhotosJobs.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
-            Needs Attention ({needsAttentionJobs.length})
+          <h2 className="text-xs uppercase tracking-widest text-amber-600 font-semibold px-1">
+            Upload Photos ({missingPhotosJobs.length})
           </h2>
-          {needsAttentionJobs.map((j) => (
+          {missingPhotosJobs.map((j) => (
             <CompletedJobCard
               key={j.id}
               job={j}
               token={token}
               canUploadPhotos={canUploadPhotos}
               canAiExtract={canAiExtract}
-              forceExpand={j.tickets.some((tk) => !tk.photoUrl)}
+              forceExpand
+              highlight="yellow"
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Photos uploaded, waiting for dispatcher review */}
+      {pendingReviewJobs.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
+            Pending Review ({pendingReviewJobs.length})
+          </h2>
+          {pendingReviewJobs.map((j) => (
+            <CompletedJobCard
+              key={j.id}
+              job={j}
+              token={token}
+              canUploadPhotos={canUploadPhotos}
+              canAiExtract={canAiExtract}
             />
           ))}
         </div>
@@ -1079,12 +1106,14 @@ function CompletedJobCard({
   canUploadPhotos,
   canAiExtract,
   forceExpand,
+  highlight,
 }: {
   job: CompletedJobData;
   token: string;
   canUploadPhotos: boolean;
   canAiExtract: boolean;
   forceExpand?: boolean;
+  highlight?: 'yellow';
 }) {
   const { t } = useLanguage();
   const hasMissingPhotos = job.tickets.some((tk) => !tk.photoUrl);
@@ -1243,11 +1272,15 @@ function CompletedJobCard({
   const missingPhotoCount = job.tickets.filter((tk) => !tk.photoUrl).length;
 
   return (
-    <div className={`rounded-lg border ${hasMissingPhotos && forceExpand ? 'border-red-300' : 'border-steel-200'} bg-white overflow-hidden`}>
+    <div className={`rounded-lg border-2 overflow-hidden ${
+      highlight === 'yellow'
+        ? 'border-amber-400 bg-amber-50'
+        : 'border-steel-200 bg-white'
+    }`}>
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left p-4"
+        className={`w-full text-left p-4 ${highlight === 'yellow' ? 'bg-amber-50' : ''}`}
       >
         {/* Header — always visible */}
         <div className="flex items-center justify-between mb-1">
