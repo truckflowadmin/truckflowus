@@ -882,7 +882,8 @@ function CompletedTab({
     ? Math.round(totalTripSheetRevenue * (payroll.payRate! / 100) * 100) / 100
     : 0;
 
-  const hasContent = tickets.length > 0 || completedJobs.length > 0 || tripSheets.length > 0;
+  const [jobsOpen, setJobsOpen] = useState(false);
+  const hasContent = completedJobs.length > 0 || tripSheets.length > 0;
 
   if (!hasContent) {
     return (
@@ -968,51 +969,34 @@ function CompletedTab({
         </div>
       )}
 
-      {/* Completed Jobs — with bulk upload */}
+      {/* Completed Jobs — collapsible dropdown */}
       {completedJobs.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
-            {t('driver.completedJobs')} ({completedJobs.length})
-          </h2>
-          {completedJobs.map((j) => (
-            <CompletedJobCard
-              key={j.id}
-              job={j}
-              token={token}
-              canUploadPhotos={canUploadPhotos}
-              canAiExtract={canAiExtract}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Completed Tickets — summary only, no "View" link */}
-      {tickets.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
-            {t('driver.completedTickets')} ({tickets.length})
-          </h2>
-          {tickets.map((tk) => {
-            const num = String(tk.ticketNumber).padStart(4, '0');
-            const rate = tk.ratePerUnit ? Number(tk.ratePerUnit) : null;
-            return (
-              <div key={tk.id} className="rounded-lg border border-steel-200 bg-white p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono font-bold text-sm">#{num}</span>
-                  <span className="badge bg-green-100 text-green-800">DONE</span>
-                </div>
-                <div className="text-xs text-steel-500">
-                  {tk.completedAt ? format(new Date(tk.completedAt), 'EEE MMM d, h:mm a') : '—'}
-                  {tk.customer && <> &middot; {tk.customer.name}</>}
-                </div>
-                <div className="text-sm mt-1">
-                  {tk.material && <span className="text-steel-700">{tk.material} &middot; </span>}
-                  {qtyStr(tk.quantity, tk.quantityType)}
-                  {rate !== null && <span className="text-steel-500"> @ ${rate.toFixed(2)}/{QTY_ABBR[tk.quantityType] || 'load'}</span>}
-                </div>
-              </div>
-            );
-          })}
+        <div>
+          <button
+            type="button"
+            onClick={() => setJobsOpen(!jobsOpen)}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-steel-200 bg-white hover:bg-steel-50 transition-colors"
+          >
+            <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold">
+              {t('driver.completedJobs')} ({completedJobs.length})
+            </h2>
+            <span className={`text-steel-400 transition-transform ${jobsOpen ? 'rotate-180' : ''}`}>
+              ▼
+            </span>
+          </button>
+          {jobsOpen && (
+            <div className="space-y-3 mt-3">
+              {completedJobs.map((j) => (
+                <CompletedJobCard
+                  key={j.id}
+                  job={j}
+                  token={token}
+                  canUploadPhotos={canUploadPhotos}
+                  canAiExtract={canAiExtract}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
