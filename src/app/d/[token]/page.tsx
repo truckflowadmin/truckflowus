@@ -259,15 +259,18 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
 
   // Filter upcoming/completed jobs using raw assignment status data
   const filteredUpcomingJobs = upcomingJobs.filter(j => {
+    if (j.status === 'CANCELLED') return false;
     const a = assignmentsByJobId.get(j.id);
     const aStatus = a?.status ?? 'ASSIGNED';
     return aStatus === 'ASSIGNED' || aStatus === 'IN_PROGRESS';
   }).slice(0, 50);
 
   const filteredCompletedJobs = completedJobs.filter(j => {
+    // Exclude cancelled jobs
+    if (j.status === 'CANCELLED') return false;
     const a = assignmentsByJobId.get(j.id);
+    if (a?.status === 'CANCELLED') return false;
     // Show if assignment status is COMPLETED, or if the job itself is completed
-    // (covers jobs completed before per-driver assignment status was added)
     return a?.status === 'COMPLETED' || j.status === 'COMPLETED';
   }).slice(0, 20);
 
