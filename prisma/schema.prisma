@@ -195,7 +195,8 @@ model Driver {
   workerType  WorkerType @default(EMPLOYEE)
   payType     PayType    @default(HOURLY)
   payRate     Decimal?   @db.Decimal(10, 2) // rate amount (hourly $, salary $, or percentage %)
-  nextPayDate DateTime? // next scheduled pay date (set by dispatcher)
+  payDay       String?   // day of week for recurring pay: "MONDAY","TUESDAY",etc.
+  payFrequency String?   // "WEEKLY" or "BIWEEKLY"
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

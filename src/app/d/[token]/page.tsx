@@ -450,7 +450,8 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
         workerType: driver.workerType,
         payType: driver.payType,
         payRate: driver.payRate ? Number(driver.payRate) : null,
-        nextPayDate: (driver as any).nextPayDate?.toISOString() ?? null,
+        payDay: (driver as any).payDay ?? null,
+        payFrequency: (driver as any).payFrequency ?? null,
       }}
     />
   );

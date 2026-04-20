@@ -48,8 +48,8 @@ async function updateDriverAction(formData: FormData) {
   const payRateStr = String(formData.get('payRate') || '').trim();
   const payRate = payRateStr ? parseFloat(payRateStr) : null;
 
-  const nextPayDateStr = String(formData.get('nextPayDate') || '').trim();
-  const nextPayDate = nextPayDateStr ? new Date(nextPayDateStr + 'T00:00:00') : null;
+  const payDay = String(formData.get('payDay') || '').trim() || null;
+  const payFrequency = String(formData.get('payFrequency') || '').trim() || null;
 
   await prisma.driver.update({
     where: { id },
@@ -59,7 +59,7 @@ async function updateDriverAction(formData: FormData) {
       emergencyContactName, emergencyContactPhone,
       assignedTruckId,
       truckNumber,
-      workerType, payType, payRate, nextPayDate,
+      workerType, payType, payRate, payDay, payFrequency,
     } as any,
   });
 
@@ -165,7 +165,7 @@ export default async function EditDriverPage({ params }: { params: { id: string 
 
         <div className="pt-3 border-t border-steel-200">
           <h3 className="text-sm font-semibold text-steel-700 mb-3">Payroll</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="label">Worker Type *</label>
               <select name="workerType" required className="input" defaultValue={driver.workerType}>
@@ -185,9 +185,28 @@ export default async function EditDriverPage({ params }: { params: { id: string 
               <label className="label">Pay Rate</label>
               <input name="payRate" type="number" step="0.01" min="0" className="input" defaultValue={driver.payRate?.toString() ?? ''} />
             </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="label">Next Pay Date</label>
-              <input name="nextPayDate" type="date" className="input" defaultValue={(driver as any).nextPayDate ? new Date((driver as any).nextPayDate).toISOString().split('T')[0] : ''} />
+              <label className="label">Pay Day</label>
+              <select name="payDay" className="input" defaultValue={(driver as any).payDay ?? ''}>
+                <option value="">— Not set —</option>
+                <option value="MONDAY">Monday</option>
+                <option value="TUESDAY">Tuesday</option>
+                <option value="WEDNESDAY">Wednesday</option>
+                <option value="THURSDAY">Thursday</option>
+                <option value="FRIDAY">Friday</option>
+                <option value="SATURDAY">Saturday</option>
+                <option value="SUNDAY">Sunday</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Pay Frequency</label>
+              <select name="payFrequency" className="input" defaultValue={(driver as any).payFrequency ?? ''}>
+                <option value="">— Not set —</option>
+                <option value="WEEKLY">Weekly</option>
+                <option value="BIWEEKLY">Biweekly</option>
+              </select>
             </div>
           </div>
         </div>

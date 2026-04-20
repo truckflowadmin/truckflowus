@@ -144,7 +144,8 @@ interface PayrollData {
   workerType: string;
   payType: string;
   payRate: number | null;
-  nextPayDate: string | null;
+  payDay: string | null;
+  payFrequency: string | null;
 }
 
 interface DriverTabsProps {
@@ -882,6 +883,22 @@ function CompletedTab({
     ? Math.round(totalTripSheetRevenue * (payroll.payRate! / 100) * 100) / 100
     : 0;
 
+  // Compute next recurring pay date from payDay + payFrequency
+  const DAY_MAP: Record<string, number> = { SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6 };
+  const DAY_LABEL: Record<string, string> = { SUNDAY: 'Sunday', MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday', THURSDAY: 'Thursday', FRIDAY: 'Friday', SATURDAY: 'Saturday' };
+  let nextPayDate: Date | null = null;
+  if (payroll.payDay && payroll.payFrequency) {
+    const targetDay = DAY_MAP[payroll.payDay];
+    if (targetDay !== undefined) {
+      const today = new Date();
+      const todayDay = today.getDay();
+      let daysUntil = (targetDay - todayDay + 7) % 7;
+      if (daysUntil === 0) daysUntil = 7; // next occurrence, not today
+      nextPayDate = new Date(today);
+      nextPayDate.setDate(today.getDate() + daysUntil);
+    }
+  }
+
   const [jobsOpen, setJobsOpen] = useState(false);
   const hasContent = completedJobs.length > 0 || tripSheets.length > 0;
 
@@ -909,10 +926,13 @@ function CompletedTab({
           <div className="text-sm text-green-700 mt-1">
             {payroll.payRate}% of ${totalTripSheetRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total trip sheet revenue
           </div>
-          {payroll.nextPayDate && (
+          {nextPayDate && payroll.payDay && payroll.payFrequency && (
             <div className="mt-3 pt-3 border-t border-green-200 text-sm text-green-800 font-medium">
               Your estimated payment of ${estimatedPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} will be paid on{' '}
-              {format(new Date(payroll.nextPayDate), 'EEEE, MMMM d, yyyy')}
+              {format(nextPayDate, 'EEEE, MMMM d, yyyy')}
+              <span className="text-green-600 text-xs ml-1">
+                ({payroll.payFrequency === 'BIWEEKLY' ? 'biweekly' : 'weekly'} every {DAY_LABEL[payroll.payDay]})
+              </span>
             </div>
           )}
         </div>
