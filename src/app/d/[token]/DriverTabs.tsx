@@ -130,6 +130,23 @@ interface DriverProfileData {
   emergencyContactPhone: string | null;
 }
 
+interface TripSheetData {
+  id: string;
+  weekEnding: string;
+  status: string;
+  totalDue: number | null;
+  broker: { name: string } | null;
+  ticketCount: number;
+  driverRevenue: number;
+}
+
+interface PayrollData {
+  workerType: string;
+  payType: string;
+  payRate: number | null;
+  nextPayDate: string | null;
+}
+
 interface DriverTabsProps {
   token: string;
   driverName: string;
@@ -153,6 +170,8 @@ interface DriverTabsProps {
   documents: DocumentData[];
   profile: DriverProfileData;
   driverExpenses: DriverExpenseData[];
+  tripSheets: TripSheetData[];
+  payroll: PayrollData;
 }
 
 interface DriverExpenseData {
@@ -454,6 +473,8 @@ export default function DriverTabs(props: DriverTabsProps) {
             token={props.token}
             canUploadPhotos={props.canUploadPhotos}
             canAiExtract={props.canAiExtract}
+            tripSheets={props.tripSheets}
+            payroll={props.payroll}
           />
         ) : (
           <ActiveJobsTab
@@ -841,16 +862,29 @@ function CompletedTab({
   token,
   canUploadPhotos,
   canAiExtract,
+  tripSheets,
+  payroll,
 }: {
   tickets: TicketData[];
   completedJobs: CompletedJobData[];
   token: string;
   canUploadPhotos: boolean;
   canAiExtract: boolean;
+  tripSheets: TripSheetData[];
+  payroll: PayrollData;
 }) {
   const { t } = useLanguage();
 
-  if (tickets.length === 0 && completedJobs.length === 0) {
+  // Calculate estimated pay for percentage-based contractors
+  const isPercentageContractor = payroll.workerType === 'CONTRACTOR' && payroll.payType === 'PERCENTAGE' && payroll.payRate;
+  const totalTripSheetRevenue = tripSheets.reduce((sum, ts) => sum + ts.driverRevenue, 0);
+  const estimatedPay = isPercentageContractor
+    ? Math.round(totalTripSheetRevenue * (payroll.payRate! / 100) * 100) / 100
+    : 0;
+
+  const hasContent = tickets.length > 0 || completedJobs.length > 0 || tripSheets.length > 0;
+
+  if (!hasContent) {
     return (
       <div className="panel p-8 text-center">
         <div className="text-5xl mb-3">📋</div>
@@ -862,6 +896,78 @@ function CompletedTab({
 
   return (
     <div className="space-y-5">
+      {/* Estimated Pay Card — percentage contractors only */}
+      {isPercentageContractor && tripSheets.length > 0 && (
+        <div className="rounded-lg border-2 border-green-300 bg-green-50 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs uppercase tracking-widest text-green-700 font-semibold">
+              Estimated Payment
+            </h2>
+            <button
+              onClick={() => window.print()}
+              className="text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Print Estimate
+            </button>
+          </div>
+          <div className="text-3xl font-bold text-green-800 tabular-nums">
+            ${estimatedPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="text-sm text-green-700 mt-1">
+            {payroll.payRate}% of ${totalTripSheetRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total trip sheet revenue
+          </div>
+          {payroll.nextPayDate && (
+            <div className="mt-3 pt-3 border-t border-green-200 text-sm text-green-800 font-medium">
+              Your estimated payment of ${estimatedPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} will be paid on{' '}
+              {format(new Date(payroll.nextPayDate), 'EEEE, MMMM d, yyyy')}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Trip Sheets */}
+      {tripSheets.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
+            Trip Sheets ({tripSheets.length})
+          </h2>
+          {tripSheets.map((ts) => {
+            const tsPayEst = isPercentageContractor
+              ? Math.round(ts.driverRevenue * (payroll.payRate! / 100) * 100) / 100
+              : null;
+            return (
+              <div key={ts.id} className="rounded-lg border border-steel-200 bg-white p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-sm">
+                    Week ending {format(new Date(ts.weekEnding), 'MMM d, yyyy')}
+                  </span>
+                  <span className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${
+                    ts.status === 'PAID' ? 'bg-green-100 text-green-800' :
+                    ts.status === 'SENT' ? 'bg-blue-100 text-blue-800' :
+                    'bg-steel-100 text-steel-600'
+                  }`}>
+                    {ts.status}
+                  </span>
+                </div>
+                <div className="text-xs text-steel-500">
+                  {ts.broker?.name ?? 'No broker'} &middot; {ts.ticketCount} ticket{ts.ticketCount !== 1 ? 's' : ''}
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="text-sm font-medium">
+                    Revenue: ${ts.driverRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  {tsPayEst !== null && (
+                    <div className="text-sm text-green-700 font-medium">
+                      Your {payroll.payRate}%: ${tsPayEst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Completed Jobs — with bulk upload */}
       {completedJobs.length > 0 && (
         <div className="space-y-3">
@@ -880,21 +986,33 @@ function CompletedTab({
         </div>
       )}
 
-      {/* Completed Tickets */}
+      {/* Completed Tickets — summary only, no "View" link */}
       {tickets.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-xs uppercase tracking-widest text-steel-500 font-semibold px-1">
             {t('driver.completedTickets')} ({tickets.length})
           </h2>
-          {tickets.map((tk) => (
-            <CompletedCard
-              key={tk.id}
-              ticket={tk}
-              token={token}
-              canUploadPhotos={canUploadPhotos}
-              canAiExtract={canAiExtract}
-            />
-          ))}
+          {tickets.map((tk) => {
+            const num = String(tk.ticketNumber).padStart(4, '0');
+            const rate = tk.ratePerUnit ? Number(tk.ratePerUnit) : null;
+            return (
+              <div key={tk.id} className="rounded-lg border border-steel-200 bg-white p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-mono font-bold text-sm">#{num}</span>
+                  <span className="badge bg-green-100 text-green-800">DONE</span>
+                </div>
+                <div className="text-xs text-steel-500">
+                  {tk.completedAt ? format(new Date(tk.completedAt), 'EEE MMM d, h:mm a') : '—'}
+                  {tk.customer && <> &middot; {tk.customer.name}</>}
+                </div>
+                <div className="text-sm mt-1">
+                  {tk.material && <span className="text-steel-700">{tk.material} &middot; </span>}
+                  {qtyStr(tk.quantity, tk.quantityType)}
+                  {rate !== null && <span className="text-steel-500"> @ ${rate.toFixed(2)}/{QTY_ABBR[tk.quantityType] || 'load'}</span>}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

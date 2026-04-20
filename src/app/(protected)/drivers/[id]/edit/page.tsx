@@ -48,6 +48,9 @@ async function updateDriverAction(formData: FormData) {
   const payRateStr = String(formData.get('payRate') || '').trim();
   const payRate = payRateStr ? parseFloat(payRateStr) : null;
 
+  const nextPayDateStr = String(formData.get('nextPayDate') || '').trim();
+  const nextPayDate = nextPayDateStr ? new Date(nextPayDateStr + 'T00:00:00') : null;
+
   await prisma.driver.update({
     where: { id },
     data: {
@@ -56,8 +59,8 @@ async function updateDriverAction(formData: FormData) {
       emergencyContactName, emergencyContactPhone,
       assignedTruckId,
       truckNumber,
-      workerType, payType, payRate,
-    },
+      workerType, payType, payRate, nextPayDate,
+    } as any,
   });
 
   revalidatePath('/drivers');
@@ -162,7 +165,7 @@ export default async function EditDriverPage({ params }: { params: { id: string 
 
         <div className="pt-3 border-t border-steel-200">
           <h3 className="text-sm font-semibold text-steel-700 mb-3">Payroll</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="label">Worker Type *</label>
               <select name="workerType" required className="input" defaultValue={driver.workerType}>
@@ -181,6 +184,10 @@ export default async function EditDriverPage({ params }: { params: { id: string 
             <div>
               <label className="label">Pay Rate</label>
               <input name="payRate" type="number" step="0.01" min="0" className="input" defaultValue={driver.payRate?.toString() ?? ''} />
+            </div>
+            <div>
+              <label className="label">Next Pay Date</label>
+              <input name="nextPayDate" type="date" className="input" defaultValue={(driver as any).nextPayDate ? new Date((driver as any).nextPayDate).toISOString().split('T')[0] : ''} />
             </div>
           </div>
         </div>

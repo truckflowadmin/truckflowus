@@ -51,6 +51,7 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
     completedJobs,
     driverDocuments,
     driverExpenses,
+    driverTripSheets,
   ] = await Promise.all([
     // Active tickets (dispatched, in-progress, issue)
     prisma.ticket.findMany({
@@ -202,6 +203,34 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
       orderBy: { date: 'desc' },
       take: 100,
     }),
+
+    // Trip sheets that contain tickets for this driver
+    prisma.tripSheet.findMany({
+      where: {
+        companyId: driver.companyId,
+        tickets: { some: { driverId: driver.id } },
+      },
+      include: {
+        broker: { select: { name: true } },
+        tickets: {
+          where: { driverId: driver.id },
+          select: {
+            id: true,
+            ticketNumber: true,
+            material: true,
+            quantity: true,
+            quantityType: true,
+            ratePerUnit: true,
+            hauledFrom: true,
+            hauledTo: true,
+            date: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { weekEnding: 'desc' },
+      take: 50,
+    }),
   ]);
 
   // Fetch this driver's assignment-level status data via raw SQL
@@ -340,6 +369,23 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
     })),
   });
 
+  const serializeTripSheet = (ts: any) => {
+    const driverTickets = ts.tickets ?? [];
+    const totalRevenue = driverTickets.reduce((sum: number, tk: any) => {
+      const rate = tk.ratePerUnit ? Number(tk.ratePerUnit) : 0;
+      return sum + rate * Number(tk.quantity);
+    }, 0);
+    return {
+      id: ts.id,
+      weekEnding: ts.weekEnding.toISOString(),
+      status: ts.status,
+      totalDue: ts.totalDue ? Number(ts.totalDue) : null,
+      broker: ts.broker ? { name: ts.broker.name } : null,
+      ticketCount: driverTickets.length,
+      driverRevenue: Math.round(totalRevenue * 100) / 100,
+    };
+  };
+
   const serializeTimeOff = (r: any) => ({
     id: r.id,
     startDate: r.startDate.toISOString(),
@@ -399,6 +445,13 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
         notes: e.notes,
         truckNumber: e.truck?.truckNumber ?? null,
       }))}
+      tripSheets={driverTripSheets.map(serializeTripSheet)}
+      payroll={{
+        workerType: driver.workerType,
+        payType: driver.payType,
+        payRate: driver.payRate ? Number(driver.payRate) : null,
+        nextPayDate: (driver as any).nextPayDate?.toISOString() ?? null,
+      }}
     />
   );
 }
