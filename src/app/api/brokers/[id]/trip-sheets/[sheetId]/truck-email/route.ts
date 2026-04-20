@@ -18,7 +18,7 @@ export async function POST(
 ) {
   const session = await requireSession();
   const body = await req.json();
-  const { to, trucks } = body;
+  const { to, trucks, customBody } = body;
 
   if (!to || !Array.isArray(trucks) || trucks.length === 0) {
     return NextResponse.json({ error: 'to and trucks[] are required' }, { status: 400 });
@@ -105,21 +105,23 @@ export async function POST(
   const weekStr = format(sheet.weekEnding, 'MMM d, yyyy');
   const filename = `TripSheet-${broker.name.replace(/\s+/g, '_')}-${trucks.join('_')}-${format(sheet.weekEnding, 'yyyy-MM-dd')}.pdf`;
 
+  const defaultText = [
+    `Hello ${(Array.isArray(broker.contacts) && (broker.contacts as any[])[0]?.name) || broker.name},`,
+    '',
+    `Please find attached the trip sheet for ${truckLabel} for week ending ${weekStr}.`,
+    '',
+    `Tickets: ${filteredTickets.length}`,
+    `Total Due: $${totalDue.toFixed(2)}`,
+    '',
+    'Thank you,',
+    company.name,
+    [company.phone, company.email].filter(Boolean).join(' \u2022 '),
+  ].join('\n');
+
   const result = await sendEmail({
     to,
     subject: `Trip Sheet from ${company.name} — ${truckLabel} — Week Ending ${weekStr}`,
-    text: [
-      `Hello ${(Array.isArray(broker.contacts) && (broker.contacts as any[])[0]?.name) || broker.name},`,
-      '',
-      `Please find attached the trip sheet for ${truckLabel} for week ending ${weekStr}.`,
-      '',
-      `Tickets: ${filteredTickets.length}`,
-      `Total Due: $${totalDue.toFixed(2)}`,
-      '',
-      'Thank you,',
-      company.name,
-      [company.phone, company.email].filter(Boolean).join(' \u2022 '),
-    ].join('\n'),
+    text: typeof customBody === 'string' && customBody.trim() ? customBody : defaultText,
     attachments: [{
       filename,
       content: pdfBuffer,

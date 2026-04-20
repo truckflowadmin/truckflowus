@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireSession();
   const body = await req.json();
-  const { weekStart, weekEnd, to, trucks } = body;
+  const { weekStart, weekEnd, to, trucks, customBody } = body;
 
   if (!weekStart || !weekEnd || !to || !Array.isArray(trucks) || trucks.length === 0) {
     return NextResponse.json({ error: 'weekStart, weekEnd, to, and trucks[] are required' }, { status: 400 });
@@ -104,21 +104,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const periodLabel = `${format(startDate, 'MMM d')} \u2013 ${format(endDate, 'MMM d, yyyy')}`;
   const filename = `TripSheet-${broker.name.replace(/\s+/g, '_')}-${trucks.join('_')}-${weekStart}.pdf`;
 
+  const defaultText = [
+    `Hello ${(Array.isArray(broker.contacts) && (broker.contacts as any[])[0]?.name) || broker.name},`,
+    '',
+    `Please find attached the trip sheet for ${truckLabel} for ${periodLabel}.`,
+    '',
+    `Tickets: ${filteredTickets.length}`,
+    `Total Due: $${totalDue.toFixed(2)}`,
+    '',
+    'Thank you,',
+    company.name,
+    [company.phone, company.email].filter(Boolean).join(' \u2022 '),
+  ].join('\n');
+
   const result = await sendEmail({
     to,
     subject: `Trip Sheet from ${company.name} \u2014 ${truckLabel} \u2014 ${periodLabel}`,
-    text: [
-      `Hello ${(Array.isArray(broker.contacts) && (broker.contacts as any[])[0]?.name) || broker.name},`,
-      '',
-      `Please find attached the trip sheet for ${truckLabel} for ${periodLabel}.`,
-      '',
-      `Tickets: ${filteredTickets.length}`,
-      `Total Due: $${totalDue.toFixed(2)}`,
-      '',
-      'Thank you,',
-      company.name,
-      [company.phone, company.email].filter(Boolean).join(' \u2022 '),
-    ].join('\n'),
+    text: typeof customBody === 'string' && customBody.trim() ? customBody : defaultText,
     attachments: [{
       filename,
       content: pdfBuffer,

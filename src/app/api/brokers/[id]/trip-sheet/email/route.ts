@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireSession();
   const body = await req.json();
-  const { weekStart, weekEnd, to } = body;
+  const { weekStart, weekEnd, to, customBody } = body;
 
   if (!weekStart || !weekEnd || !to) {
     return NextResponse.json({ error: 'weekStart, weekEnd, and to are required' }, { status: 400 });
@@ -91,22 +91,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const periodLabel = `${format(startDate, 'MMM d')} – ${format(endDate, 'MMM d, yyyy')}`;
   const filename = `TripSheet-${broker.name.replace(/\s+/g, '_')}-${weekStart}.pdf`;
 
+  const defaultText = [
+    `Hello ${(Array.isArray(broker.contacts) && (broker.contacts as any[])[0]?.name) || broker.name},`,
+    '',
+    `Please find attached the trip sheet for ${periodLabel}.`,
+    '',
+    `Tickets: ${tickets.length}`,
+    `Completed revenue: $${totalRevenue.toFixed(2)}`,
+    `Commission owed (${commPct}%): $${totalCommission.toFixed(2)}`,
+    '',
+    'Thank you,',
+    company.name,
+    [company.phone, company.email].filter(Boolean).join(' • '),
+  ].join('\n');
+
   const result = await sendEmail({
     to,
     subject: `Trip Sheet from ${company.name} — ${periodLabel}`,
-    text: [
-      `Hello ${(Array.isArray(broker.contacts) && (broker.contacts as any[])[0]?.name) || broker.name},`,
-      '',
-      `Please find attached the trip sheet for ${periodLabel}.`,
-      '',
-      `Tickets: ${tickets.length}`,
-      `Completed revenue: $${totalRevenue.toFixed(2)}`,
-      `Commission owed (${commPct}%): $${totalCommission.toFixed(2)}`,
-      '',
-      'Thank you,',
-      company.name,
-      [company.phone, company.email].filter(Boolean).join(' • '),
-    ].join('\n'),
+    text: typeof customBody === 'string' && customBody.trim() ? customBody : defaultText,
     attachments: [{
       filename,
       content: pdfBuffer,

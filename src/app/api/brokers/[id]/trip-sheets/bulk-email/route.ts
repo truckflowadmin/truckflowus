@@ -18,7 +18,7 @@ export async function POST(
 ) {
   const session = await requireSession();
   const body = await req.json();
-  const { to } = body;
+  const { to, customBody } = body;
   const entries: { sheetId: string; trucks: string[] }[] = body.entries ?? [];
 
   if (!to) {
@@ -143,21 +143,23 @@ export async function POST(
   const weekStr = format(latestWeekEnding, 'MMM d, yyyy');
   const filename = `TripSheets-${broker.name.replace(/\s+/g, '_')}-${sheets.length}-sheets.pdf`;
 
+  const defaultText = [
+    `Hello ${(Array.isArray(broker.contacts) && (broker.contacts as any[])[0]?.name) || broker.name},`,
+    '',
+    `Please find attached the combined trip sheet${sheets.length !== 1 ? 's' : ''} through week ending ${weekStr}.`,
+    '',
+    `Tickets: ${allTickets.length}`,
+    `Total Due: $${totalDue.toFixed(2)}`,
+    '',
+    'Thank you,',
+    company.name,
+    [company.phone, company.email].filter(Boolean).join(' • '),
+  ].join('\n');
+
   const result = await sendEmail({
     to,
     subject: `Trip Sheets from ${company.name} — ${sheets.length} sheet${sheets.length !== 1 ? 's' : ''} through ${weekStr}`,
-    text: [
-      `Hello ${(Array.isArray(broker.contacts) && (broker.contacts as any[])[0]?.name) || broker.name},`,
-      '',
-      `Please find attached the combined trip sheet${sheets.length !== 1 ? 's' : ''} through week ending ${weekStr}.`,
-      '',
-      `Tickets: ${allTickets.length}`,
-      `Total Due: $${totalDue.toFixed(2)}`,
-      '',
-      'Thank you,',
-      company.name,
-      [company.phone, company.email].filter(Boolean).join(' • '),
-    ].join('\n'),
+    text: typeof customBody === 'string' && customBody.trim() ? customBody : defaultText,
     attachments: [{
       filename,
       content: pdfBuffer,

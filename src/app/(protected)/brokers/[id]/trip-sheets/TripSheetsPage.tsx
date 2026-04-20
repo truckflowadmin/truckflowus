@@ -141,6 +141,11 @@ export function TripSheetsPage({
   const [emailTo, setEmailTo] = useState(brokerEmail ?? '');
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState<string | null>(null);
+  // Preview state
+  const [emailPreviewBody, setEmailPreviewBody] = useState('');
+  const [emailPreviewSubject, setEmailPreviewSubject] = useState('');
+  const [emailPreviewLoading, setEmailPreviewLoading] = useState(false);
+  const [emailShowPreview, setEmailShowPreview] = useState(false);
 
   /* ── Compute date range from preset ────────────────────────── */
 
@@ -362,12 +367,62 @@ export function TripSheetsPage({
     }
   }
 
+  async function handleEmailPreview() {
+    if (emailTargets.length === 0 || !emailTo.trim()) return;
+    setEmailPreviewLoading(true);
+    setError('');
+    try {
+      // For single sheet, fetch preview from the preview endpoint
+      if (emailTargets.length === 1) {
+        const target = emailTargets[0];
+        const res = await fetch(`/api/brokers/${brokerId}/trip-sheets/${target.sheetId}/email-preview`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trucks: target.trucks.length > 0 ? target.trucks : undefined }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setEmailPreviewSubject(data.subject);
+          setEmailPreviewBody(data.text);
+          setEmailShowPreview(true);
+        } else {
+          const data = await res.json().catch(() => ({ error: 'Failed to load preview' }));
+          setError(data.error || 'Failed to load preview');
+        }
+      } else {
+        // For bulk, fetch preview from the first sheet for a reasonable default
+        const target = emailTargets[0];
+        const res = await fetch(`/api/brokers/${brokerId}/trip-sheets/${target.sheetId}/email-preview`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trucks: target.trucks.length > 0 ? target.trucks : undefined }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setEmailPreviewSubject(`${emailTargets.length} Trip Sheets — ${data.subject.split(' — ').pop()}`);
+          // Use the default body pattern but note it's multiple sheets
+          setEmailPreviewBody(data.text.replace(
+            /trip sheet for/i,
+            `combined trip sheet${emailTargets.length !== 1 ? 's' : ''} for`
+          ));
+          setEmailShowPreview(true);
+        } else {
+          setError('Failed to load preview');
+        }
+      }
+    } catch {
+      setError('Failed to load preview');
+    }
+    setEmailPreviewLoading(false);
+  }
+
   async function handleEmailSend() {
     if (emailTargets.length === 0 || !emailTo.trim()) return;
     setEmailSending(true);
     setError('');
     setEmailSent(null);
     try {
+      const customBody = emailPreviewBody || undefined;
       // Single entry — use existing per-sheet route
       if (emailTargets.length === 1) {
         const target = emailTargets[0];
@@ -376,13 +431,13 @@ export function TripSheetsPage({
           res = await fetch(`/api/brokers/${brokerId}/trip-sheets/${target.sheetId}/email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: emailTo.trim() }),
+            body: JSON.stringify({ to: emailTo.trim(), customBody }),
           });
         } else {
           res = await fetch(`/api/brokers/${brokerId}/trip-sheets/${target.sheetId}/truck-email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: emailTo.trim(), trucks: target.trucks }),
+            body: JSON.stringify({ to: emailTo.trim(), trucks: target.trucks, customBody }),
           });
         }
         if (!res.ok) {
@@ -394,7 +449,7 @@ export function TripSheetsPage({
         const res = await fetch(`/api/brokers/${brokerId}/trip-sheets/bulk-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: emailTo.trim(), entries: emailTargets }),
+          body: JSON.stringify({ to: emailTo.trim(), entries: emailTargets, customBody }),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({ error: 'Failed to send' }));
@@ -403,6 +458,9 @@ export function TripSheetsPage({
       }
       setEmailSent(emailTo);
       setEmailTargets([]);
+      setEmailShowPreview(false);
+      setEmailPreviewBody('');
+      setEmailPreviewSubject('');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -562,7 +620,7 @@ export function TripSheetsPage({
         </div>
       )}
 
-      {/* Email form (inline) */}
+      {/* Email form (inline) with preview */}
       {emailTargets.length > 0 && (
         <div className="panel p-4 border-2 border-safety bg-safety/5">
           <h3 className="text-sm font-semibold mb-2">
@@ -570,7 +628,7 @@ export function TripSheetsPage({
               ? `Trip Sheet${emailTargets[0].trucks.length > 0 ? ` — ${emailTargets[0].trucks.join(', ')}` : ''}`
               : `${emailTargets.length} Trip Sheets`}
           </h3>
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2 mb-3">
             <div className="flex-1">
               <label className="label text-xs">Email to</label>
               <input
@@ -581,11 +639,52 @@ export function TripSheetsPage({
                 placeholder="broker@example.com"
               />
             </div>
-            <button onClick={handleEmailSend} disabled={emailSending || !emailTo.trim()} className="btn-accent">
-              {emailSending ? 'Sending\u2026' : 'Send'}
-            </button>
-            <button onClick={() => setEmailTargets([])} className="btn-ghost">Cancel</button>
+            {!emailShowPreview ? (
+              <button
+                onClick={handleEmailPreview}
+                disabled={emailPreviewLoading || !emailTo.trim()}
+                className="btn-accent"
+              >
+                {emailPreviewLoading ? 'Loading…' : 'Preview'}
+              </button>
+            ) : null}
+            <button onClick={() => { setEmailTargets([]); setEmailShowPreview(false); setEmailPreviewBody(''); }} className="btn-ghost">Cancel</button>
           </div>
+
+          {/* Preview body */}
+          {emailShowPreview && (
+            <div className="space-y-3">
+              <div>
+                <label className="label text-xs">Subject</label>
+                <div className="text-sm font-medium bg-steel-100 px-3 py-2 rounded border border-steel-200">
+                  {emailPreviewSubject}
+                </div>
+              </div>
+              <div>
+                <label className="label text-xs">Email Body <span className="text-steel-400 font-normal">(edit as needed)</span></label>
+                <textarea
+                  value={emailPreviewBody}
+                  onChange={(e) => setEmailPreviewBody(e.target.value)}
+                  className="input w-full h-48 resize-y font-mono text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleEmailSend}
+                  disabled={emailSending || !emailTo.trim()}
+                  className="btn-accent"
+                >
+                  {emailSending ? 'Sending…' : 'Send Email'}
+                </button>
+                <button
+                  onClick={() => { setEmailShowPreview(false); setEmailPreviewBody(''); }}
+                  className="btn-ghost text-sm"
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

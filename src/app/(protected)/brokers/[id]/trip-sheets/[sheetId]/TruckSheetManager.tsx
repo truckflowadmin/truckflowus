@@ -60,6 +60,12 @@ export function TruckSheetManager({
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
 
+  // Preview state
+  const [previewBody, setPreviewBody] = useState('');
+  const [previewSubject, setPreviewSubject] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+
   // Group tickets by truck number
   const truckGroups: TruckGroup[] = useMemo(() => {
     const map = new Map<string, TruckGroup>();
@@ -109,6 +115,32 @@ export function TruckSheetManager({
     window.open(url, '_blank');
   }
 
+  // Fetch email preview
+  async function fetchPreview(truckNumbers: string[] | 'full') {
+    setPreviewLoading(true);
+    setError('');
+    try {
+      const trucks = truckNumbers === 'full' ? undefined : truckNumbers;
+      const res = await fetch(`/api/brokers/${brokerId}/trip-sheets/${sheetId}/email-preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trucks }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPreviewSubject(data.subject);
+        setPreviewBody(data.text);
+        setShowPreview(true);
+      } else {
+        const data = await res.json().catch(() => ({ error: 'Failed to load preview' }));
+        setError(data.error || 'Failed to load preview');
+      }
+    } catch {
+      setError('Failed to load preview');
+    }
+    setPreviewLoading(false);
+  }
+
   // Email selected trucks (per-truck API) or full sheet
   async function handleEmail(truckNumbers: string[] | 'full') {
     if (!emailTo.trim()) return;
@@ -122,14 +154,14 @@ export function TruckSheetManager({
         res = await fetch(`/api/brokers/${brokerId}/trip-sheets/${sheetId}/email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: emailTo.trim() }),
+          body: JSON.stringify({ to: emailTo.trim(), customBody: previewBody || undefined }),
         });
       } else {
         if (truckNumbers.length === 0) return;
         res = await fetch(`/api/brokers/${brokerId}/trip-sheets/${sheetId}/truck-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: emailTo.trim(), trucks: truckNumbers }),
+          body: JSON.stringify({ to: emailTo.trim(), trucks: truckNumbers, customBody: previewBody || undefined }),
         });
       }
       if (!res.ok) {
@@ -138,6 +170,9 @@ export function TruckSheetManager({
       }
       setEmailSent(truckNumbers === 'full' ? 'Full Trip Sheet' : truckNumbers.join(', '));
       setEmailTruck(null);
+      setShowPreview(false);
+      setPreviewBody('');
+      setPreviewSubject('');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -162,6 +197,31 @@ export function TruckSheetManager({
       setEmailTruck('__full__');
     }
     setEmailTo(brokerEmail ?? '');
+    setShowPreview(false);
+    setPreviewBody('');
+    setPreviewSubject('');
+  }
+
+  // Handle Preview button click
+  function handlePreviewClick() {
+    if (!emailTo.trim()) return;
+    if (emailTruck === '__full__') {
+      fetchPreview('full');
+    } else if (emailTruck === '__bulk__') {
+      fetchPreview(Array.from(selected));
+    } else if (emailTruck) {
+      fetchPreview([emailTruck]);
+    }
+  }
+
+  // Handle Send from preview
+  function handleSendFromPreview() {
+    if (emailTruck === '__full__') {
+      handleEmail('full');
+    } else {
+      const trucks = emailTruck === '__bulk__' ? Array.from(selected) : [emailTruck!];
+      handleEmail(trucks);
+    }
   }
 
   const selectedCount = selected.size;
@@ -235,7 +295,7 @@ export function TruckSheetManager({
         </div>
       )}
 
-      {/* Email modal for selected trucks */}
+      {/* Email modal with preview */}
       {emailTruck && (
         <div className="panel p-4 border-2 border-safety bg-safety/5">
           <h3 className="text-sm font-semibold mb-2">
@@ -245,7 +305,9 @@ export function TruckSheetManager({
                 ? `Email Trip Sheet (${selectedCount} truck${selectedCount !== 1 ? 's' : ''})`
                 : `Email Trip Sheet — ${emailTruck}`}
           </h3>
-          <div className="flex items-end gap-2">
+
+          {/* Email to field */}
+          <div className="flex items-end gap-2 mb-3">
             <div className="flex-1">
               <label className="label text-xs">Email to</label>
               <input
@@ -256,43 +318,71 @@ export function TruckSheetManager({
                 placeholder="broker@example.com"
               />
             </div>
+            {!showPreview ? (
+              <button
+                onClick={handlePreviewClick}
+                disabled={previewLoading || !emailTo.trim()}
+                className="btn-accent"
+              >
+                {previewLoading ? 'Loading…' : 'Preview'}
+              </button>
+            ) : null}
             <button
-              onClick={() => {
-                if (emailTruck === '__full__') {
-                  handleEmail('full');
-                } else {
-                  const trucks = emailTruck === '__bulk__'
-                    ? Array.from(selected)
-                    : [emailTruck!];
-                  handleEmail(trucks);
-                }
-              }}
-              disabled={emailSending || !emailTo.trim()}
-              className="btn-accent"
-            >
-              {emailSending ? 'Sending\u2026' : 'Send'}
-            </button>
-            <button
-              onClick={() => setEmailTruck(null)}
+              onClick={() => { setEmailTruck(null); setShowPreview(false); setPreviewBody(''); }}
               className="btn-ghost"
             >
               Cancel
             </button>
           </div>
+
+          {/* Preview body */}
+          {showPreview && (
+            <div className="space-y-3">
+              <div>
+                <label className="label text-xs">Subject</label>
+                <div className="text-sm font-medium bg-steel-100 px-3 py-2 rounded border border-steel-200">
+                  {previewSubject}
+                </div>
+              </div>
+              <div>
+                <label className="label text-xs">Email Body <span className="text-steel-400 font-normal">(edit as needed)</span></label>
+                <textarea
+                  value={previewBody}
+                  onChange={(e) => setPreviewBody(e.target.value)}
+                  className="input w-full h-48 resize-y font-mono text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSendFromPreview}
+                  disabled={emailSending || !emailTo.trim()}
+                  className="btn-accent"
+                >
+                  {emailSending ? 'Sending…' : 'Send Email'}
+                </button>
+                <button
+                  onClick={() => { setShowPreview(false); setPreviewBody(''); }}
+                  className="btn-ghost text-sm"
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {emailSent && (
         <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
           Sent trip sheet for {emailSent} to {emailTo}!
-          <button onClick={() => setEmailSent(null)} className="ml-2 text-green-500 hover:text-green-700">\u2715</button>
+          <button onClick={() => setEmailSent(null)} className="ml-2 text-green-500 hover:text-green-700">{'\u2715'}</button>
         </div>
       )}
 
       {error && (
         <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
           {error}
-          <button onClick={() => setError('')} className="ml-2 text-red-500 hover:text-red-700">\u2715</button>
+          <button onClick={() => setError('')} className="ml-2 text-red-500 hover:text-red-700">{'\u2715'}</button>
         </div>
       )}
 
@@ -358,6 +448,8 @@ export function TruckSheetManager({
                     onClick={() => {
                       setEmailTruck(group.truckNumber);
                       setEmailTo(brokerEmail ?? '');
+                      setShowPreview(false);
+                      setPreviewBody('');
                     }}
                     className="text-xs px-3 py-1.5 bg-steel-100 text-steel-700 rounded-lg hover:bg-steel-200 transition-colors inline-flex items-center gap-1"
                   >
@@ -403,7 +495,7 @@ export function TruckSheetManager({
                               <form action={removeAction}>
                                 <input type="hidden" name="sheetId" value={sheetId} />
                                 <input type="hidden" name="ticketId" value={t.id} />
-                                <button type="submit" className="text-red-500 hover:text-red-700 text-xs">\u2715</button>
+                                <button type="submit" className="text-red-500 hover:text-red-700 text-xs">{'\u2715'}</button>
                               </form>
                             </td>
                           )}
