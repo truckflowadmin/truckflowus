@@ -151,7 +151,7 @@ export function EditTicketForm({ action, ticket, customers: initialCustomers, ma
         </div>
         <div>
           <label className="label" htmlFor="quantity">{quantityLabel}</label>
-          <input id="quantity" name="quantity" type="number" min="0.01" step={quantityType === 'TONS' ? '0.01' : '1'} defaultValue={ticket.quantity} className="input" />
+          <input id="quantity" name="quantity" type="number" min={quantityType === 'TONS' ? '0.01' : '1'} step={quantityType === 'TONS' ? '0.01' : '1'} defaultValue={ticket.quantity} className="input" />
         </div>
       </div>
 

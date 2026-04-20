@@ -199,7 +199,7 @@ export function NewTicketForm({ drivers, customers: initialCustomers, materials:
         </div>
         <div>
           <label className="label" htmlFor="quantity">{quantityLabel}</label>
-          <input id="quantity" name="quantity" type="number" min="0.01" step={quantityType === 'TONS' ? '0.01' : '1'} defaultValue={1} className="input" />
+          <input id="quantity" name="quantity" type="number" min={quantityType === 'TONS' ? '0.01' : '1'} step={quantityType === 'TONS' ? '0.01' : '1'} defaultValue={1} className="input" />
         </div>
       </div>
 
