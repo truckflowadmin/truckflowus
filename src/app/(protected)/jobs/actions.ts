@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
 import type { QuantityType } from '@prisma/client';
+import { sendSms } from '@/lib/sms';
 
 /* ── Helper: check if a job has any invoiced tickets ── */
 async function jobHasInvoicedTickets(jobId: string): Promise<boolean> {
@@ -447,6 +448,25 @@ export async function updateJobStatusAction(jobId: string, newStatus: string, as
 
   revalidatePath('/jobs');
   revalidatePath(`/jobs/${jobId}`);
+
+  // Notify assigned drivers via SMS when a job is cancelled
+  if (newStatus === 'CANCELLED') {
+    const drivers = await prisma.driver.findMany({
+      where: {
+        id: { in: allAssignments.map((a: any) => a.driverId) },
+        active: true,
+      },
+      select: { id: true, phone: true, name: true },
+    });
+    for (const d of drivers) {
+      sendSms({
+        phone: d.phone,
+        message: `Job #${job.jobNumber} "${job.name}" has been cancelled. Please check your app for updates.`,
+        driverId: d.id,
+      }).catch(() => {}); // fire-and-forget, don't block the response
+    }
+  }
+
   return { ok: true };
 }
 

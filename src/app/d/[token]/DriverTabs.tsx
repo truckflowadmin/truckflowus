@@ -295,6 +295,14 @@ export default function DriverTabs(props: DriverTabsProps) {
   const [tab, setTab] = useState<'active' | 'available' | 'upcoming' | 'completed' | 'calendar' | 'expenses' | 'profile'>('active');
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Auto-refresh every 30s so driver sees dispatcher changes (cancellations, new jobs, etc.)
+  useEffect(() => {
+    const id = setInterval(() => {
+      router.refresh();
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [router]);
+
   async function handleLogout() {
     setLoggingOut(true);
     try {
