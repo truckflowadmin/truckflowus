@@ -900,17 +900,9 @@ function CompletedTab({
       {/* Estimated Pay Card — percentage contractors only */}
       {isPercentageContractor && tripSheets.length > 0 && (
         <div className="rounded-lg border-2 border-green-300 bg-green-50 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs uppercase tracking-widest text-green-700 font-semibold">
-              Estimated Payment
-            </h2>
-            <button
-              onClick={() => window.print()}
-              className="text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              Print Estimate
-            </button>
-          </div>
+          <h2 className="text-xs uppercase tracking-widest text-green-700 font-semibold mb-3">
+            Estimated Payment
+          </h2>
           <div className="text-3xl font-bold text-green-800 tabular-nums">
             ${estimatedPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
@@ -962,6 +954,14 @@ function CompletedTab({
                       Your {payroll.payRate}%: ${tsPayEst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-steel-100">
+                  <button
+                    onClick={() => window.print()}
+                    className="text-xs font-medium text-steel-600 bg-steel-100 hover:bg-steel-200 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Print Trip Sheet
+                  </button>
                 </div>
               </div>
             );
