@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { getAllPosts } from '@/lib/blog';
 
 export const metadata: Metadata = {
-  title: 'Blog — Dump Truck Industry Tips & Software Guides',
+  title: 'Dump Truck Business Blog — Dispatch, Ticketing & Fleet Management Tips',
   description:
-    'Tips, guides, and best practices for dump truck operators, dispatchers, and hauling companies. Learn about ticketing, dispatch, invoicing, and fleet management.',
+    'Expert tips and guides for dump truck operators, dispatchers, and hauling company owners. Learn how to streamline dispatch, go paperless with digital load tickets, speed up invoicing, and grow your trucking business.',
   alternates: { canonical: '/blog' },
 };
 

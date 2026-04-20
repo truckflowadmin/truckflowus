@@ -4,9 +4,10 @@ import { prisma } from '@/lib/prisma';
 import { hashPassword, signSession, setSessionCookie, getSession } from '@/lib/auth';
 
 export const metadata: Metadata = {
-  title: 'Sign Up',
+  title: 'Sign Up Free — Dump Truck Dispatch Software',
   description:
-    'Create your TruckFlowUS account. Dump truck ticketing, dispatch, and invoicing software for hauling companies.',
+    'Start your free TruckFlowUS trial. Set up your dump truck dispatch, ticketing, and invoicing in under 5 minutes. No credit card required. Built for hauling companies.',
+  alternates: { canonical: '/signup' },
 };
 
 export default async function SignupPage({

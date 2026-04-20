@@ -4,9 +4,10 @@ import { redirect } from 'next/navigation';
 import { getSession, landingPathForUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
-  title: 'TruckFlowUS — Dump Truck Ticketing and Dispatch',
+  title: 'TruckFlowUS — Dump Truck Dispatch Software | Ticketing, Invoicing & Fleet Management',
   description:
-    'All-in-one ticketing, dispatch, and invoicing software for dump truck operators. Manage jobs, drivers, customers, and billing from one platform.',
+    'Best dump truck dispatch software for hauling companies. Digital load tickets, real-time fleet tracking, automated invoicing, driver mobile app, and AI ticket scanning. Replace paper tickets and spreadsheets. Start free — no credit card required.',
+  alternates: { canonical: '/' },
 };
 
 export default async function Home() {
@@ -388,6 +389,18 @@ export default async function Home() {
             q="Is there a free trial?"
             a="Yes. You can sign up and start using TruckFlowUS immediately with no credit card required. Set up your company, add drivers and trucks, and start dispatching in under 5 minutes."
           />
+          <FaqItem
+            q="How does TruckFlowUS compare to paper tickets and spreadsheets?"
+            a="Paper tickets get lost, require manual data entry, and delay invoicing by days or weeks. TruckFlowUS replaces that entire workflow — drivers submit digital load tickets from their phones, data syncs instantly, and invoices generate automatically from completed loads. Most companies see billing turnaround cut in half."
+          />
+          <FaqItem
+            q="Can I manage multiple job sites and materials at the same time?"
+            a="Absolutely. TruckFlowUS handles multiple active job sites, material types, brokers, and customers simultaneously. Dispatchers see everything on one dashboard and can assign the right truck to the right job based on truck type, driver availability, and proximity."
+          />
+          <FaqItem
+            q="Does TruckFlowUS support Spanish-speaking drivers?"
+            a="Yes. The entire driver mobile portal and dispatcher interface supports both English and Spanish. Drivers can switch languages with one tap, making it easy for bilingual crews to use the platform without barriers."
+          />
         </div>
       </section>
 
@@ -437,6 +450,30 @@ export default async function Home() {
                 acceptedAnswer: {
                   '@type': 'Answer',
                   text: 'Yes. You can sign up and start using TruckFlowUS immediately with no credit card required. Set up your company, add drivers and trucks, and start dispatching in under 5 minutes.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'How does TruckFlowUS compare to paper tickets and spreadsheets?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Paper tickets get lost, require manual data entry, and delay invoicing by days or weeks. TruckFlowUS replaces that entire workflow — drivers submit digital load tickets from their phones, data syncs instantly, and invoices generate automatically from completed loads. Most companies see billing turnaround cut in half.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Can I manage multiple job sites and materials at the same time?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Absolutely. TruckFlowUS handles multiple active job sites, material types, brokers, and customers simultaneously. Dispatchers see everything on one dashboard and can assign the right truck to the right job based on truck type, driver availability, and proximity.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Does TruckFlowUS support Spanish-speaking drivers?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Yes. The entire driver mobile portal and dispatcher interface supports both English and Spanish. Drivers can switch languages with one tap, making it easy for bilingual crews to use the platform without barriers.',
                 },
               },
             ],

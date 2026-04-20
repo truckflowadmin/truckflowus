@@ -7,9 +7,10 @@ import { formatPrice, FEATURE_CATALOG } from '@/lib/features';
 import DismissibleBanner from '@/components/DismissibleBanner';
 
 export const metadata: Metadata = {
-  title: 'Plans & Pricing',
+  title: 'Plans & Pricing — Dump Truck Software',
   description:
-    'Choose a TruckFlowUS plan for your hauling company. Ticketing, dispatch, invoicing, and fleet management at every tier.',
+    'Affordable dump truck dispatch software plans for hauling companies of all sizes. Includes ticketing, dispatch, invoicing, fleet management, and driver mobile portal.',
+  alternates: { canonical: '/subscribe' },
 };
 
 export const dynamic = 'force-dynamic';

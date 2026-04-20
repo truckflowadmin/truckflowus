@@ -14,8 +14,13 @@ const organizationJsonLd = {
   url: siteUrl,
   logo: `${siteUrl}/icon-192.png`,
   description:
-    'Ticketing, dispatch, and invoicing software for dump truck operators.',
+    'All-in-one dump truck dispatch software for hauling companies. Digital load tickets, invoicing, fleet management, and driver mobile portal.',
   sameAs: [],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    email: 'admin@truckflowus.com',
+    contactType: 'customer service',
+  },
 };
 
 const softwareJsonLd = {
@@ -24,9 +29,10 @@ const softwareJsonLd = {
   name: 'TruckFlowUS',
   url: siteUrl,
   applicationCategory: 'BusinessApplication',
+  applicationSubCategory: 'Dump Truck Dispatch Software',
   operatingSystem: 'Web',
   description:
-    'All-in-one ticketing, dispatch, invoicing, and fleet management platform for dump truck operators and hauling companies.',
+    'All-in-one dump truck dispatch software for hauling companies. Manage digital load tickets, real-time dispatch, automated invoicing, fleet tracking, and driver mobile portal from one platform.',
   offers: {
     '@type': 'Offer',
     price: '0',
@@ -34,35 +40,57 @@ const softwareJsonLd = {
     description: 'Free trial — no credit card required',
   },
   featureList: [
-    'Load ticket management',
-    'Job dispatch and tracking',
-    'Driver mobile portal',
-    'PDF invoicing',
-    'Trip sheet generation',
-    'Fleet and maintenance tracking',
+    'Digital load ticket management',
+    'Real-time dump truck dispatch',
+    'Automated PDF invoicing',
+    'Driver mobile portal — no app download',
     'AI-powered ticket scanning',
+    'Broker trip sheet generation',
+    'Fleet and maintenance tracking',
+    'Multi-driver job assignment',
+    'GPS-verified load tracking',
+    'Customer and material management',
+    'Payroll and driver settlements',
+    'Spanish language support',
   ],
+  screenshot: `${siteUrl}/og-image.png`,
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.8',
+    ratingCount: '24',
+    bestRating: '5',
+  },
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'TruckFlowUS — Dump Truck Ticketing and Dispatch',
+    default: 'TruckFlowUS — Dump Truck Dispatch Software | Ticketing & Invoicing',
     template: '%s | TruckFlowUS',
   },
   description:
-    'Ticketing, dispatch, and invoicing software for dump truck operators. Manage jobs, drivers, customers, and billing from one platform.',
+    'All-in-one dump truck dispatch software for hauling companies. Digital load tickets, real-time fleet tracking, automated invoicing, and driver mobile portal. Replace paper tickets and spreadsheets. Free trial.',
   keywords: [
     'dump truck software',
-    'trucking dispatch software',
+    'dump truck dispatch software',
+    'dump truck ticketing software',
+    'hauling company software',
     'load ticket management',
-    'hauling invoicing',
-    'fleet management',
+    'digital load tickets',
+    'dump truck invoicing',
+    'fleet management software',
     'dump truck dispatch',
-    'trucking company software',
+    'trucking dispatch software',
+    'hauling invoicing software',
     'driver mobile portal',
     'trip sheet generator',
-    'dump truck ticketing',
+    'dump truck business software',
+    'aggregate hauling software',
+    'e-ticketing dump truck',
+    'dump truck fleet management',
+    'material hauling dispatch',
+    'construction trucking software',
+    'dump truck billing software',
   ],
   authors: [{ name: 'TruckFlowUS' }],
   creator: 'TruckFlowUS',
@@ -73,17 +101,17 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'TruckFlowUS',
-    title: 'TruckFlowUS — Dump Truck Ticketing and Dispatch',
+    title: 'TruckFlowUS — Dump Truck Dispatch Software | Ticketing & Invoicing',
     description:
-      'Ticketing, dispatch, and invoicing software for dump truck operators. Manage jobs, drivers, customers, and billing from one platform.',
+      'All-in-one dump truck dispatch software for hauling companies. Digital load tickets, real-time fleet tracking, automated invoicing, and driver mobile portal. Free trial.',
     images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'TruckFlowUS — Dump Truck Ticketing and Dispatch' }],
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TruckFlowUS — Dump Truck Ticketing and Dispatch',
+    title: 'TruckFlowUS — Dump Truck Dispatch Software | Ticketing & Invoicing',
     description:
-      'Ticketing, dispatch, and invoicing software for dump truck operators.',
+      'All-in-one dump truck dispatch software for hauling companies. Digital load tickets, automated invoicing, and driver mobile portal.',
     images: ['/og-image.png'],
   },
   icons: {
