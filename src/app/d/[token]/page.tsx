@@ -266,7 +266,9 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
 
   const filteredCompletedJobs = completedJobs.filter(j => {
     const a = assignmentsByJobId.get(j.id);
-    return a?.status === 'COMPLETED';
+    // Show if assignment status is COMPLETED, or if the job itself is completed
+    // (covers jobs completed before per-driver assignment status was added)
+    return a?.status === 'COMPLETED' || j.status === 'COMPLETED';
   }).slice(0, 20);
 
   // Serialize for client component (Dates → ISO strings, Decimals → numbers)

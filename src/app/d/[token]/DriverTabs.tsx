@@ -902,11 +902,11 @@ function CompletedTab({
   const [jobsOpen, setJobsOpen] = useState(false);
 
   // Split completed jobs into three buckets:
-  // 1. Missing photos — yellow, auto-expanded (driver must upload)
+  // 1. Missing photos (or no tickets yet) — yellow, auto-expanded (driver must upload)
   // 2. Photos uploaded but not reviewed — visible but collapsible
   // 3. All tickets reviewed by dispatcher — collapsed dropdown
   const missingPhotosJobs = completedJobs.filter((j) =>
-    j.tickets.some((tk) => !tk.photoUrl),
+    j.tickets.length === 0 || j.tickets.some((tk) => !tk.photoUrl),
   );
   const pendingReviewJobs = completedJobs.filter((j) =>
     j.tickets.length > 0
