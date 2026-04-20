@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,6 +30,38 @@ interface CalcResult {
   jobsCompleted: number;
   ticketsCompleted: number;
   calculatedAmount: number;
+  totalRevenue?: number;
+}
+
+interface CheckData {
+  payment: {
+    id: string;
+    periodStart: string;
+    periodEnd: string;
+    payType: string;
+    payRate: number;
+    hoursWorked: number;
+    jobsCompleted: number;
+    ticketsCompleted: number;
+    calculatedAmount: number;
+    adjustedAmount: number | null;
+    finalAmount: number;
+    notes: string | null;
+    status: string;
+    paidAt: string | null;
+    createdAt: string;
+  };
+  driverName: string;
+  company: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+    phone: string;
+    checkRoutingNumber: string;
+    checkAccountNumber: string;
+  };
 }
 
 interface Props {
@@ -69,13 +101,239 @@ function formatRate(payType: string, payRate: string | null): string {
   return `$${num.toFixed(2)}${payType === 'HOURLY' ? '/hr' : ''}`;
 }
 
+/** Convert a number to words for check writing (e.g. 1234.56 → "One Thousand Two Hundred Thirty-Four and 56/100") */
+function amountToWords(amount: number): string {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  function convert(n: number): string {
+    if (n === 0) return '';
+    if (n < 20) return ones[n];
+    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? '-' + ones[n % 10] : '');
+    if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + convert(n % 100) : '');
+    if (n < 1000000) return convert(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + convert(n % 1000) : '');
+    if (n < 1000000000) return convert(Math.floor(n / 1000000)) + ' Million' + (n % 1000000 ? ' ' + convert(n % 1000000) : '');
+    return convert(Math.floor(n / 1000000000)) + ' Billion' + (n % 1000000000 ? ' ' + convert(n % 1000000000) : '');
+  }
+
+  const dollars = Math.floor(amount);
+  const cents = Math.round((amount - dollars) * 100);
+  const dollarWords = dollars === 0 ? 'Zero' : convert(dollars);
+  return `${dollarWords} and ${cents.toString().padStart(2, '0')}/100`;
+}
+
+function maskAccount(acct: string): string {
+  if (!acct || acct.length <= 4) return acct || '';
+  return '●●●●' + acct.slice(-4);
+}
+
+// ---------------------------------------------------------------------------
+// Check View Component
+// ---------------------------------------------------------------------------
+function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) {
+  const checkRef = useRef<HTMLDivElement>(null);
+
+  function handlePrint() {
+    const content = checkRef.current;
+    if (!content) return;
+    const printWindow = window.open('', '_blank', 'width=900,height=600');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Check - ${data.driverName}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Courier New', monospace; padding: 20px; }
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none !important; }
+          }
+          .check-container {
+            border: 2px solid #333;
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            position: relative;
+          }
+          .check-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 16px;
+          }
+          .company-info { font-size: 12px; line-height: 1.5; }
+          .company-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+          .check-number { font-size: 14px; color: #666; text-align: right; }
+          .check-date { font-size: 14px; text-align: right; margin-top: 8px; }
+          .date-label { font-size: 10px; color: #666; text-transform: uppercase; }
+          .pay-to-section { margin-bottom: 20px; }
+          .pay-to-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+          .pay-to-name { font-size: 20px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; display: inline-block; min-width: 400px; }
+          .amount-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+          .amount-words { font-size: 13px; flex: 1; border-bottom: 1px solid #999; padding-bottom: 4px; margin-right: 16px; }
+          .amount-box { border: 2px solid #333; padding: 8px 16px; font-size: 20px; font-weight: bold; min-width: 140px; text-align: center; }
+          .memo-section { margin-top: 24px; padding-top: 16px; border-top: 1px solid #ccc; }
+          .memo-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+          .memo-text { font-size: 12px; border-bottom: 1px solid #999; padding-bottom: 4px; min-height: 16px; }
+          .bank-section { margin-top: 24px; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #ccc; padding-top: 16px; }
+          .bank-info { font-size: 11px; color: #555; }
+          .bank-label { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
+          .signature-line { border-top: 1px solid #333; width: 250px; text-align: center; padding-top: 4px; font-size: 10px; color: #666; }
+          .stub { margin-top: 30px; border-top: 2px dashed #999; padding-top: 20px; }
+          .stub-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; }
+          .stub-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 12px; }
+          .stub-label { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
+          .stub-value { font-weight: bold; }
+          .print-btn {
+            display: block; margin: 20px auto; padding: 10px 30px;
+            background: #2563eb; color: white; border: none; border-radius: 6px;
+            font-size: 14px; cursor: pointer;
+          }
+          .print-btn:hover { background: #1d4ed8; }
+        </style>
+      </head>
+      <body>
+        <button class="print-btn no-print" onclick="window.print()">Print Check</button>
+        ${content.innerHTML}
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  const p = data.payment;
+  const c = data.company;
+  const companyAddress = [c.address, [c.city, c.state, c.zip].filter(Boolean).join(', ')].filter(Boolean).join('\n');
+
+  return (
+    <div className="space-y-4">
+      {/* Action bar */}
+      <div className="flex items-center justify-between">
+        <button onClick={onClose} className="text-sm text-steel-500 hover:text-steel-700">
+          ← Back to payments
+        </button>
+        <button
+          onClick={handlePrint}
+          className="btn btn-primary flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Print Check
+        </button>
+      </div>
+
+      {/* Check preview */}
+      <div ref={checkRef} className="bg-white">
+        <div style={{ border: '2px solid #333', padding: '30px', maxWidth: '800px', margin: '0 auto', fontFamily: "'Courier New', monospace", background: '#fff' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid #ccc', paddingBottom: '16px' }}>
+            <div>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>{c.name}</div>
+              <div style={{ fontSize: '12px', lineHeight: '1.5', whiteSpace: 'pre-line' }}>{companyAddress}</div>
+              {c.phone && <div style={{ fontSize: '12px' }}>{c.phone}</div>}
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Date</div>
+              <div style={{ fontSize: '14px', marginTop: '4px' }}>
+                {p.paidAt ? formatDate(p.paidAt) : formatDate(p.createdAt)}
+              </div>
+            </div>
+          </div>
+
+          {/* Pay To */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Pay to the Order of</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', borderBottom: '2px solid #333', paddingBottom: '4px', flex: 1, marginRight: '16px' }}>
+                {data.driverName}
+              </div>
+              <div style={{ border: '2px solid #333', padding: '8px 16px', fontSize: '20px', fontWeight: 'bold', minWidth: '140px', textAlign: 'center' }}>
+                {formatCurrency(p.finalAmount)}
+              </div>
+            </div>
+          </div>
+
+          {/* Amount in words */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '13px', borderBottom: '1px solid #999', paddingBottom: '4px' }}>
+              {amountToWords(p.finalAmount)} ★★★★★
+            </div>
+          </div>
+
+          {/* Memo */}
+          <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #ccc' }}>
+            <div style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Memo</div>
+            <div style={{ fontSize: '12px', borderBottom: '1px solid #999', paddingBottom: '4px', minHeight: '16px' }}>
+              Payment for {formatDate(p.periodStart)} — {formatDate(p.periodEnd)}
+              {p.notes ? ` | ${p.notes}` : ''}
+            </div>
+          </div>
+
+          {/* Bank info + signature */}
+          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #ccc', paddingTop: '16px' }}>
+            <div style={{ fontSize: '11px', color: '#555' }}>
+              {c.checkRoutingNumber && (
+                <div>
+                  <span style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Routing: </span>
+                  {c.checkRoutingNumber}
+                </div>
+              )}
+              {c.checkAccountNumber && (
+                <div>
+                  <span style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Account: </span>
+                  {maskAccount(c.checkAccountNumber)}
+                </div>
+              )}
+            </div>
+            <div style={{ borderTop: '1px solid #333', width: '250px', textAlign: 'center', paddingTop: '4px', fontSize: '10px', color: '#666' }}>
+              Authorized Signature
+            </div>
+          </div>
+        </div>
+
+        {/* Pay stub / details */}
+        <div style={{ marginTop: '30px', borderTop: '2px dashed #999', paddingTop: '20px', maxWidth: '800px', margin: '30px auto 0', fontFamily: "'Courier New', monospace" }}>
+          <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' }}>Payment Stub — {data.driverName}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', fontSize: '12px' }}>
+            <div>
+              <div style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Period</div>
+              <div style={{ fontWeight: 'bold' }}>{formatDate(p.periodStart)} – {formatDate(p.periodEnd)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Pay Type</div>
+              <div style={{ fontWeight: 'bold' }}>{PAY_TYPE_LABELS[p.payType] ?? p.payType} @ {formatRate(p.payType, String(p.payRate))}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Hours / Jobs / Tickets</div>
+              <div style={{ fontWeight: 'bold' }}>{p.hoursWorked.toFixed(1)}h / {p.jobsCompleted} / {p.ticketsCompleted}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Net Pay</div>
+              <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{formatCurrency(p.finalAmount)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 export default function PayrollDetail({ driverId, driverName, workerType, payType, payRate, onClose }: Props) {
-  const [view, setView] = useState<'history' | 'create'>('history');
+  const [view, setView] = useState<'history' | 'create' | 'check'>('history');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [checkData, setCheckData] = useState<CheckData | null>(null);
+  const [checkLoading, setCheckLoading] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<'' | 'PENDING' | 'PAID' | 'VOID'>('');
@@ -134,7 +392,7 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
     if (!calcResult || !periodStart || !periodEnd) return;
     setSaving(true);
     const adj = adjustedAmount ? parseFloat(adjustedAmount) : null;
-    const final = adj !== null ? adj : calcResult.calculatedAmount;
+    const final_ = adj !== null ? adj : calcResult.calculatedAmount;
     try {
       const res = await fetch('/api/drivers/payments', {
         method: 'POST',
@@ -150,24 +408,40 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
           payRate: calcResult.payRate,
           calculatedAmount: calcResult.calculatedAmount,
           adjustedAmount: adj,
-          finalAmount: final,
+          finalAmount: final_,
           notes: payNotes || null,
           status: markAsPaid ? 'PAID' : 'PENDING',
         }),
       });
       if (res.ok) {
-        // Reset form and switch to history
+        const data = await res.json();
+        // Show check view immediately after creating payment
+        await viewCheck(data.payment.id);
+        // Reset form
         setCalcResult(null);
         setPeriodStart('');
         setPeriodEnd('');
         setAdjustedAmount('');
         setPayNotes('');
         setMarkAsPaid(false);
-        setView('history');
         fetchPayments();
       }
     } catch { /* ignore */ }
     setSaving(false);
+  }
+
+  // -- View check for a payment --
+  async function viewCheck(paymentId: string) {
+    setCheckLoading(true);
+    try {
+      const res = await fetch(`/api/drivers/payments/check?paymentId=${paymentId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCheckData(data);
+        setView('check');
+      }
+    } catch { /* ignore */ }
+    setCheckLoading(false);
   }
 
   // -- Mark payment as paid/void --
@@ -221,30 +495,34 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
       </div>
 
       {/* View toggle */}
-      <div className="px-5 pt-4 flex items-center gap-4">
-        <div className="flex items-center gap-1 bg-steel-100 rounded-lg p-1">
-          <button
-            onClick={() => setView('history')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              view === 'history' ? 'bg-white text-steel-900 shadow-sm' : 'text-steel-500 hover:text-steel-700'
-            }`}
-          >
-            Payment History
-          </button>
-          <button
-            onClick={() => setView('create')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              view === 'create' ? 'bg-white text-steel-900 shadow-sm' : 'text-steel-500 hover:text-steel-700'
-            }`}
-          >
-            + Create Payment
-          </button>
+      {view !== 'check' && (
+        <div className="px-5 pt-4 flex items-center gap-4">
+          <div className="flex items-center gap-1 bg-steel-100 rounded-lg p-1">
+            <button
+              onClick={() => setView('history')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                view === 'history' ? 'bg-white text-steel-900 shadow-sm' : 'text-steel-500 hover:text-steel-700'
+              }`}
+            >
+              Payment History
+            </button>
+            <button
+              onClick={() => setView('create')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                view === 'create' ? 'bg-white text-steel-900 shadow-sm' : 'text-steel-500 hover:text-steel-700'
+              }`}
+            >
+              + Create Payment
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Content */}
       <div className="p-5">
-        {view === 'history' ? (
+        {view === 'check' && checkData ? (
+          <CheckView data={checkData} onClose={() => { setCheckData(null); setView('history'); }} />
+        ) : view === 'history' ? (
           <>
             {/* Filters */}
             <div className="flex flex-wrap items-end gap-3 mb-4">
@@ -355,30 +633,39 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
                           {p.notes || '—'}
                         </td>
                         <td className="py-2.5 pl-3 text-right whitespace-nowrap">
-                          {p.status === 'PENDING' && (
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => updatePaymentStatus(p.id, 'PAID')}
-                                className="text-xs text-green-600 hover:text-green-800 font-medium"
-                              >
-                                Mark Paid
-                              </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => viewCheck(p.id)}
+                              disabled={checkLoading}
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              View Check
+                            </button>
+                            {p.status === 'PENDING' && (
+                              <>
+                                <button
+                                  onClick={() => updatePaymentStatus(p.id, 'PAID')}
+                                  className="text-xs text-green-600 hover:text-green-800 font-medium"
+                                >
+                                  Mark Paid
+                                </button>
+                                <button
+                                  onClick={() => updatePaymentStatus(p.id, 'VOID')}
+                                  className="text-xs text-red-500 hover:text-red-700 font-medium"
+                                >
+                                  Void
+                                </button>
+                              </>
+                            )}
+                            {p.status === 'PAID' && (
                               <button
                                 onClick={() => updatePaymentStatus(p.id, 'VOID')}
                                 className="text-xs text-red-500 hover:text-red-700 font-medium"
                               >
                                 Void
                               </button>
-                            </div>
-                          )}
-                          {p.status === 'PAID' && (
-                            <button
-                              onClick={() => updatePaymentStatus(p.id, 'VOID')}
-                              className="text-xs text-red-500 hover:text-red-700 font-medium"
-                            >
-                              Void
-                            </button>
-                          )}
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -391,6 +678,9 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
           /* Create Payment View */
           <div className="max-w-2xl">
             <h4 className="font-semibold mb-4">Calculate Payment</h4>
+            <p className="text-xs text-steel-500 mb-4">
+              Only dispatcher-reviewed tickets within the selected period are included in the calculation.
+            </p>
 
             {/* Period picker */}
             <div className="grid grid-cols-2 gap-4 mb-4">
@@ -426,7 +716,7 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
             {calcResult && (
               <div className="space-y-4">
                 <div className="panel p-4 bg-steel-50">
-                  <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold mb-3">Period Summary</div>
+                  <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold mb-3">Period Summary (Reviewed Tickets Only)</div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <div className="text-[10px] uppercase tracking-widest text-steel-400">Hours</div>

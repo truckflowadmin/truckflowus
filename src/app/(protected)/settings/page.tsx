@@ -24,7 +24,9 @@ async function saveCompanyAction(formData: FormData) {
       phone: String(formData.get('phone') || '').trim() || null,
       email: String(formData.get('email') || '').trim() || null,
       defaultRate: isNaN(rate) ? 0 : rate,
-    },
+      checkRoutingNumber: String(formData.get('checkRoutingNumber') || '').trim() || null,
+      checkAccountNumber: String(formData.get('checkAccountNumber') || '').trim() || null,
+    } as any,
   });
   revalidatePath('/settings');
 }
@@ -316,6 +318,20 @@ export default async function SettingsPage({
             className="input max-w-xs"
           />
           <p className="text-xs text-steel-500 mt-1">Used as the default when creating new tickets.</p>
+        </div>
+        <div className="border-t border-steel-200 pt-4 mt-4">
+          <h3 className="font-semibold text-sm mb-3">Check / Payment Settings</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="label">Routing Number</label>
+              <input name="checkRoutingNumber" defaultValue={(company as any).checkRoutingNumber ?? ''} className="input" placeholder="e.g. 021000021" />
+            </div>
+            <div>
+              <label className="label">Account Number</label>
+              <input name="checkAccountNumber" defaultValue={(company as any).checkAccountNumber ?? ''} className="input" placeholder="e.g. 1234567890" />
+            </div>
+          </div>
+          <p className="text-xs text-steel-500 mt-1">Displayed on printed driver payment checks.</p>
         </div>
         <div className="pt-3 border-t border-steel-200">
           <button className="btn-accent" type="submit">Save Changes</button>

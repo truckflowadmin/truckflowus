@@ -5,7 +5,8 @@ import { getSession } from '@/lib/auth';
 /**
  * GET /api/drivers/payments/calculate?driverId=X&from=2026-04-01&to=2026-04-15
  * Calculates suggested payment for a driver in a given period.
- * Returns: hours, jobs, tickets, rate, suggested amount — dispatcher can then adjust & confirm.
+ * Only counts tickets that have been reviewed by the dispatcher (dispatcherReviewedAt is set).
+ * Uses the ticket date field for period filtering.
  */
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -34,42 +35,40 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
   }
 
-  // Get completed jobs in the period
+  // Get dispatcher-reviewed tickets in the period (using ticket date)
+  const reviewedTickets = await prisma.ticket.findMany({
+    where: {
+      companyId: session.companyId,
+      driverId,
+      dispatcherReviewedAt: { not: null }, // Only dispatcher-reviewed tickets
+      date: { gte: periodStart, lte: periodEnd },
+    },
+    select: {
+      id: true,
+      quantity: true,
+      ratePerUnit: true,
+      jobId: true,
+    },
+  });
+
+  const ticketCount = reviewedTickets.length;
+
+  // Get unique job IDs from the reviewed tickets
+  const jobIds = [...new Set(reviewedTickets.map((t) => t.jobId).filter(Boolean))] as string[];
+
+  // Get completed jobs that have reviewed tickets to sum driver time
   const jobs = await prisma.job.findMany({
     where: {
+      id: { in: jobIds },
       companyId: session.companyId,
-      driverId,
-      completedAt: { gte: periodStart, lte: periodEnd },
     },
     select: { id: true, driverTimeSeconds: true },
-  });
-
-  // Get completed tickets in the period
-  const ticketCount = await prisma.ticket.count({
-    where: {
-      companyId: session.companyId,
-      driverId,
-      status: 'COMPLETED',
-      completedAt: { gte: periodStart, lte: periodEnd },
-    },
-  });
-
-  // Sum ticket revenue for percentage-based pay
-  const ticketRevenue = await prisma.ticket.aggregate({
-    where: {
-      companyId: session.companyId,
-      driverId,
-      status: 'COMPLETED',
-      completedAt: { gte: periodStart, lte: periodEnd },
-      ratePerUnit: { not: null },
-    },
-    _sum: { quantity: true },
   });
 
   // Calculate totals
   const totalSeconds = jobs.reduce((sum, j) => sum + (j.driverTimeSeconds || 0), 0);
   const hoursWorked = Math.round((totalSeconds / 3600) * 100) / 100;
-  const jobsCompleted = jobs.length;
+  const jobsCompleted = jobIds.length;
   const payRate = Number(driver.payRate ?? 0);
 
   // Calculate suggested amount based on pay type
@@ -81,18 +80,8 @@ export async function GET(req: NextRequest) {
     const periodDays = Math.max(1, Math.round((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)));
     calculatedAmount = (payRate / 30) * periodDays;
   } else if (driver.payType === 'PERCENTAGE') {
-    // Percentage of revenue generated
-    // We need to calculate actual revenue from individual tickets
-    const tickets = await prisma.ticket.findMany({
-      where: {
-        companyId: session.companyId,
-        driverId,
-        status: 'COMPLETED',
-        completedAt: { gte: periodStart, lte: periodEnd },
-      },
-      select: { quantity: true, ratePerUnit: true },
-    });
-    const totalRevenue = tickets.reduce((sum, t) => {
+    // Percentage of revenue from dispatcher-reviewed tickets
+    const totalRevenue = reviewedTickets.reduce((sum, t) => {
       const rate = t.ratePerUnit ? Number(t.ratePerUnit) : 0;
       return sum + rate * Number(t.quantity);
     }, 0);
@@ -100,6 +89,12 @@ export async function GET(req: NextRequest) {
   }
 
   calculatedAmount = Math.round(calculatedAmount * 100) / 100;
+
+  // Also return the total revenue for percentage pay so the check can show it
+  const totalRevenue = reviewedTickets.reduce((sum, t) => {
+    const rate = t.ratePerUnit ? Number(t.ratePerUnit) : 0;
+    return sum + rate * Number(t.quantity);
+  }, 0);
 
   return NextResponse.json({
     driverId: driver.id,
@@ -113,5 +108,6 @@ export async function GET(req: NextRequest) {
     jobsCompleted,
     ticketsCompleted: ticketCount,
     calculatedAmount,
+    totalRevenue: Math.round(totalRevenue * 100) / 100,
   });
 }

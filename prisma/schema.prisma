@@ -57,6 +57,9 @@ model Company {
   disabledFeatures  String[] // features removed even if the plan includes them
   suspended         Boolean  @default(false)
   suspendedAt       DateTime?
+  // Check / payment settings
+  checkRoutingNumber   String?   // bank routing number for printed checks
+  checkAccountNumber   String?   // bank account number for printed checks
   // Billing
   customPriceCents     Int?      // override plan price for this tenant (null = use plan price)
   trialEndsAt          DateTime? // free trial end date
