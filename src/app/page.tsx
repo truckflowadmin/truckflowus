@@ -36,6 +36,12 @@ export default async function Home() {
               Blog
             </Link>
             <Link
+              href="/contact"
+              className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
+            >
+              Contact
+            </Link>
+            <Link
               href="/login"
               className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
             >
@@ -504,6 +510,7 @@ export default async function Home() {
                 <li><Link href="/d/login" className="hover:text-steel-200 transition-colors">Driver Login</Link></li>
                 <li><Link href="/subscribe" className="hover:text-steel-200 transition-colors">Plans &amp; Pricing</Link></li>
                 <li><Link href="/blog" className="hover:text-steel-200 transition-colors">Blog</Link></li>
+                <li><Link href="/contact" className="hover:text-steel-200 transition-colors">Contact Us</Link></li>
               </ul>
             </div>
             <div>
