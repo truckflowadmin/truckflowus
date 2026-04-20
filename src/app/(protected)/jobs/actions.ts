@@ -470,6 +470,29 @@ export async function updateJobStatusAction(jobId: string, newStatus: string, as
   return { ok: true };
 }
 
+/* ── Delete a cancelled job ── */
+export async function deleteJobAction(jobId: string) {
+  const session = await requireSession();
+
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, companyId: session.companyId },
+  });
+  if (!job) throw new Error('Job not found');
+  if (job.status !== 'CANCELLED') throw new Error('Only cancelled jobs can be deleted');
+
+  if (await jobHasInvoicedTickets(jobId)) {
+    throw new Error('This job has invoiced tickets and cannot be deleted');
+  }
+
+  // Delete in order: tickets → assignments → job
+  await prisma.ticket.deleteMany({ where: { jobId } });
+  await prisma.$executeRaw`DELETE FROM "JobAssignment" WHERE "jobId" = ${jobId}`;
+  await prisma.job.delete({ where: { id: jobId } });
+
+  revalidatePath('/jobs');
+  redirect('/jobs');
+}
+
 /* ── Record a completed load → create a ticket ── */
 export async function recordLoadAction(jobId: string) {
   const session = await requireSession();

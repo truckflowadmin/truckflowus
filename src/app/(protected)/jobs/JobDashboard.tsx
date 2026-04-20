@@ -146,6 +146,7 @@ export default function JobDashboard({
 
   const filtered = useMemo(() => {
     return jobs.filter((j) => {
+      if (statusFilter === 'ALL' && j.status === 'CANCELLED') return false;
       if (statusFilter !== 'ALL' && j.status !== statusFilter) return false;
       if (nameFilter) {
         const q = nameFilter.toLowerCase();
@@ -175,9 +176,10 @@ export default function JobDashboard({
   const someSelected = activeSelected.size > 0;
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { ALL: jobs.length };
+    const c: Record<string, number> = { ALL: 0 };
     for (const j of jobs) {
       c[j.status] = (c[j.status] || 0) + 1;
+      if (j.status !== 'CANCELLED') c.ALL++;
     }
     return c;
   }, [jobs]);

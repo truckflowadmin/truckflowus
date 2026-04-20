@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { fmtQty } from '@/lib/format';
 import RotatableImage from '@/components/RotatableImage';
-import { updateJobStatusAction, recordLoadAction } from '../actions';
+import { updateJobStatusAction, recordLoadAction, deleteJobAction } from '../actions';
 import { bulkCreateJobTicketsAction } from '../scanActions';
 import AddressLink from '@/components/AddressLink';
 
@@ -146,6 +146,7 @@ export default function JobDetail({ job: initialJob, invoiced = false }: { job: 
   const [job, setJob] = useState(initialJob);
   const [recording, setRecording] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addingTickets, setAddingTickets] = useState(false);
   const [addCount, setAddCount] = useState(1);
@@ -378,6 +379,17 @@ export default function JobDetail({ job: initialJob, invoiced = false }: { job: 
     }
   }
 
+  async function handleDelete() {
+    if (!confirm('Are you sure you want to permanently delete this cancelled job? This cannot be undone.')) return;
+    setDeleting(true);
+    try {
+      await deleteJobAction(job.id);
+    } catch (err: any) {
+      alert(err.message);
+      setDeleting(false);
+    }
+  }
+
   async function handleAddTickets() {
     if (!addFields.hauledFrom.trim() || !addFields.hauledTo.trim()) {
       setAddError('Hauled From and Hauled To are required');
@@ -478,6 +490,15 @@ export default function JobDetail({ job: initialJob, invoiced = false }: { job: 
                 </button>
               ))}
             </div>
+          )}
+          {job.status === 'CANCELLED' && !invoiced && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-medium transition-colors"
+            >
+              {deleting ? 'Deleting…' : '🗑 Delete Job'}
+            </button>
           )}
         </div>
       </div>
