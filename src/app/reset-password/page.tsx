@@ -1,8 +1,15 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { validateResetToken, consumeResetToken } from '@/lib/password-reset';
 import { prisma } from '@/lib/prisma';
 import { audit } from '@/lib/audit';
+
+export const metadata: Metadata = {
+  title: 'Reset Password',
+  description: 'Set a new password for your TruckFlowUS account.',
+  robots: { index: false, follow: false },
+};
 
 export default async function ResetPasswordPage({
   searchParams,

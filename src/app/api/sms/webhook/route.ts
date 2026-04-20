@@ -24,22 +24,17 @@ function normalizePhone(raw: string): string[] {
 }
 
 export async function POST(req: NextRequest) {
-  // ── Webhook authentication (fail closed) ────────────────────
+  // ── Webhook authentication (fail closed in ALL environments) ────────────────────
   const webhookSecret = process.env.TEXTBELT_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    // No secret configured — reject in production, warn in dev
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[sms-webhook] TEXTBELT_WEBHOOK_SECRET not set — rejecting all requests');
-      return NextResponse.json({ ok: false, error: 'Webhook not configured' }, { status: 503 });
-    }
-    console.warn('[sms-webhook] TEXTBELT_WEBHOOK_SECRET not set — allowing in dev mode');
-  } else {
-    // Only accept secret via header — query strings leak in logs
-    const provided = req.headers.get('x-webhook-secret');
-    if (provided !== webhookSecret) {
-      console.warn('[sms-webhook] Rejected: invalid or missing webhook secret');
-      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    console.error('[sms-webhook] TEXTBELT_WEBHOOK_SECRET not set — rejecting request');
+    return NextResponse.json({ ok: false, error: 'Webhook not configured' }, { status: 503 });
+  }
+  // Only accept secret via header — query strings leak in logs
+  const provided = req.headers.get('x-webhook-secret');
+  if (provided !== webhookSecret) {
+    console.warn('[sms-webhook] Rejected: invalid or missing webhook secret');
+    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   let body: any;

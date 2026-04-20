@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getDriverSession } from '@/lib/driver-auth';
+import { checkRateLimit, recordAttempt } from '@/lib/rate-limit';
 
 /**
  * GET /api/driver/profile — fetch the authenticated driver's profile
@@ -10,6 +11,18 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
+
+  // Rate limit profile reads (60 per 15 min per driver)
+  const limit = await checkRateLimit({
+    key: `prof:${session.driverId}`,
+    type: 'driver_profile',
+    maxAttempts: 60,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!limit.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+  await recordAttempt(`prof:${session.driverId}`, 'driver_profile', true);
 
   const driver = await prisma.driver.findUnique({
     where: { id: session.driverId },

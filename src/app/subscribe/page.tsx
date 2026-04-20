@@ -1,9 +1,16 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getSession, requireSession } from '@/lib/auth';
 import { formatPrice, FEATURE_CATALOG } from '@/lib/features';
 import DismissibleBanner from '@/components/DismissibleBanner';
+
+export const metadata: Metadata = {
+  title: 'Plans & Pricing',
+  description:
+    'Choose a TruckFlowUS plan for your hauling company. Ticketing, dispatch, invoicing, and fleet management at every tier.',
+};
 
 export const dynamic = 'force-dynamic';
 

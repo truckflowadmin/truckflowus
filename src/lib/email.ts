@@ -40,7 +40,7 @@ export interface SendEmailOpts {
 }
 
 export async function sendEmail(opts: SendEmailOpts): Promise<{ success: boolean; error?: string }> {
-  const from = process.env.SMTP_FROM || 'noreply@truckflow.local';
+  const from = process.env.SMTP_FROM || 'admin@truckflowus.com';
   const t = getTransporter();
 
   if (!t) {

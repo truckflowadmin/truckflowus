@@ -46,8 +46,10 @@ export async function POST(req: Request) {
         select: { securityQ1: true, securityQ2: true, securityQ3: true },
       });
 
+      // Return the same generic error for "not found" and "no questions set"
+      // to prevent user enumeration
       if (!user || !user.securityQ1 || !user.securityQ2 || !user.securityQ3) {
-        return NextResponse.json({ error: 'no_questions' }, { status: 404 });
+        return NextResponse.json({ error: 'no_questions' }, { status: 400 });
       }
 
       return NextResponse.json({
@@ -90,7 +92,8 @@ export async function POST(req: Request) {
       });
 
       if (!user || !user.securityA1 || !user.securityA2 || !user.securityA3) {
-        return NextResponse.json({ error: 'no_questions' }, { status: 404 });
+        // Same generic error to prevent user enumeration
+        return NextResponse.json({ error: 'no_questions' }, { status: 400 });
       }
 
       const [v1, v2, v3] = await Promise.all([

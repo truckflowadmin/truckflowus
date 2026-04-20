@@ -354,29 +354,133 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* ── FAQ Section ── */}
+      <section className="max-w-6xl mx-auto px-6 py-20 lg:py-28">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            Frequently asked <span className="text-safety">questions</span>
+          </h2>
+        </div>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <FaqItem
+            q="What types of trucking companies use TruckFlowUS?"
+            a="TruckFlowUS is built for dump truck operators, hauling companies, and material transport businesses. Whether you run 2 trucks or 200, our platform scales to fit your operation with ticketing, dispatch, invoicing, and fleet management."
+          />
+          <FaqItem
+            q="Do my drivers need to download an app?"
+            a="No. Drivers access their mobile portal through a secure web link — no app store download required. They can view jobs, submit tickets, upload photos, and update their status right from their phone's browser."
+          />
+          <FaqItem
+            q="Can I generate invoices and trip sheets automatically?"
+            a="Yes. TruckFlowUS generates professional PDF invoices from your completed tickets and creates broker trip sheets with per-truck breakdowns. You can email them directly to customers and brokers from the platform."
+          />
+          <FaqItem
+            q="How does the AI ticket scanning work?"
+            a="Simply take a photo of a paper load ticket with your phone. Our AI reads the ticket and auto-fills the data — material, quantity, ticket number, and more. It eliminates manual data entry and reduces errors."
+          />
+          <FaqItem
+            q="Is there a free trial?"
+            a="Yes. You can sign up and start using TruckFlowUS immediately with no credit card required. Set up your company, add drivers and trucks, and start dispatching in under 5 minutes."
+          />
+        </div>
+      </section>
+
+      {/* FAQ JSON-LD for Google rich results */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: [
+              {
+                '@type': 'Question',
+                name: 'What types of trucking companies use TruckFlowUS?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'TruckFlowUS is built for dump truck operators, hauling companies, and material transport businesses. Whether you run 2 trucks or 200, our platform scales to fit your operation with ticketing, dispatch, invoicing, and fleet management.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Do my drivers need to download an app?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'No. Drivers access their mobile portal through a secure web link — no app store download required. They can view jobs, submit tickets, upload photos, and update their status right from their phone\'s browser.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Can I generate invoices and trip sheets automatically?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Yes. TruckFlowUS generates professional PDF invoices from your completed tickets and creates broker trip sheets with per-truck breakdowns. You can email them directly to customers and brokers from the platform.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'How does the AI ticket scanning work?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Simply take a photo of a paper load ticket with your phone. Our AI reads the ticket and auto-fills the data — material, quantity, ticket number, and more. It eliminates manual data entry and reduces errors.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Is there a free trial?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Yes. You can sign up and start using TruckFlowUS immediately with no credit card required. Set up your company, add drivers and trucks, and start dispatching in under 5 minutes.',
+                },
+              },
+            ],
+          }),
+        }}
+      />
+
       {/* ── Footer ── */}
-      <footer className="border-t border-steel-800">
-        <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-safety rounded flex items-center justify-center font-black text-diesel text-xs">
-              TF
+      <footer className="border-t border-steel-800 bg-steel-900/40">
+        <div className="max-w-6xl mx-auto px-6 py-12">
+          <div className="grid sm:grid-cols-3 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 bg-safety rounded flex items-center justify-center font-black text-diesel text-xs">
+                  TF
+                </div>
+                <span className="text-sm font-bold text-white">TruckFlowUS</span>
+              </div>
+              <p className="text-sm text-steel-400 leading-relaxed">
+                All-in-one dump truck software for ticketing, dispatch, invoicing, and fleet management. Built for hauling companies across the United States.
+              </p>
             </div>
-            <span className="text-sm font-bold text-steel-400">TruckFlowUS</span>
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-3">Platform</h3>
+              <ul className="space-y-2 text-sm text-steel-400">
+                <li><Link href="/signup" className="hover:text-steel-200 transition-colors">Start Free Trial</Link></li>
+                <li><Link href="/login" className="hover:text-steel-200 transition-colors">Dispatcher Login</Link></li>
+                <li><Link href="/d/login" className="hover:text-steel-200 transition-colors">Driver Login</Link></li>
+                <li><Link href="/subscribe" className="hover:text-steel-200 transition-colors">Plans &amp; Pricing</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-3">Features</h3>
+              <ul className="space-y-2 text-sm text-steel-400">
+                <li>Load Ticket Management</li>
+                <li>Job Dispatch &amp; Tracking</li>
+                <li>PDF Invoicing &amp; Trip Sheets</li>
+                <li>AI Ticket Scanning</li>
+                <li>Fleet &amp; Driver Management</li>
+              </ul>
+            </div>
           </div>
-          <div className="flex items-center gap-6 text-sm text-steel-500">
-            <Link href="/login" className="hover:text-steel-300 transition-colors">
-              Log in
-            </Link>
-            <Link href="/signup" className="hover:text-steel-300 transition-colors">
-              Sign up
-            </Link>
-            <Link href="/d/login" className="hover:text-steel-300 transition-colors">
-              Driver login
-            </Link>
+          <div className="border-t border-steel-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-steel-600">
+              &copy; {new Date().getFullYear()} TruckFlowUS. All rights reserved.
+            </p>
+            <p className="text-xs text-steel-600">
+              Dump truck dispatch software &middot; Hauling company management &middot; Made in the USA
+            </p>
           </div>
-          <p className="text-xs text-steel-600">
-            &copy; {new Date().getFullYear()} TruckFlowUS. All rights reserved.
-          </p>
         </div>
       </footer>
     </div>
@@ -422,6 +526,28 @@ function StepCard({
       <h3 className="font-bold text-lg mb-2">{title}</h3>
       <p className="text-steel-400 text-sm leading-relaxed">{desc}</p>
     </div>
+  );
+}
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  return (
+    <details className="group bg-steel-900/50 border border-steel-800 rounded-xl">
+      <summary className="flex items-center justify-between cursor-pointer px-6 py-5 text-left font-semibold text-white hover:text-safety transition-colors list-none">
+        {q}
+        <svg
+          className="w-5 h-5 text-steel-500 group-open:rotate-180 transition-transform flex-shrink-0 ml-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </summary>
+      <div className="px-6 pb-5 text-steel-400 text-sm leading-relaxed">
+        {a}
+      </div>
+    </details>
   );
 }
 

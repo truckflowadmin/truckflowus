@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { validateFileSize } from '@/lib/upload-limits';
 import { uploadBlob } from '@/lib/blob-storage';
 import { randomUUID } from 'crypto';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +77,15 @@ export async function POST(req: NextRequest) {
           where: { id: existing.id },
           data: { fileUrl, updatedAt: new Date() },
         });
+        await audit({
+          companyId: driver.companyId,
+          entityType: 'driver',
+          entityId: driver.id,
+          action: 'update',
+          actor: driver.name,
+          actorRole: 'DISPATCHER',
+          summary: `Driver ${driver.name} replaced document: ${docType}`,
+        });
         return NextResponse.json({
           success: true,
           document: { id: existing.id, docType, fileUrl, label },
@@ -92,6 +102,16 @@ export async function POST(req: NextRequest) {
         label: docType === 'OTHER' ? label : null,
         fileUrl,
       },
+    });
+
+    await audit({
+      companyId: driver.companyId,
+      entityType: 'driver',
+      entityId: driver.id,
+      action: 'create',
+      actor: driver.name,
+      actorRole: 'DISPATCHER',
+      summary: `Driver ${driver.name} uploaded document: ${docType}${label ? ` (${label})` : ''}`,
     });
 
     return NextResponse.json({
@@ -140,6 +160,16 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.driverDocument.delete({ where: { id: docId } });
+
+    await audit({
+      companyId: driver.companyId,
+      entityType: 'driver',
+      entityId: driver.id,
+      action: 'delete',
+      actor: driver.name,
+      actorRole: 'DISPATCHER',
+      summary: `Driver ${driver.name} deleted document: ${doc.docType}${doc.label ? ` (${doc.label})` : ''}`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

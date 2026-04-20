@@ -200,11 +200,16 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
       </head>
       <body>
         <button class="print-btn no-print" onclick="window.print()">Print Check</button>
-        ${content.innerHTML}
+        <div id="check-root"></div>
       </body>
       </html>
     `);
     printWindow.document.close();
+    // Safely clone the DOM nodes instead of using innerHTML string injection
+    const root = printWindow.document.getElementById('check-root');
+    if (root) {
+      root.appendChild(content.cloneNode(true));
+    }
   }
 
   const p = data.payment;

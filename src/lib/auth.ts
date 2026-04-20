@@ -40,7 +40,7 @@ const SA_BACKUP_COOKIE = 'tf_sa_backup';
 export function backupSuperadminSession(token: string) {
   cookies().set(SA_BACKUP_COOKIE, token, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: 60 * 60 * 4, // 4 hours — short-lived
@@ -70,7 +70,7 @@ export async function verifyPassword(pw: string, hash: string): Promise<boolean>
 }
 
 export function signSession(payload: SessionPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d', audience: 'dispatcher' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '2d', audience: 'dispatcher' });
 }
 
 export function verifySession(token: string): SessionPayload | null {
@@ -84,10 +84,10 @@ export function verifySession(token: string): SessionPayload | null {
 export function setSessionCookie(token: string) {
   cookies().set(COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 24 * 2, // 2 days
   });
 }
 

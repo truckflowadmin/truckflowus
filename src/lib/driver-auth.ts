@@ -51,7 +51,7 @@ export async function verifyAnswer(answer: string, hash: string): Promise<boolea
 // JWT session
 // ---------------------------------------------------------------------------
 export function signDriverSession(payload: DriverSession): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d', audience: 'driver' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '2d', audience: 'driver' });
 }
 
 export function verifyDriverSession(token: string): DriverSession | null {
@@ -65,10 +65,10 @@ export function verifyDriverSession(token: string): DriverSession | null {
 export function setDriverSessionCookie(token: string) {
   cookies().set(DRIVER_COOKIE, token, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 2, // 2 days
   });
 }
 

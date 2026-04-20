@@ -136,6 +136,19 @@ export async function POST(req: NextRequest) {
     if (!token || !pin) {
       return NextResponse.json({ error: 'Token and PIN required' }, { status: 400 });
     }
+
+    // Rate limit setup attempts by token to prevent brute-force
+    const setupLimit = await checkRateLimit({
+      key: `setup:${token}`,
+      type: 'driver_setup',
+      maxAttempts: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!setupLimit.allowed) {
+      return NextResponse.json({ error: 'Too many setup attempts. Try again later.' }, { status: 429 });
+    }
+    await recordAttempt(`setup:${token}`, 'driver_setup', true);
+
     if (pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin)) {
       return NextResponse.json({ error: 'PIN must be 4-6 digits' }, { status: 400 });
     }
@@ -150,6 +163,7 @@ export async function POST(req: NextRequest) {
     if (driver.pinSet) {
       return NextResponse.json({ error: 'Account already set up. Please use the login page.' }, { status: 400 });
     }
+
 
     const [pinHash, a1Hash, a2Hash, a3Hash] = await Promise.all([
       hashPin(pin),
@@ -232,7 +246,8 @@ export async function POST(req: NextRequest) {
       where: { phone: { in: phoneVariants as string[] }, active: true, pinSet: true },
     });
     if (!driver || !driver.securityA1 || !driver.securityA2 || !driver.securityA3) {
-      return NextResponse.json({ error: 'Account not found or security questions not set' }, { status: 404 });
+      // Generic error to prevent phone number enumeration
+      return NextResponse.json({ error: 'Security questions not available for this account' }, { status: 400 });
     }
 
     const [v1, v2, v3] = await Promise.all([
@@ -372,8 +387,9 @@ export async function POST(req: NextRequest) {
       where: { phone: { in: phoneVariants as string[] }, active: true, pinSet: true },
       select: { securityQ1: true, securityQ2: true, securityQ3: true, email: true },
     });
+    // Return generic error to prevent phone number enumeration
     if (!driver || !driver.securityQ1) {
-      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Security questions not available for this account' }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -417,7 +433,8 @@ export async function POST(req: NextRequest) {
       });
 
       if (!driver || !driver.email) {
-        return NextResponse.json({ error: 'No email address on file for this account. Contact your dispatcher.' }, { status: 404 });
+        // Return success even if not found to prevent phone enumeration
+        return NextResponse.json({ ok: true, maskedEmail: '***' });
       }
 
       // Generate a secure, time-limited token (1 hour)
