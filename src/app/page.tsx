@@ -29,6 +29,12 @@ export default async function Home() {
           </Link>
           <div className="flex items-center gap-3">
             <Link
+              href="/blog"
+              className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
+            >
+              Blog
+            </Link>
+            <Link
               href="/login"
               className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
             >
@@ -460,6 +466,7 @@ export default async function Home() {
                 <li><Link href="/login" className="hover:text-steel-200 transition-colors">Dispatcher Login</Link></li>
                 <li><Link href="/d/login" className="hover:text-steel-200 transition-colors">Driver Login</Link></li>
                 <li><Link href="/subscribe" className="hover:text-steel-200 transition-colors">Plans &amp; Pricing</Link></li>
+                <li><Link href="/blog" className="hover:text-steel-200 transition-colors">Blog</Link></li>
               </ul>
             </div>
             <div>
