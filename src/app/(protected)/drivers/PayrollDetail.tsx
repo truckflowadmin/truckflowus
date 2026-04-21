@@ -36,6 +36,7 @@ interface CalcResult {
 interface CheckData {
   payment: {
     id: string;
+    checkNumber: number;
     periodStart: string;
     periodEnd: string;
     payType: string;
@@ -59,6 +60,7 @@ interface CheckData {
     state: string;
     zip: string;
     phone: string;
+    logoUrl: string | null;
     checkRoutingNumber: string;
     checkAccountNumber: string;
   };
@@ -182,7 +184,7 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
   const c = data.company;
   const companyAddress = [c.address, [c.city, c.state, c.zip].filter(Boolean).join(', ')].filter(Boolean).join('\n');
   const checkDate = p.paidAt ? formatDate(p.paidAt) : formatDate(p.createdAt);
-  const checkNumber = p.id.slice(-6).toUpperCase();
+  const checkNumber = String(p.checkNumber).padStart(6, '0');
   const periodLabel = `${formatDate(p.periodStart)} – ${formatDate(p.periodEnd)}`;
 
   // Voucher stub content (shared between top and middle stubs)
@@ -291,13 +293,19 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
 
         {/* ═══ Section 1: Top Check (Negotiable Instrument) ═══ */}
         <div style={{ height: '3.5in', padding: '0.35in 0.5in', display: 'flex', flexDirection: 'column', borderBottom: '2px dashed #aaa' }}>
-          {/* Check header — company info + check number + date */}
+          {/* Check header — company info + logo + check number + date */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '2px' }}>{c.name}</div>
               <div style={{ fontSize: '10px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#333' }}>{companyAddress}</div>
               {c.phone && <div style={{ fontSize: '10px', color: '#333' }}>{c.phone}</div>}
             </div>
+            {/* Company logo (center) */}
+            {c.logoUrl && (
+              <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={c.logoUrl} alt={c.name} style={{ maxHeight: '50px', maxWidth: '150px', objectFit: 'contain' }} />
+              </div>
+            )}
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>{checkNumber}</div>
               <div style={{ marginTop: '10px' }}>

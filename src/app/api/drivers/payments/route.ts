@@ -67,10 +67,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
   }
 
+  // Get next check number for this company (max of both DriverPayment and ManualCheck)
+  const [maxDriverPay, maxManualCheck] = await Promise.all([
+    prisma.driverPayment.findFirst({
+      where: { companyId: session.companyId },
+      orderBy: { checkNumber: 'desc' },
+      select: { checkNumber: true },
+    }),
+    prisma.manualCheck.findFirst({
+      where: { companyId: session.companyId },
+      orderBy: { checkNumber: 'desc' },
+      select: { checkNumber: true },
+    }).catch(() => null), // table may not exist yet during migration
+  ]);
+  const maxNum = Math.max(
+    (maxDriverPay as any)?.checkNumber ?? 0,
+    (maxManualCheck as any)?.checkNumber ?? 0,
+  );
+  const nextCheckNumber = maxNum + 1;
+
   const payment = await prisma.driverPayment.create({
     data: {
       companyId: session.companyId,
       driverId,
+      checkNumber: nextCheckNumber,
       periodStart: new Date(periodStart),
       periodEnd: new Date(periodEnd),
       hoursWorked: hoursWorked ?? 0,
@@ -84,7 +104,7 @@ export async function POST(req: NextRequest) {
       notes: notes ?? null,
       status: status === 'PAID' ? 'PAID' : 'PENDING',
       paidAt: status === 'PAID' ? new Date() : null,
-    },
+    } as any,
   });
 
   return NextResponse.json({ payment }, { status: 201 });

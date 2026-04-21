@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { FEATURE_CATALOG, featuresBySide, getEffectiveFeatures, formatPrice } from '@/lib/features';
 import { SECURITY_QUESTIONS, hashAnswer } from '@/lib/driver-auth';
 import { audit } from '@/lib/audit';
+import CompanyLogoUpload from '@/components/CompanyLogoUpload';
 
 async function saveCompanyAction(formData: FormData) {
   'use server';
@@ -29,6 +30,7 @@ async function saveCompanyAction(formData: FormData) {
     } as any,
   });
   revalidatePath('/settings');
+  redirect('/settings?saved=1');
 }
 
 async function changePasswordAction(formData: FormData) {
@@ -176,7 +178,7 @@ async function removeUserAction(formData: FormData) {
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: { pwOk?: string; sqOk?: string; sqErr?: string; setupSQ?: string };
+  searchParams: { pwOk?: string; sqOk?: string; sqErr?: string; setupSQ?: string; saved?: string };
 }) {
   const session = await requireSession();
   const lang = getServerLang();
@@ -278,6 +280,13 @@ export default async function SettingsPage({
       {/* Company Info */}
       <form action={saveCompanyAction} className="panel p-6 space-y-4 mb-6">
         <h2 className="font-semibold text-lg">Company Information</h2>
+        {searchParams.saved && (
+          <p className="text-sm text-green-700 bg-green-50 rounded px-3 py-2">Settings saved successfully.</p>
+        )}
+
+        {/* Company Logo Upload */}
+        <CompanyLogoUpload currentLogoUrl={company.logoUrl ?? null} />
+
         <div>
           <label className="label">Company Name</label>
           <input name="name" defaultValue={company.name} className="input" required />

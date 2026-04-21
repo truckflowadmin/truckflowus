@@ -15,6 +15,7 @@ const NAV = [
   { href: '/fleet', labelKey: 'nav.fleet', icon: '🚛' },
   { href: '/customers', labelKey: 'nav.customers', icon: '◉' },
   { href: '/invoices', labelKey: 'nav.invoices', icon: '$' },
+  { href: '/checks', labelKey: 'nav.checks', icon: '✎' },
   { href: '/reports', labelKey: 'nav.reports', icon: '◈' },
   { href: '/sms', labelKey: 'nav.sms', icon: '⌯' },
   { href: '/brokers', labelKey: 'nav.brokers', icon: '⇆' },

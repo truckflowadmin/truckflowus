@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     payment: {
       id: payment.id,
+      checkNumber: (payment as any).checkNumber ?? 0,
       periodStart: payment.periodStart,
       periodEnd: payment.periodEnd,
       payType: payment.payType,
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest) {
       state: company?.state ?? '',
       zip: company?.zip ?? '',
       phone: company?.phone ?? '',
+      logoUrl: company?.logoUrl ?? null,
       checkRoutingNumber: (company as any)?.checkRoutingNumber ?? '',
       checkAccountNumber: (company as any)?.checkAccountNumber ?? '',
     },

@@ -622,6 +622,7 @@ model DriverPayment {
   id              String        @id @default(cuid())
   companyId       String
   driverId        String
+  checkNumber     Int           @default(0) // sequential check number per company
   /// Period covered by this payment
   periodStart     DateTime
   periodEnd       DateTime
@@ -648,6 +649,25 @@ model DriverPayment {
   @@index([companyId, driverId])
   @@index([companyId, status])
   @@index([driverId, periodStart])
+  @@index([companyId, checkNumber])
+}
+
+/// Manual checks for non-payroll expenses (rent, fuel, equipment, etc.)
+model ManualCheck {
+  id              String        @id @default(cuid())
+  companyId       String
+  checkNumber     Int           @default(0)
+  payee           String        // who the check is made out to
+  amount          Decimal       @db.Decimal(10, 2)
+  memo            String?       @db.Text
+  category        String?       // expense category (rent, fuel, equipment, etc.)
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, checkNumber])
 }
 
 enum DocType {
