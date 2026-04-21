@@ -389,4 +389,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'driver.addTicket': { en: 'Add Ticket', es: 'Agregar Boleta' },
 };
 
-export default translations;
+// Merge public page translations
+import publicTranslations from './public-translations';
+const merged = { ...translations, ...publicTranslations };
+
+export default merged;

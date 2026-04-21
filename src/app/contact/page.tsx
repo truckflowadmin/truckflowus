@@ -2,16 +2,19 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { usePublicLang } from '@/lib/usePublicLang';
+import PublicLanguageToggle from '@/components/PublicLanguageToggle';
 
 const CATEGORIES = [
-  { value: '', label: 'Select a category...' },
-  { value: 'Special Request', label: 'Special Request' },
-  { value: 'Something Not Working', label: 'Something Not Working' },
-  { value: 'General Inquiry', label: 'General Inquiry' },
-  { value: 'Other', label: 'Other' },
+  { value: '', labelKey: 'pub.contact.selectCat' },
+  { value: 'Special Request', labelKey: 'pub.contact.catSpecial' },
+  { value: 'Something Not Working', labelKey: 'pub.contact.catBug' },
+  { value: 'General Inquiry', labelKey: 'pub.contact.catGeneral' },
+  { value: 'Other', labelKey: 'pub.contact.catOther' },
 ];
 
 export default function ContactPage() {
+  const { lang, t } = usePublicLang();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState('');
@@ -35,7 +38,7 @@ export default function ContactPage() {
 
       if (!res.ok) {
         setStatus('error');
-        setErrorMsg(data.error || 'Something went wrong. Please try again.');
+        setErrorMsg(data.error || (lang === 'en' ? 'Something went wrong. Please try again.' : 'Algo salió mal. Intente de nuevo.'));
         return;
       }
 
@@ -46,7 +49,7 @@ export default function ContactPage() {
       setMessage('');
     } catch {
       setStatus('error');
-      setErrorMsg('Failed to send. Please check your connection and try again.');
+      setErrorMsg(t('pub.contact.errorConnection'));
     }
   }
 
@@ -66,13 +69,14 @@ export default function ContactPage() {
               href="/blog"
               className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
             >
-              Blog
+              {t('pub.nav.blog')}
             </Link>
+            <PublicLanguageToggle />
             <Link
               href="/signup"
               className="text-sm font-semibold bg-safety text-diesel px-4 py-2 rounded-md hover:bg-safety-dark transition-colors"
             >
-              Start Free Trial
+              {t('pub.nav.startTrial')}
             </Link>
           </div>
         </div>
@@ -84,10 +88,11 @@ export default function ContactPage() {
           {/* Left — Info */}
           <div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
-              Contact <span className="text-safety">Us</span>
+              {t('pub.contact.title')}{' '}
+              {t('pub.contact.titleAccent') && <span className="text-safety">{t('pub.contact.titleAccent')}</span>}
             </h1>
             <p className="text-steel-400 text-lg leading-relaxed mb-8">
-              Have a question, feature request, or running into an issue? We'd love to hear from you. Fill out the form and we'll get back to you as soon as possible.
+              {t('pub.contact.subtitle')}
             </p>
 
             <div className="space-y-6">
@@ -98,7 +103,7 @@ export default function ContactPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Email</p>
+                  <p className="font-semibold text-white">{t('pub.contact.email')}</p>
                   <a href="mailto:truckflowadmin@gmail.com" className="text-steel-400 hover:text-safety transition-colors">
                     truckflowadmin@gmail.com
                   </a>
@@ -112,8 +117,8 @@ export default function ContactPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Response Time</p>
-                  <p className="text-steel-400">We typically respond within 24 hours</p>
+                  <p className="font-semibold text-white">{t('pub.contact.responseTime')}</p>
+                  <p className="text-steel-400">{t('pub.contact.responseDesc')}</p>
                 </div>
               </div>
 
@@ -124,9 +129,9 @@ export default function ContactPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Existing Customers</p>
+                  <p className="font-semibold text-white">{t('pub.contact.existing')}</p>
                   <p className="text-steel-400">
-                    If you're already a TruckFlowUS user, include your company name so we can look up your account.
+                    {t('pub.contact.existingDesc')}
                   </p>
                 </div>
               </div>
@@ -142,15 +147,15 @@ export default function ContactPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-bold mb-2">Message Sent!</h2>
+                <h2 className="text-xl font-bold mb-2">{t('pub.contact.sent')}</h2>
                 <p className="text-steel-400 mb-6">
-                  Thanks for reaching out. We'll get back to you as soon as possible.
+                  {t('pub.contact.sentDesc')}
                 </p>
                 <button
                   onClick={() => setStatus('idle')}
                   className="text-sm font-medium text-safety hover:text-safety-dark transition-colors"
                 >
-                  Send another message
+                  {t('pub.contact.sendAnother')}
                 </button>
               </div>
             ) : (
@@ -158,7 +163,7 @@ export default function ContactPage() {
                 {/* Name */}
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-steel-300 mb-1.5">
-                    Your Name
+                    {t('pub.contact.yourName')}
                   </label>
                   <input
                     id="name"
@@ -174,7 +179,7 @@ export default function ContactPage() {
                 {/* Email */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-steel-300 mb-1.5">
-                    Email Address
+                    {t('pub.contact.emailAddr')}
                   </label>
                   <input
                     id="email"
@@ -190,7 +195,7 @@ export default function ContactPage() {
                 {/* Category */}
                 <div>
                   <label htmlFor="category" className="block text-sm font-medium text-steel-300 mb-1.5">
-                    What can we help with?
+                    {t('pub.contact.helpWith')}
                   </label>
                   <select
                     id="category"
@@ -201,7 +206,7 @@ export default function ContactPage() {
                   >
                     {CATEGORIES.map((cat) => (
                       <option key={cat.value} value={cat.value} disabled={!cat.value}>
-                        {cat.label}
+                        {t(cat.labelKey)}
                       </option>
                     ))}
                   </select>
@@ -210,7 +215,7 @@ export default function ContactPage() {
                 {/* Message */}
                 <div>
                   <label htmlFor="message" className="block text-sm font-medium text-steel-300 mb-1.5">
-                    Message
+                    {t('pub.contact.message')}
                   </label>
                   <textarea
                     id="message"
@@ -218,7 +223,7 @@ export default function ContactPage() {
                     rows={5}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Tell us what you need help with..."
+                    placeholder={t('pub.contact.messagePlaceholder')}
                     className="w-full bg-steel-800 border border-steel-700 rounded-lg px-4 py-2.5 text-white placeholder-steel-500 focus:border-safety focus:outline-none focus:ring-1 focus:ring-safety transition-colors resize-none"
                   />
                 </div>
@@ -236,7 +241,7 @@ export default function ContactPage() {
                   disabled={status === 'sending'}
                   className="w-full bg-safety text-diesel font-bold text-sm px-6 py-3 rounded-lg hover:bg-safety-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {status === 'sending' ? 'Sending...' : 'Send Message'}
+                  {status === 'sending' ? t('pub.contact.sending') : t('pub.contact.send')}
                 </button>
               </form>
             )}
@@ -248,10 +253,10 @@ export default function ContactPage() {
       <footer className="border-t border-steel-800">
         <div className="max-w-4xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-steel-500">
           <Link href="/" className="hover:text-steel-300 transition-colors">
-            &larr; Back to TruckFlowUS
+            {t('pub.nav.backHome')}
           </Link>
           <p className="text-xs text-steel-600">
-            &copy; {new Date().getFullYear()} TruckFlowUS. All rights reserved.
+            &copy; {new Date().getFullYear()} TruckFlowUS. {t('pub.nav.allRights')}
           </p>
         </div>
       </footer>

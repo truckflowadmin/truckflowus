@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
+const BLOG_DIR_ES = path.join(process.cwd(), 'content', 'blog', 'es');
 
 export interface BlogPost {
   slug: string;
@@ -89,14 +90,15 @@ function markdownToHtml(md: string): string {
 }
 
 /** Get all blog posts sorted by date (newest first) */
-export function getAllPosts(): BlogPost[] {
-  if (!fs.existsSync(BLOG_DIR)) return [];
+export function getAllPosts(lang: 'en' | 'es' = 'en'): BlogPost[] {
+  const dir = lang === 'es' ? BLOG_DIR_ES : BLOG_DIR;
+  if (!fs.existsSync(dir)) return [];
 
-  const files = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith('.md'));
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
 
   const posts = files.map((filename) => {
     const slug = filename.replace(/\.md$/, '');
-    const raw = fs.readFileSync(path.join(BLOG_DIR, filename), 'utf-8');
+    const raw = fs.readFileSync(path.join(dir, filename), 'utf-8');
     const { data, content } = parseFrontmatter(raw);
 
     return {
@@ -114,8 +116,9 @@ export function getAllPosts(): BlogPost[] {
 }
 
 /** Get a single post by slug */
-export function getPostBySlug(slug: string): BlogPost | null {
-  const filepath = path.join(BLOG_DIR, `${slug}.md`);
+export function getPostBySlug(slug: string, lang: 'en' | 'es' = 'en'): BlogPost | null {
+  const dir = lang === 'es' ? BLOG_DIR_ES : BLOG_DIR;
+  const filepath = path.join(dir, `${slug}.md`);
   if (!fs.existsSync(filepath)) return null;
 
   const raw = fs.readFileSync(filepath, 'utf-8');

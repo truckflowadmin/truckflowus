@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { usePublicLang } from '@/lib/usePublicLang';
+import PublicLanguageToggle from '@/components/PublicLanguageToggle';
 
 const DISPATCHER_ICON = (
   <svg className="w-8 h-8 text-safety" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -20,38 +22,40 @@ const DOWNLOAD_ICON = (
   </svg>
 );
 
-const GUIDES = [
+interface GuideData {
+  titleKey: string;
+  descKey: string;
+  fileEn: string;
+  fileEs: string;
+  icon: React.ReactNode;
+  slides: number;
+  audienceKey: string;
+}
+
+const GUIDES: GuideData[] = [
   {
-    title: 'Dispatcher Guide',
-    titleEs: 'Guía del Despachador',
-    description:
-      'A 10-slide walkthrough covering everything a dispatcher needs — from logging in and navigating the dashboard to creating jobs, managing tickets, generating invoices, and running reports.',
-    descriptionEs:
-      'Una guía de 10 diapositivas que cubre todo lo que un despachador necesita — desde iniciar sesión y navegar el panel hasta crear trabajos, gestionar tickets, generar facturas e informes.',
+    titleKey: 'pub.resources.dispatcherGuide',
+    descKey: 'pub.resources.dispatcherDesc',
     fileEn: '/TruckFlowUS-Dispatcher-Guide.pptx',
     fileEs: '/TruckFlowUS-Guia-Despachador.pptx',
     icon: DISPATCHER_ICON,
     slides: 10,
-    audience: 'Dispatchers & Admins',
-    audienceEs: 'Despachadores y Administradores',
+    audienceKey: 'pub.resources.dispatchersAdmins',
   },
   {
-    title: 'Driver Guide',
-    titleEs: 'Guía del Conductor',
-    description:
-      'A 9-slide walkthrough for drivers — how to log in via your unique link, view and accept jobs, submit load tickets, upload photos, manage your profile, and track pay history.',
-    descriptionEs:
-      'Una guía de 9 diapositivas para conductores — cómo iniciar sesión con su enlace único, ver y aceptar trabajos, enviar tickets de carga, subir fotos, y ver historial de pagos.',
+    titleKey: 'pub.resources.driverGuide',
+    descKey: 'pub.resources.driverDesc',
     fileEn: '/TruckFlowUS-Driver-Guide.pptx',
     fileEs: '/TruckFlowUS-Guia-Conductor.pptx',
     icon: DRIVER_ICON,
     slides: 9,
-    audience: 'Drivers',
-    audienceEs: 'Conductores',
+    audienceKey: 'pub.resources.drivers',
   },
 ];
 
 export default function ResourcesPage() {
+  const { t } = usePublicLang();
+
   return (
     <div className="min-h-screen bg-diesel text-white">
       {/* Nav */}
@@ -68,19 +72,20 @@ export default function ResourcesPage() {
               href="/blog"
               className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
             >
-              Blog
+              {t('pub.nav.blog')}
             </Link>
             <Link
               href="/contact"
               className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
             >
-              Contact
+              {t('pub.nav.contact')}
             </Link>
+            <PublicLanguageToggle />
             <Link
               href="/signup"
               className="text-sm font-semibold bg-safety text-diesel px-4 py-2 rounded-md hover:bg-safety-dark transition-colors"
             >
-              Start Free Trial
+              {t('pub.nav.startTrial')}
             </Link>
           </div>
         </div>
@@ -89,10 +94,10 @@ export default function ResourcesPage() {
       {/* Header */}
       <div className="max-w-5xl mx-auto px-6 pt-16 pb-12">
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
-          Resources & <span className="text-safety">Guides</span>
+          {t('pub.resources.title')} <span className="text-safety">{t('pub.resources.titleAccent')}</span>
         </h1>
         <p className="text-steel-400 text-lg leading-relaxed max-w-2xl">
-          Download our step-by-step guides to get your team up and running fast. Available in English and Spanish. Share these with your dispatchers and drivers so everyone knows exactly how to use TruckFlowUS.
+          {t('pub.resources.subtitle')}
         </p>
       </div>
 
@@ -101,7 +106,7 @@ export default function ResourcesPage() {
         <div className="space-y-8">
           {GUIDES.map((guide) => (
             <div
-              key={guide.title}
+              key={guide.titleKey}
               className="bg-steel-900/60 border border-steel-800 rounded-xl p-6 sm:p-8"
             >
               <div className="flex items-start gap-4 mb-5">
@@ -109,15 +114,15 @@ export default function ResourcesPage() {
                   {guide.icon}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">{guide.title}</h2>
+                  <h2 className="text-xl font-bold">{t(guide.titleKey)}</h2>
                   <p className="text-sm text-steel-500 mt-0.5">
-                    {guide.slides} slides &middot; For {guide.audience}
+                    {guide.slides} {t('pub.resources.slides')} &middot; {t('pub.resources.for')} {t(guide.audienceKey)}
                   </p>
                 </div>
               </div>
 
               <p className="text-steel-400 text-sm leading-relaxed mb-6">
-                {guide.description}
+                {t(guide.descKey)}
               </p>
 
               <div className="grid sm:grid-cols-2 gap-3">
@@ -128,7 +133,7 @@ export default function ResourcesPage() {
                   className="inline-flex items-center justify-center gap-2 bg-safety text-diesel font-bold text-sm px-6 py-3 rounded-lg hover:bg-safety-dark transition-colors"
                 >
                   {DOWNLOAD_ICON}
-                  Download — English
+                  {t('pub.resources.downloadEn')}
                 </a>
 
                 {/* Spanish */}
@@ -138,7 +143,7 @@ export default function ResourcesPage() {
                   className="inline-flex items-center justify-center gap-2 bg-steel-800 text-white font-bold text-sm px-6 py-3 rounded-lg hover:bg-steel-700 transition-colors border border-steel-700"
                 >
                   {DOWNLOAD_ICON}
-                  Descargar — Español
+                  {t('pub.resources.downloadEs')}
                 </a>
               </div>
             </div>
@@ -147,25 +152,22 @@ export default function ResourcesPage() {
 
         {/* CTA */}
         <div className="mt-12 bg-steel-900/40 border border-steel-800 rounded-xl p-8 text-center">
-          <h3 className="text-xl font-bold mb-2">Need more help getting started?</h3>
-          <p className="text-steel-400 mb-1">
-            Our team is here to help you set up your account and train your crew.
-          </p>
-          <p className="text-steel-500 text-sm mb-6">
-            Nuestro equipo está aquí para ayudarle a configurar su cuenta y capacitar a su equipo.
+          <h3 className="text-xl font-bold mb-2">{t('pub.resources.needHelp')}</h3>
+          <p className="text-steel-400 mb-6">
+            {t('pub.resources.needHelpDesc')}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/contact"
               className="text-sm font-semibold bg-steel-800 text-white px-5 py-2.5 rounded-lg hover:bg-steel-700 transition-colors"
             >
-              Contact Us
+              {t('pub.footer.contactUs')}
             </Link>
             <Link
               href="/signup"
               className="text-sm font-semibold bg-safety text-diesel px-5 py-2.5 rounded-lg hover:bg-safety-dark transition-colors"
             >
-              Start Free Trial
+              {t('pub.nav.startTrial')}
             </Link>
           </div>
         </div>
@@ -175,10 +177,10 @@ export default function ResourcesPage() {
       <footer className="border-t border-steel-800">
         <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-steel-500">
           <Link href="/" className="hover:text-steel-300 transition-colors">
-            &larr; Back to TruckFlowUS
+            {t('pub.nav.backHome')}
           </Link>
           <p className="text-xs text-steel-600">
-            &copy; {new Date().getFullYear()} TruckFlowUS. All rights reserved.
+            &copy; {new Date().getFullYear()} TruckFlowUS. {t('pub.nav.allRights')}
           </p>
         </div>
       </footer>
