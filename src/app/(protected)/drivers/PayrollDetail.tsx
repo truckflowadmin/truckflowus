@@ -299,7 +299,6 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
             <div>
               <div style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '2px', color: '#000' }}>{c.name}</div>
               <div style={{ fontSize: '11px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#000', fontWeight: 600 }}>{companyAddress}</div>
-              {c.checkBankName && <div style={{ fontSize: '11px', color: '#000', fontWeight: 600 }}>{c.checkBankName}</div>}
             </div>
             {/* Company logo (center) */}
             {c.logoUrl && (
@@ -330,26 +329,27 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
           </div>
 
           {/* Amount in words */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '0' }}>
             <div style={{ flex: 1, fontSize: '12px', fontWeight: 'bold', borderBottom: '2px solid #000', paddingBottom: '2px', color: '#000' }}>
               {amountToWords(p.finalAmount)} ★★★★★★★★★★ DOLLARS
             </div>
           </div>
+          {c.checkBankName && <div style={{ fontSize: '10px', color: '#000', fontWeight: 600, marginTop: '2px' }}>{c.checkBankName}</div>}
 
           {/* Memo + Signature */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             {/* Memo + Signature line */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
               <div style={{ flex: 1, marginRight: '40px' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <span style={{ fontSize: '10px', color: '#000', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Memo</span>
-                  <span style={{ flex: 1, fontSize: '11px', fontWeight: 600, borderBottom: '2px solid #000', paddingBottom: '2px', color: '#000' }}>
+                <div style={{ borderBottom: '2px solid #000', paddingBottom: '2px', marginBottom: '3px' }}>
+                  <span style={{ fontSize: '10px', color: '#000', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Memo </span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#000' }}>
                     {periodLabel}{p.notes ? ` — ${p.notes}` : ''}
                   </span>
                 </div>
               </div>
               <div>
-                <div style={{ borderBottom: '2px solid #000', width: '240px', marginBottom: '3px' }}>&nbsp;</div>
+                <div style={{ borderBottom: '2px solid #000', width: '240px', paddingBottom: '2px', marginBottom: '3px' }}>&nbsp;</div>
                 <div style={{ fontSize: '10px', color: '#000', fontWeight: 600, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>Authorized Signature</div>
               </div>
             </div>
