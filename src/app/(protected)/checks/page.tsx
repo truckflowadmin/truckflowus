@@ -242,7 +242,7 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
                 </div>
               </div>
               <div>
-                <div style={{ borderBottom: '2px solid #000', width: '240px', paddingBottom: '2px', marginBottom: '3px' }}>&nbsp;</div>
+                <div style={{ borderBottom: '2px solid #000', width: '240px', paddingBottom: '2px', marginBottom: '6px' }}>&nbsp;</div>
                 <div style={{ fontSize: '10px', color: '#000', fontWeight: 600, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>Authorized Signature</div>
               </div>
             </div>
