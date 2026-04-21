@@ -12,6 +12,7 @@
 import { prisma } from './prisma';
 import { hashPassword } from './auth';
 import { sendEmail } from './email';
+import { clearAttempts } from './rate-limit';
 
 const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -59,6 +60,9 @@ export async function consumeResetToken(token: string, newPassword: string): Pro
   const userId = await validateResetToken(token);
   if (!userId) return false;
 
+  // Get user email so we can clear login lockout
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+
   const hash = await hashPassword(newPassword);
 
   await prisma.$transaction([
@@ -71,6 +75,11 @@ export async function consumeResetToken(token: string, newPassword: string): Pro
       data: { usedAt: new Date() },
     }),
   ]);
+
+  // Clear login attempts so the account is no longer locked
+  if (user?.email) {
+    await clearAttempts(user.email, 'dispatcher_login');
+  }
 
   return true;
 }
