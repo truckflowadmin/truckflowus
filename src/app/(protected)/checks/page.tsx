@@ -197,7 +197,7 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
             <div>
               <div style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '2px', color: '#000' }}>{company.name}</div>
               <div style={{ fontSize: '11px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#000', fontWeight: 600 }}>{companyAddress}</div>
-              {company.phone && <div style={{ fontSize: '11px', color: '#000', fontWeight: 600 }}>{company.phone}</div>}
+              {company.checkBankName && <div style={{ fontSize: '11px', color: '#000', fontWeight: 600 }}>{company.checkBankName}</div>}
             </div>
             {company.logoUrl && (
               <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
