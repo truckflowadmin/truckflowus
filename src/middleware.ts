@@ -32,10 +32,10 @@ async function verifyJwtEdge(token: string, secret: string): Promise<boolean> {
 
 function getJwtSecretForMiddleware(): string {
   const secret = process.env.JWT_SECRET;
-  if (!secret && process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET must be set in production');
+  if (!secret) {
+    throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in .env.local for development.');
   }
-  return secret || 'dev-insecure-secret-change-me';
+  return secret;
 }
 
 // Tenant-scoped dispatcher/admin routes.

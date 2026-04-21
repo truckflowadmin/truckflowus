@@ -294,6 +294,11 @@ export async function emailInvoiceAction(formData: FormData) {
   const id = String(formData.get('id') || '');
   const toOverride = String(formData.get('to') || '').trim();
 
+  // Validate email format if override provided
+  if (toOverride && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toOverride)) {
+    throw new Error('Invalid email address format');
+  }
+
   const invoice = await prisma.invoice.findFirst({
     where: { id, companyId: session.companyId },
     include: {

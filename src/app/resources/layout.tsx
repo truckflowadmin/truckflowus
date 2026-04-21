@@ -1,10 +1,14 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Resources & Guides — Dump Truck Dispatch Software',
-  description:
-    'Download free TruckFlowUS guides for dispatchers and drivers. Step-by-step instructions to get your dump truck fleet running with our dispatch and ticketing software.',
+  title: 'Free Guides — Dump Truck Dispatch & Driver Training Resources',
+  description: 'Download free dispatcher and driver training guides for TruckFlowUS. Step-by-step walkthroughs for dump truck dispatch software, load ticketing, and fleet management. Available in English and Spanish.',
   alternates: { canonical: '/resources' },
+  openGraph: {
+    type: 'website',
+    title: 'Free Dump Truck Dispatch Training Guides — TruckFlowUS',
+    description: 'Download free dispatcher and driver training guides. Available in English and Spanish.',
+  },
 };
 
 export default function ResourcesLayout({ children }: { children: React.ReactNode }) {

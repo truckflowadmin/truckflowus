@@ -168,7 +168,8 @@ model Driver {
   truckNumber String?
   active      Boolean  @default(true)
   // Token used in /d/[token] mobile URL — first-time setup only after auth is set.
-  accessToken String   @unique @default(cuid())
+  accessToken          String    @unique @default(cuid())
+  accessTokenExpiresAt DateTime? // NULL = legacy token (no expiry); new tokens expire in 7 days
   // Driver authentication (phone + PIN)
   pinHash     String?  // bcrypt hash of 4-6 digit PIN
   pinSet      Boolean  @default(false) // true once driver has completed first-time setup

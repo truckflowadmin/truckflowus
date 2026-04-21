@@ -60,8 +60,11 @@ export default async function ResetPasswordPage({
     const newPw = String(formData.get('newPassword') || '');
     const confirm = String(formData.get('confirmPassword') || '');
 
-    if (!newPw || newPw.length < 6) {
-      redirect(`/reset-password?token=${tkn}&error=Password must be at least 6 characters`);
+    if (!newPw || newPw.length < 8) {
+      redirect(`/reset-password?token=${tkn}&error=Password must be at least 8 characters`);
+    }
+    if (!/[A-Z]/.test(newPw) || !/[0-9]/.test(newPw) || !/[^A-Za-z0-9]/.test(newPw)) {
+      redirect(`/reset-password?token=${tkn}&error=Password must include an uppercase letter, a number, and a special character`);
     }
     if (newPw !== confirm) {
       redirect(`/reset-password?token=${tkn}&error=Passwords do not match`);

@@ -8,10 +8,7 @@ const DRIVER_COOKIE = 'tf_driver_session';
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('FATAL: JWT_SECRET environment variable is required in production');
-    }
-    return 'dev-insecure-secret-change-me';
+    throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in .env.local for development.');
   }
   return secret;
 }

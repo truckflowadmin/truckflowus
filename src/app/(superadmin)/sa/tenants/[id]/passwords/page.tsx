@@ -302,6 +302,7 @@ async function resetDriverSetupAction(formData: FormData) {
       pinHash: null,
       pinSet: false,
       accessToken: randomBytes(24).toString('hex'), // regenerate to invalidate old setup URL
+      accessTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       securityQ1: null, securityA1: null,
       securityQ2: null, securityA2: null,
       securityQ3: null, securityA3: null,
@@ -652,11 +653,11 @@ export default async function PasswordManagementPage({
                           name="newPin"
                           type="password"
                           required
-                          minLength={4}
+                          minLength={6}
                           maxLength={6}
-                          pattern="\d{4,6}"
+                          pattern="\d{6}"
                           className="input-sa text-sm"
-                          placeholder="4-6 digits"
+                          placeholder="6 digits"
                         />
                       </div>
                       <div>

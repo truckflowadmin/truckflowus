@@ -48,7 +48,11 @@ async function createDriver(formData: FormData) {
   if (!companyId || !name || !phone) throw new Error('Name and phone are required');
 
   const driver = await prisma.driver.create({
-    data: { companyId, name, phone, truckNumber, accessToken: randomBytes(24).toString('hex') },
+    data: {
+      companyId, name, phone, truckNumber,
+      accessToken: randomBytes(24).toString('hex'),
+      accessTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    },
   });
   await audit({
     companyId,

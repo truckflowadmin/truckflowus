@@ -47,6 +47,7 @@ async function createDriverAction(formData: FormData) {
       workerType, payType,
       ...(payRate !== undefined ? { payRate } : {}),
       accessToken: randomBytes(24).toString('hex'),
+      accessTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     },
   });
   revalidatePath('/drivers');
@@ -70,7 +71,10 @@ async function rotateTokenAction(formData: FormData) {
   if (!d) return;
   await prisma.driver.update({
     where: { id },
-    data: { accessToken: randomBytes(24).toString('hex') },
+    data: {
+      accessToken: randomBytes(24).toString('hex'),
+      accessTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    },
   });
   revalidatePath('/drivers');
 }

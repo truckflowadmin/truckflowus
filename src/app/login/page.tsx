@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Sign In',
   description:
     'Sign in to your TruckFlowUS account to manage dump truck ticketing, dispatch, and invoicing.',
+  alternates: { canonical: '/login' },
 };
 
 export default async function LoginPage({

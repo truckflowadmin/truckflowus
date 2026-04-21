@@ -4,6 +4,16 @@ import { checkRateLimit, recordAttempt } from '@/lib/rate-limit';
 
 const CONTACT_EMAIL = 'truckflowadmin@gmail.com';
 
+/** Escape HTML entities to prevent injection in email templates */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const VALID_CATEGORIES = [
   'Special Request',
   'Something Not Working',
@@ -79,7 +89,12 @@ export async function POST(req: NextRequest) {
     // Record the attempt
     await recordAttempt(ip, 'contact_form', true);
 
-    // Send email
+    // Send email — escape all user inputs to prevent HTML injection
+    const safeName = escapeHtml(name.trim());
+    const safeEmail = escapeHtml(email.trim());
+    const safeCategory = escapeHtml(category);
+    const safeMessage = escapeHtml(message.trim());
+
     const subject = `[TruckFlowUS Contact] ${category} — from ${name.trim()}`;
     const text = [
       `Name: ${name.trim()}`,
@@ -96,20 +111,20 @@ export async function POST(req: NextRequest) {
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="padding: 8px 12px; font-weight: bold; color: #666; width: 100px;">Name</td>
-            <td style="padding: 8px 12px;">${name.trim()}</td>
+            <td style="padding: 8px 12px;">${safeName}</td>
           </tr>
           <tr style="background: #f9f9f9;">
             <td style="padding: 8px 12px; font-weight: bold; color: #666;">Email</td>
-            <td style="padding: 8px 12px;"><a href="mailto:${email.trim()}">${email.trim()}</a></td>
+            <td style="padding: 8px 12px;"><a href="mailto:${safeEmail}">${safeEmail}</a></td>
           </tr>
           <tr>
             <td style="padding: 8px 12px; font-weight: bold; color: #666;">Category</td>
-            <td style="padding: 8px 12px;">${category}</td>
+            <td style="padding: 8px 12px;">${safeCategory}</td>
           </tr>
         </table>
         <div style="margin-top: 20px; padding: 16px; background: #f5f5f5; border-radius: 8px;">
           <p style="font-weight: bold; color: #666; margin: 0 0 8px;">Message:</p>
-          <p style="margin: 0; white-space: pre-wrap;">${message.trim()}</p>
+          <p style="margin: 0; white-space: pre-wrap;">${safeMessage}</p>
         </div>
         <hr style="margin-top: 24px; border: none; border-top: 1px solid #eee;" />
         <p style="font-size: 12px; color: #999;">Sent from the TruckFlowUS contact form</p>

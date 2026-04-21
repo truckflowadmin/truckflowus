@@ -13,6 +13,73 @@
 import fs from 'fs';
 import path from 'path';
 
+// ---------------------------------------------------------------------------
+// HTML Sanitizer — allowlist-based, strips all tags/attributes not explicitly
+// permitted.  Used to prevent XSS in blog markdown rendering.
+// ---------------------------------------------------------------------------
+const ALLOWED_TAGS = new Set([
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'p', 'br', 'hr',
+  'ul', 'ol', 'li',
+  'strong', 'em', 'b', 'i', 'u', 'code', 'pre',
+  'a', 'blockquote',
+  'table', 'thead', 'tbody', 'tr', 'th', 'td',
+  'img',
+]);
+
+/** Attributes allowed per tag (all others are stripped) */
+const ALLOWED_ATTRS: Record<string, Set<string>> = {
+  a: new Set(['href', 'title', 'rel', 'target']),
+  img: new Set(['src', 'alt', 'title', 'width', 'height']),
+  code: new Set(['class']),
+  td: new Set(['colspan', 'rowspan']),
+  th: new Set(['colspan', 'rowspan']),
+};
+
+/** Protocols allowed in href/src attributes */
+const SAFE_URL_RE = /^(?:https?:\/\/|mailto:|\/[^/])/i;
+
+function sanitizeHtml(html: string): string {
+  // Strip <script>, <style>, <iframe>, <object>, <embed>, <form> and their contents
+  let out = html.replace(/<(script|style|iframe|object|embed|form)\b[\s\S]*?<\/\1\s*>/gi, '');
+
+  // Strip HTML comments
+  out = out.replace(/<!--[\s\S]*?-->/g, '');
+
+  // Process remaining tags
+  out = out.replace(/<\/?([a-z][a-z0-9]*)\b([^>]*)?\/?>/gi, (match, tag: string, attrs: string) => {
+    const lower = tag.toLowerCase();
+    const isClosing = match.startsWith('</');
+
+    if (!ALLOWED_TAGS.has(lower)) return ''; // strip unknown tags entirely
+
+    if (isClosing) return `</${lower}>`;
+
+    // Filter attributes
+    const allowedSet = ALLOWED_ATTRS[lower];
+    if (!attrs || !allowedSet) return `<${lower}>`;
+
+    const cleanAttrs: string[] = [];
+    const attrRe = /([a-z][a-z0-9-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/gi;
+    let m;
+    while ((m = attrRe.exec(attrs)) !== null) {
+      const name = m[1].toLowerCase();
+      const value = m[2] ?? m[3] ?? m[4] ?? '';
+      if (!allowedSet.has(name)) continue;
+      // Block javascript: and data: URIs in href/src
+      if ((name === 'href' || name === 'src') && !SAFE_URL_RE.test(value)) continue;
+      cleanAttrs.push(`${name}="${value.replace(/"/g, '&quot;')}"`);
+    }
+
+    // Block on* event handlers (belt-and-suspenders — they're not in allowedSet anyway)
+    const isSelfClosing = lower === 'img' || lower === 'br' || lower === 'hr';
+    const attrStr = cleanAttrs.length ? ' ' + cleanAttrs.join(' ') : '';
+    return isSelfClosing ? `<${lower}${attrStr} />` : `<${lower}${attrStr}>`;
+  });
+
+  return out;
+}
+
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
 const BLOG_DIR_ES = path.join(process.cwd(), 'content', 'blog', 'es');
 
@@ -108,15 +175,21 @@ export function getAllPosts(lang: 'en' | 'es' = 'en'): BlogPost[] {
       date: data.date || '',
       tags: data.tags ? data.tags.split(',').map((t: string) => t.trim()) : [],
       content,
-      html: markdownToHtml(content),
+      html: sanitizeHtml(markdownToHtml(content)),
     };
   });
 
   return posts.sort((a, b) => (b.date > a.date ? 1 : -1));
 }
 
+/** Validate slug format — alphanumeric + hyphens only */
+const VALID_SLUG_RE = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
+
 /** Get a single post by slug */
 export function getPostBySlug(slug: string, lang: 'en' | 'es' = 'en'): BlogPost | null {
+  // Reject invalid slug formats to prevent path traversal
+  if (!VALID_SLUG_RE.test(slug)) return null;
+
   const dir = lang === 'es' ? BLOG_DIR_ES : BLOG_DIR;
   const filepath = path.join(dir, `${slug}.md`);
   if (!fs.existsSync(filepath)) return null;
@@ -131,6 +204,6 @@ export function getPostBySlug(slug: string, lang: 'en' | 'es' = 'en'): BlogPost 
     date: data.date || '',
     tags: data.tags ? data.tags.split(',').map((t: string) => t.trim()) : [],
     content,
-    html: markdownToHtml(content),
+    html: sanitizeHtml(markdownToHtml(content)),
   };
 }

@@ -9,11 +9,7 @@ const COOKIE_NAME = 'tf_session';
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('FATAL: JWT_SECRET environment variable is required in production');
-    }
-    // Allow a weak default ONLY in development
-    return 'dev-insecure-secret-change-me';
+    throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in .env.local for development.');
   }
   return secret;
 }
@@ -43,7 +39,7 @@ export function backupSuperadminSession(token: string) {
     sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 60 * 60 * 4, // 4 hours — short-lived
+    maxAge: 60 * 30, // 30 minutes — short-lived for security
   });
 }
 

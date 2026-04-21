@@ -1,6 +1,17 @@
 import type { MetadataRoute } from 'next';
 import { getAllPosts } from '@/lib/blog';
 
+const LOCATION_SLUGS = [
+  'cape-coral-fl',
+  'miami-fl',
+  'houston-tx',
+  'dallas-tx',
+  'atlanta-ga',
+  'charlotte-nc',
+  'phoenix-az',
+  'los-angeles-ca',
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.APP_URL || 'https://truckflowus.com';
 
@@ -9,6 +20,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(post.date + 'T00:00:00'),
     changeFrequency: 'monthly' as const,
     priority: 0.6,
+  }));
+
+  const locationPages = LOCATION_SLUGS.map((slug) => ({
+    url: `${baseUrl}/locations/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
   }));
 
   return [
@@ -31,6 +49,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     ...blogPosts,
+    {
+      url: `${baseUrl}/locations`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    ...locationPages,
     {
       url: `${baseUrl}/contact`,
       lastModified: new Date(),

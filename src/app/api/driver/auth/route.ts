@@ -89,11 +89,11 @@ export async function POST(req: NextRequest) {
 
     const loginResult = await loginDriver(phone, pin);
 
-    // Phone not found — tell driver to contact their dispatcher
+    // Phone not found — use generic message to prevent phone enumeration
     if ('notFound' in loginResult) {
       return NextResponse.json({
-        error: 'notFound',
-        message: 'No account found with this phone number. Please contact your dispatcher for assistance.',
+        error: 'invalid',
+        message: 'Invalid phone number or PIN. Please try again or contact your dispatcher.',
       }, { status: 401 });
     }
 
@@ -149,8 +149,8 @@ export async function POST(req: NextRequest) {
     }
     await recordAttempt(`setup:${token}`, 'driver_setup', true);
 
-    if (pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin)) {
-      return NextResponse.json({ error: 'PIN must be 4-6 digits' }, { status: 400 });
+    if (pin.length !== 6 || !/^\d+$/.test(pin)) {
+      return NextResponse.json({ error: 'PIN must be exactly 6 digits' }, { status: 400 });
     }
     if (!securityQ1 || !securityA1 || !securityQ2 || !securityA2 || !securityQ3 || !securityA3) {
       return NextResponse.json({ error: 'All 3 security questions and answers required' }, { status: 400 });
@@ -305,8 +305,8 @@ export async function POST(req: NextRequest) {
     if (!resetToken || !newPin) {
       return NextResponse.json({ error: 'Reset token and new PIN required' }, { status: 400 });
     }
-    if (newPin.length < 4 || newPin.length > 6 || !/^\d+$/.test(newPin)) {
-      return NextResponse.json({ error: 'PIN must be 4-6 digits' }, { status: 400 });
+    if (newPin.length !== 6 || !/^\d+$/.test(newPin)) {
+      return NextResponse.json({ error: 'PIN must be exactly 6 digits' }, { status: 400 });
     }
 
     // Look up by resetToken (time-limited, single-use)
@@ -514,8 +514,8 @@ export async function POST(req: NextRequest) {
     if (!emailResetToken || !newPin) {
       return NextResponse.json({ error: 'Reset token and new PIN required' }, { status: 400 });
     }
-    if (newPin.length < 4 || newPin.length > 6 || !/^\d+$/.test(newPin)) {
-      return NextResponse.json({ error: 'PIN must be 4-6 digits' }, { status: 400 });
+    if (newPin.length !== 6 || !/^\d+$/.test(newPin)) {
+      return NextResponse.json({ error: 'PIN must be exactly 6 digits' }, { status: 400 });
     }
 
     try {

@@ -34,8 +34,11 @@ export default async function SignupPage({
     if (!name || !email || !password || !companyName) {
       redirect('/signup?error=All fields marked * are required');
     }
-    if (password.length < 6) {
-      redirect('/signup?error=Password must be at least 6 characters');
+    if (password.length < 8) {
+      redirect('/signup?error=Password must be at least 8 characters');
+    }
+    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      redirect('/signup?error=Password must include an uppercase letter, a number, and a special character');
     }
     if (password !== confirmPassword) {
       redirect('/signup?error=Passwords do not match');

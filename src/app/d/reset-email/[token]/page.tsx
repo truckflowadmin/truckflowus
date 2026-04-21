@@ -21,12 +21,8 @@ export default function EmailResetPage() {
     e.preventDefault();
     setError('');
 
-    if (newPin.length < 4 || newPin.length > 6) {
-      setError('PIN must be 4-6 digits');
-      return;
-    }
-    if (!/^\d+$/.test(newPin)) {
-      setError('PIN must be numbers only');
+    if (newPin.length !== 6 || !/^\d+$/.test(newPin)) {
+      setError('PIN must be exactly 6 digits');
       return;
     }
     if (newPin !== confirmPin) {
@@ -87,7 +83,7 @@ export default function EmailResetPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-steel-600 mb-1">New PIN (4-6 digits)</label>
+                <label className="block text-xs font-medium text-steel-600 mb-1">New PIN (6 digits)</label>
                 <input
                   type="password"
                   inputMode="numeric"
@@ -123,7 +119,7 @@ export default function EmailResetPage() {
 
               <button
                 type="submit"
-                disabled={loading || newPin.length < 4}
+                disabled={loading || newPin.length < 6}
                 className="w-full py-3 bg-safety text-diesel font-bold text-lg rounded-lg hover:bg-safety-dark transition-colors disabled:opacity-50"
               >
                 {loading ? 'Resetting...' : 'Reset PIN'}

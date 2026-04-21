@@ -39,6 +39,12 @@ export default function BlogPost({ params }: { params: { slug: string } }) {
   const nextPost = allPosts[currentIdx + 1] ?? null;
   const prevPost = allPosts[currentIdx - 1] ?? null;
 
+  // Related posts — match by shared tags, exclude current
+  const relatedPosts = allPosts
+    .filter((p) => p.slug !== post.slug && p.tags.some((tag) => post.tags.includes(tag)))
+    .slice(0, 3)
+    .map((p) => ({ slug: p.slug, title: p.title, description: p.description, date: p.date }));
+
   // Article JSON-LD — kept in English for SEO
   const articleJsonLd = {
     '@context': 'https://schema.org',
@@ -73,6 +79,7 @@ export default function BlogPost({ params }: { params: { slug: string } }) {
         }}
         prevPost={prevPost ? { slug: prevPost.slug, title: prevPost.title } : null}
         nextPost={nextPost ? { slug: nextPost.slug, title: nextPost.title } : null}
+        relatedPosts={relatedPosts}
       />
     </>
   );

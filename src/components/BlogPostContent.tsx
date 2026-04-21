@@ -18,14 +18,23 @@ interface NavPost {
   title: string;
 }
 
+interface RelatedPost {
+  slug: string;
+  title: string;
+  description: string;
+  date: string;
+}
+
 export default function BlogPostContent({
   post,
   prevPost,
   nextPost,
+  relatedPosts = [],
 }: {
   post: PostData;
   prevPost: NavPost | null;
   nextPost: NavPost | null;
+  relatedPosts?: RelatedPost[];
 }) {
   const { lang, t } = usePublicLang();
 
@@ -126,6 +135,35 @@ export default function BlogPostContent({
             {lang === 'en' ? 'Get Started Free' : 'Empiece Gratis'}
           </Link>
         </div>
+
+        {/* Related Articles */}
+        {relatedPosts.length > 0 && (
+          <div className="mt-14">
+            <h3 className="text-lg font-bold mb-5">
+              {lang === 'en' ? 'Related Articles' : 'Artículos Relacionados'}
+            </h3>
+            <div className="grid sm:grid-cols-3 gap-4">
+              {relatedPosts.map((rp) => (
+                <Link
+                  key={rp.slug}
+                  href={`/blog/${rp.slug}`}
+                  className="bg-steel-900/40 border border-steel-800 rounded-lg p-4 hover:border-safety/40 transition-colors group"
+                >
+                  <time className="text-xs text-steel-600" dateTime={rp.date}>
+                    {new Date(rp.date + 'T00:00:00').toLocaleDateString(
+                      lang === 'es' ? 'es-US' : 'en-US',
+                      { month: 'short', day: 'numeric', year: 'numeric' },
+                    )}
+                  </time>
+                  <p className="text-sm font-semibold mt-1.5 group-hover:text-safety transition-colors leading-snug">
+                    {rp.title}
+                  </p>
+                  <p className="text-xs text-steel-500 mt-1.5 line-clamp-2">{rp.description}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Prev / Next */}
         {(prevPost || nextPost) && (

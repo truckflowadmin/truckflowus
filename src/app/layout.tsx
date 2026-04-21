@@ -62,6 +62,36 @@ const softwareJsonLd = {
   },
 };
 
+const localBusinessJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  '@id': `${siteUrl}/#business`,
+  name: 'TruckFlowUS',
+  url: siteUrl,
+  logo: `${siteUrl}/icon-192.png`,
+  image: `${siteUrl}/og-image.png`,
+  description: 'Dump truck dispatch software for hauling companies. Digital load tickets, invoicing, fleet tracking, and driver mobile app.',
+  telephone: '',
+  email: 'admin@truckflowus.com',
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: 'Cape Coral',
+    addressRegion: 'FL',
+    addressCountry: 'US',
+  },
+  areaServed: {
+    '@type': 'Country',
+    name: 'United States',
+  },
+  priceRange: 'Free–$$',
+  openingHoursSpecification: {
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    opens: '08:00',
+    closes: '18:00',
+  },
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -91,6 +121,18 @@ export const metadata: Metadata = {
     'material hauling dispatch',
     'construction trucking software',
     'dump truck billing software',
+    'trip sheet software',
+    'load ticket app',
+    'truck dispatching app',
+    'hauling business software',
+    'small trucking company software',
+    'dump truck payroll software',
+    'driver settlement software',
+    'dump truck GPS tracking',
+    'construction hauling dispatch',
+    'material hauling software',
+    'dump truck broker management',
+    'dump truck compliance software',
   ],
   authors: [{ name: 'TruckFlowUS' }],
   creator: 'TruckFlowUS',
@@ -147,6 +189,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
         />
       </head>
       <body className={inter.className}>{children}</body>

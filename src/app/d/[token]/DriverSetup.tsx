@@ -48,8 +48,8 @@ export default function DriverSetup({
   function handleStep1(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (pin.length < 4 || pin.length > 6) {
-      setError('PIN must be 4-6 digits');
+    if (pin.length !== 6) {
+      setError('PIN must be exactly 6 digits');
       return;
     }
     if (pin !== confirmPin) {
@@ -178,7 +178,7 @@ export default function DriverSetup({
 
               <button
                 type="submit"
-                disabled={pin.length < 4}
+                disabled={pin.length < 6}
                 className="w-full py-3 bg-safety text-diesel font-bold text-lg rounded-lg hover:bg-safety-dark transition-colors disabled:opacity-50"
               >
                 Next →
