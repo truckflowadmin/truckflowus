@@ -152,3 +152,33 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ payment });
 }
+
+/**
+ * DELETE /api/drivers/payments?paymentId=X
+ * Delete a voided payment record.
+ */
+export async function DELETE(req: NextRequest) {
+  const session = await getSession();
+  if (!session || !session.companyId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const paymentId = req.nextUrl.searchParams.get('paymentId');
+  if (!paymentId) {
+    return NextResponse.json({ error: 'paymentId required' }, { status: 400 });
+  }
+
+  const existing = await prisma.driverPayment.findFirst({
+    where: { id: paymentId, companyId: session.companyId },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
+  }
+  if (existing.status !== 'VOID') {
+    return NextResponse.json({ error: 'Only voided payments can be deleted' }, { status: 400 });
+  }
+
+  await prisma.driverPayment.delete({ where: { id: paymentId } });
+
+  return NextResponse.json({ success: true });
+}

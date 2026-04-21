@@ -505,6 +505,13 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
     if (res.ok) fetchPayments();
   }
 
+  // -- Delete a voided payment --
+  async function deletePayment(paymentId: string) {
+    if (!confirm('Are you sure you want to delete this voided check? This cannot be undone.')) return;
+    const res = await fetch(`/api/drivers/payments?paymentId=${paymentId}`, { method: 'DELETE' });
+    if (res.ok) fetchPayments();
+  }
+
   // Summary stats
   const totalPaid = payments.filter((p) => p.status === 'PAID').reduce((sum, p) => sum + parseFloat(p.finalAmount), 0);
   const pendingTotal = payments.filter((p) => p.status === 'PENDING').reduce((sum, p) => sum + parseFloat(p.finalAmount), 0);
@@ -714,6 +721,14 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
                                 className="text-xs text-red-500 hover:text-red-700 font-medium"
                               >
                                 Void
+                              </button>
+                            )}
+                            {p.status === 'VOID' && (
+                              <button
+                                onClick={() => deletePayment(p.id)}
+                                className="text-xs text-red-600 hover:text-red-800 font-medium"
+                              >
+                                Delete
                               </button>
                             )}
                           </div>

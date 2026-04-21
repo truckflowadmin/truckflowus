@@ -355,6 +355,12 @@ export default function ManualChecksPage() {
     if (res.ok) fetchChecks();
   }
 
+  async function deleteCheck(checkId: string) {
+    if (!confirm('Are you sure you want to delete this voided check? This cannot be undone.')) return;
+    const res = await fetch(`/api/checks?checkId=${checkId}`, { method: 'DELETE' });
+    if (res.ok) fetchChecks();
+  }
+
   function viewCheckPrint(check: ManualCheck) {
     setSelectedCheck(check);
     setView('print');
@@ -510,6 +516,11 @@ export default function ManualChecksPage() {
                                 Void
                               </button>
                             </>
+                          )}
+                          {c.status === 'VOID' && (
+                            <button onClick={() => deleteCheck(c.id)} className="text-xs text-red-500 hover:text-red-700 font-medium">
+                              Delete
+                            </button>
                           )}
                         </div>
                       </td>
