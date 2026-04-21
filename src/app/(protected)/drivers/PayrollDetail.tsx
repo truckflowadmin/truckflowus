@@ -129,7 +129,9 @@ function maskAccount(acct: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Check View Component
+// Check View Component — 7200 Business Voucher Check Format (Check-on-Top)
+// Layout: Top Check | Middle Voucher Stub | Bottom Voucher Stub
+// Page: 8.5" x 11" with perforations at ~3.5" and ~7.0" from top
 // ---------------------------------------------------------------------------
 function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) {
   const checkRef = useRef<HTMLDivElement>(null);
@@ -137,7 +139,7 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
   function handlePrint() {
     const content = checkRef.current;
     if (!content) return;
-    const printWindow = window.open('', '_blank', 'width=900,height=600');
+    const printWindow = window.open('', '_blank', 'width=900,height=1100');
     if (!printWindow) return;
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -146,52 +148,17 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
         <title>Check - ${data.driverName}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Courier New', monospace; padding: 20px; }
+          @page { size: letter; margin: 0; }
+          body { font-family: 'Courier New', monospace; }
           @media print {
             body { padding: 0; }
             .no-print { display: none !important; }
           }
-          .check-container {
-            border: 2px solid #333;
-            padding: 30px;
-            max-width: 800px;
-            margin: 0 auto;
-            background: #fff;
-            position: relative;
+          @media screen {
+            body { padding: 20px; background: #f0f0f0; }
           }
-          .check-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 24px;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 16px;
-          }
-          .company-info { font-size: 12px; line-height: 1.5; }
-          .company-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
-          .check-number { font-size: 14px; color: #666; text-align: right; }
-          .check-date { font-size: 14px; text-align: right; margin-top: 8px; }
-          .date-label { font-size: 10px; color: #666; text-transform: uppercase; }
-          .pay-to-section { margin-bottom: 20px; }
-          .pay-to-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-          .pay-to-name { font-size: 20px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; display: inline-block; min-width: 400px; }
-          .amount-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-          .amount-words { font-size: 13px; flex: 1; border-bottom: 1px solid #999; padding-bottom: 4px; margin-right: 16px; }
-          .amount-box { border: 2px solid #333; padding: 8px 16px; font-size: 20px; font-weight: bold; min-width: 140px; text-align: center; }
-          .memo-section { margin-top: 24px; padding-top: 16px; border-top: 1px solid #ccc; }
-          .memo-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-          .memo-text { font-size: 12px; border-bottom: 1px solid #999; padding-bottom: 4px; min-height: 16px; }
-          .bank-section { margin-top: 24px; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #ccc; padding-top: 16px; }
-          .bank-info { font-size: 11px; color: #555; }
-          .bank-label { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
-          .signature-line { border-top: 1px solid #333; width: 250px; text-align: center; padding-top: 4px; font-size: 10px; color: #666; }
-          .stub { margin-top: 30px; border-top: 2px dashed #999; padding-top: 20px; }
-          .stub-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; }
-          .stub-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 12px; }
-          .stub-label { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
-          .stub-value { font-weight: bold; }
           .print-btn {
-            display: block; margin: 20px auto; padding: 10px 30px;
+            display: block; margin: 0 auto 20px; padding: 10px 30px;
             background: #2563eb; color: white; border: none; border-radius: 6px;
             font-size: 14px; cursor: pointer;
           }
@@ -205,7 +172,6 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
       </html>
     `);
     printWindow.document.close();
-    // Safely clone the DOM nodes instead of using innerHTML string injection
     const root = printWindow.document.getElementById('check-root');
     if (root) {
       root.appendChild(content.cloneNode(true));
@@ -215,6 +181,92 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
   const p = data.payment;
   const c = data.company;
   const companyAddress = [c.address, [c.city, c.state, c.zip].filter(Boolean).join(', ')].filter(Boolean).join('\n');
+  const checkDate = p.paidAt ? formatDate(p.paidAt) : formatDate(p.createdAt);
+  const checkNumber = p.id.slice(-6).toUpperCase();
+  const periodLabel = `${formatDate(p.periodStart)} – ${formatDate(p.periodEnd)}`;
+
+  // Voucher stub content (shared between top and middle stubs)
+  const VoucherStub = ({ label }: { label: string }) => (
+    <div style={{ height: '3.5in', padding: '0.35in 0.5in', display: 'flex', flexDirection: 'column', fontFamily: "'Courier New', monospace", fontSize: '11px', borderBottom: '2px dashed #aaa' }}>
+      {/* Stub header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{c.name}</div>
+          <div style={{ fontSize: '10px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#444' }}>{companyAddress}</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Check No.</div>
+          <div style={{ fontSize: '13px', fontWeight: 'bold' }}>{checkNumber}</div>
+          <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Date</div>
+          <div style={{ fontSize: '12px' }}>{checkDate}</div>
+        </div>
+      </div>
+
+      {/* Pay to */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #ddd' }}>
+        <div>
+          <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Pay To</div>
+          <div style={{ fontSize: '13px', fontWeight: 'bold' }}>{data.driverName}</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Amount</div>
+          <div style={{ fontSize: '15px', fontWeight: 'bold' }}>{formatCurrency(p.finalAmount)}</div>
+        </div>
+      </div>
+
+      {/* Detail table */}
+      <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px', fontWeight: 'bold' }}>{label}</div>
+      <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', flex: 1 }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid #ccc' }}>
+            <th style={{ textAlign: 'left', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Description</th>
+            <th style={{ textAlign: 'center', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Period</th>
+            <th style={{ textAlign: 'center', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Hours</th>
+            <th style={{ textAlign: 'center', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Jobs</th>
+            <th style={{ textAlign: 'center', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Tickets</th>
+            <th style={{ textAlign: 'center', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Rate</th>
+            <th style={{ textAlign: 'right', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Gross</th>
+            <th style={{ textAlign: 'right', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Net Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style={{ borderBottom: '1px solid #eee' }}>
+            <td style={{ padding: '4px' }}>{PAY_TYPE_LABELS[p.payType] ?? p.payType} Pay</td>
+            <td style={{ padding: '4px', textAlign: 'center' }}>{periodLabel}</td>
+            <td style={{ padding: '4px', textAlign: 'center' }}>{p.hoursWorked.toFixed(1)}</td>
+            <td style={{ padding: '4px', textAlign: 'center' }}>{p.jobsCompleted}</td>
+            <td style={{ padding: '4px', textAlign: 'center' }}>{p.ticketsCompleted}</td>
+            <td style={{ padding: '4px', textAlign: 'center' }}>{formatRate(p.payType, String(p.payRate))}</td>
+            <td style={{ padding: '4px', textAlign: 'right' }}>{formatCurrency(p.calculatedAmount)}</td>
+            <td style={{ padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(p.finalAmount)}</td>
+          </tr>
+          {p.adjustedAmount !== null && p.adjustedAmount !== p.calculatedAmount && (
+            <tr style={{ borderBottom: '1px solid #eee' }}>
+              <td style={{ padding: '4px', color: '#666' }} colSpan={6}>Adjustment</td>
+              <td style={{ padding: '4px', textAlign: 'right', color: '#666' }}></td>
+              <td style={{ padding: '4px', textAlign: 'right', color: '#b45309' }}>{formatCurrency(p.adjustedAmount - p.calculatedAmount)}</td>
+            </tr>
+          )}
+          {/* Empty rows for alignment */}
+          <tr><td style={{ padding: '4px' }} colSpan={8}>&nbsp;</td></tr>
+          <tr><td style={{ padding: '4px' }} colSpan={8}>&nbsp;</td></tr>
+        </tbody>
+        <tfoot>
+          <tr style={{ borderTop: '2px solid #333' }}>
+            <td style={{ padding: '4px', fontWeight: 'bold' }} colSpan={7}>Total</td>
+            <td style={{ padding: '4px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>{formatCurrency(p.finalAmount)}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      {/* Notes */}
+      {p.notes && (
+        <div style={{ marginTop: '4px', fontSize: '10px', color: '#555' }}>
+          <span style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase' }}>Memo: </span>{p.notes}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -234,97 +286,83 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
         </button>
       </div>
 
-      {/* Check preview */}
-      <div ref={checkRef} className="bg-white">
-        <div style={{ border: '2px solid #333', padding: '30px', maxWidth: '800px', margin: '0 auto', fontFamily: "'Courier New', monospace", background: '#fff' }}>
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid #ccc', paddingBottom: '16px' }}>
+      {/* 7200 Business Voucher Check — full page preview (Check on Top) */}
+      <div ref={checkRef} style={{ width: '8.5in', minHeight: '11in', margin: '0 auto', background: '#fff', fontFamily: "'Courier New', monospace", boxShadow: '0 2px 12px rgba(0,0,0,0.15)' }}>
+
+        {/* ═══ Section 1: Top Check (Negotiable Instrument) ═══ */}
+        <div style={{ height: '3.5in', padding: '0.35in 0.5in', display: 'flex', flexDirection: 'column', borderBottom: '2px dashed #aaa' }}>
+          {/* Check header — company info + check number + date */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
             <div>
-              <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>{c.name}</div>
-              <div style={{ fontSize: '12px', lineHeight: '1.5', whiteSpace: 'pre-line' }}>{companyAddress}</div>
-              {c.phone && <div style={{ fontSize: '12px' }}>{c.phone}</div>}
+              <div style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '2px' }}>{c.name}</div>
+              <div style={{ fontSize: '10px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#333' }}>{companyAddress}</div>
+              {c.phone && <div style={{ fontSize: '10px', color: '#333' }}>{c.phone}</div>}
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Date</div>
-              <div style={{ fontSize: '14px', marginTop: '4px' }}>
-                {p.paidAt ? formatDate(p.paidAt) : formatDate(p.createdAt)}
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>{checkNumber}</div>
+              <div style={{ marginTop: '10px' }}>
+                <span style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Date </span>
+                <span style={{ fontSize: '12px', borderBottom: '1px solid #333', paddingBottom: '1px', paddingLeft: '8px', paddingRight: '4px' }}>{checkDate}</span>
               </div>
             </div>
           </div>
 
-          {/* Pay To */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Pay to the Order of</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', borderBottom: '2px solid #333', paddingBottom: '4px', flex: 1, marginRight: '16px' }}>
+          {/* Pay To the Order Of + Amount box */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginBottom: '10px' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px' }}>Pay to the Order of</div>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', borderBottom: '2px solid #333', paddingBottom: '3px', minHeight: '22px' }}>
                 {data.driverName}
               </div>
-              <div style={{ border: '2px solid #333', padding: '8px 16px', fontSize: '20px', fontWeight: 'bold', minWidth: '140px', textAlign: 'center' }}>
-                {formatCurrency(p.finalAmount)}
-              </div>
+            </div>
+            <div style={{ border: '2px solid #333', padding: '6px 14px', fontSize: '18px', fontWeight: 'bold', minWidth: '130px', textAlign: 'center', background: '#fafafa' }}>
+              {formatCurrency(p.finalAmount)}
             </div>
           </div>
 
           {/* Amount in words */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '13px', borderBottom: '1px solid #999', paddingBottom: '4px' }}>
-              {amountToWords(p.finalAmount)} ★★★★★
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '16px' }}>
+            <div style={{ flex: 1, fontSize: '12px', borderBottom: '1px solid #666', paddingBottom: '2px' }}>
+              {amountToWords(p.finalAmount)} ★★★★★★★★★★ DOLLARS
             </div>
           </div>
 
-          {/* Memo */}
-          <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #ccc' }}>
-            <div style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Memo</div>
-            <div style={{ fontSize: '12px', borderBottom: '1px solid #999', paddingBottom: '4px', minHeight: '16px' }}>
-              Payment for {formatDate(p.periodStart)} — {formatDate(p.periodEnd)}
-              {p.notes ? ` | ${p.notes}` : ''}
-            </div>
-          </div>
-
-          {/* Bank info + signature */}
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #ccc', paddingTop: '16px' }}>
-            <div style={{ fontSize: '11px', color: '#555' }}>
-              {c.checkRoutingNumber && (
-                <div>
-                  <span style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Routing: </span>
-                  {c.checkRoutingNumber}
+          {/* Bank name placeholder + Memo */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+            {/* Memo + Signature line */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1, marginRight: '40px' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Memo</span>
+                  <span style={{ flex: 1, fontSize: '11px', borderBottom: '1px solid #999', paddingBottom: '2px' }}>
+                    {periodLabel}{p.notes ? ` — ${p.notes}` : ''}
+                  </span>
                 </div>
+              </div>
+              <div>
+                <div style={{ borderBottom: '1px solid #333', width: '240px', marginBottom: '3px' }}>&nbsp;</div>
+                <div style={{ fontSize: '9px', color: '#666', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>Authorized Signature</div>
+              </div>
+            </div>
+
+            {/* MICR line (simulated) */}
+            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '12px', letterSpacing: '2px', color: '#333', fontFamily: "'Courier New', monospace" }}>
+              {c.checkRoutingNumber && (
+                <span>⑆{c.checkRoutingNumber}⑆ </span>
               )}
               {c.checkAccountNumber && (
-                <div>
-                  <span style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Account: </span>
-                  {maskAccount(c.checkAccountNumber)}
-                </div>
+                <span>{c.checkAccountNumber}⑈ </span>
               )}
-            </div>
-            <div style={{ borderTop: '1px solid #333', width: '250px', textAlign: 'center', paddingTop: '4px', fontSize: '10px', color: '#666' }}>
-              Authorized Signature
+              <span>{checkNumber}</span>
             </div>
           </div>
         </div>
 
-        {/* Pay stub / details */}
-        <div style={{ marginTop: '30px', borderTop: '2px dashed #999', paddingTop: '20px', maxWidth: '800px', margin: '30px auto 0', fontFamily: "'Courier New', monospace" }}>
-          <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' }}>Payment Stub — {data.driverName}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', fontSize: '12px' }}>
-            <div>
-              <div style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Period</div>
-              <div style={{ fontWeight: 'bold' }}>{formatDate(p.periodStart)} – {formatDate(p.periodEnd)}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Pay Type</div>
-              <div style={{ fontWeight: 'bold' }}>{PAY_TYPE_LABELS[p.payType] ?? p.payType} @ {formatRate(p.payType, String(p.payRate))}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Hours / Jobs / Tickets</div>
-              <div style={{ fontWeight: 'bold' }}>{p.hoursWorked.toFixed(1)}h / {p.jobsCompleted} / {p.ticketsCompleted}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Net Pay</div>
-              <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{formatCurrency(p.finalAmount)}</div>
-            </div>
-          </div>
-        </div>
+        {/* ═══ Section 2: Middle Voucher Stub (Payer's Record) ═══ */}
+        <VoucherStub label="PAYER'S COPY — DETACH AND RETAIN" />
+
+        {/* ═══ Section 3: Bottom Voucher Stub (Payee's Remittance) ═══ */}
+        <VoucherStub label="PAYEE'S REMITTANCE ADVICE — DETACH AND RETAIN" />
       </div>
     </div>
   );
