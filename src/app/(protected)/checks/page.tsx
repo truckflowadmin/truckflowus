@@ -246,7 +246,8 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
               </div>
             </div>
 
-            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '12px', letterSpacing: '2px', color: '#000', fontWeight: 600, fontFamily: "'Courier New', monospace" }}>
+            {/* MICR line — enlarged for mobile deposit scanning */}
+            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '18px', letterSpacing: '4px', color: '#000', fontWeight: 700, fontFamily: "'Courier New', monospace" }}>
               {company.checkRoutingNumber && <span>⑆{company.checkRoutingNumber}⑆ </span>}
               {company.checkAccountNumber && <span>{company.checkAccountNumber}⑈ </span>}
               <span>{checkNumber}</span>

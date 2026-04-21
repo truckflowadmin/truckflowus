@@ -353,8 +353,8 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
               </div>
             </div>
 
-            {/* MICR line (simulated) */}
-            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '12px', letterSpacing: '2px', color: '#333', fontFamily: "'Courier New', monospace" }}>
+            {/* MICR line — enlarged for mobile deposit scanning */}
+            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '18px', letterSpacing: '4px', color: '#000', fontWeight: 700, fontFamily: "'Courier New', monospace" }}>
               {c.checkRoutingNumber && (
                 <span>⑆{c.checkRoutingNumber}⑆ </span>
               )}
