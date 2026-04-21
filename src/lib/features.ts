@@ -48,6 +48,8 @@ export const FEATURES = {
   VIEW_REPORTS: 'view_reports',
   VIEW_SMS: 'view_sms',
   VIEW_SETTINGS: 'view_settings',
+  VIEW_CHECKS: 'view_checks',
+  VIEW_CALENDAR: 'view_calendar',
 
   // ---- Advanced dispatcher features ----
   AI_JOB_SCAN: 'ai_job_scan',
@@ -291,6 +293,18 @@ export const FEATURE_CATALOG: {
     description: 'Access to company Settings and plan info',
     side: 'dispatcher_views',
   },
+  {
+    key: FEATURES.VIEW_CHECKS,
+    label: 'Checks tab',
+    description: 'Access to check printing and manual check writing',
+    side: 'dispatcher_views',
+  },
+  {
+    key: FEATURES.VIEW_CALENDAR,
+    label: 'Calendar tab',
+    description: 'Access to the scheduling Calendar view',
+    side: 'dispatcher_views',
+  },
 
   // ---- Driver view access ----
   {
@@ -358,6 +372,7 @@ export const PLAN_SEED_DEFAULTS: {
       FEATURES.VIEW_TICKETS,
       FEATURES.VIEW_DRIVERS,
       FEATURES.VIEW_SETTINGS,
+      FEATURES.VIEW_CALENDAR,
       // Driver features — all included even on Free
       FEATURES.DRIVER_ISSUE_REPORTING,
       FEATURES.DRIVER_JOB_HISTORY,
@@ -402,6 +417,8 @@ export const PLAN_SEED_DEFAULTS: {
       FEATURES.VIEW_CUSTOMERS,
       FEATURES.VIEW_INVOICES,
       FEATURES.VIEW_FLEET,
+      FEATURES.VIEW_CHECKS,
+      FEATURES.VIEW_CALENDAR,
       FEATURES.VIEW_SETTINGS,
       // Driver views — both tabs on Starter+
       FEATURES.VIEW_DRIVER_ACTIVE,
@@ -452,6 +469,8 @@ export const PLAN_SEED_DEFAULTS: {
       FEATURES.VIEW_SMS,
       FEATURES.VIEW_BROKERS,
       FEATURES.VIEW_FLEET,
+      FEATURES.VIEW_CHECKS,
+      FEATURES.VIEW_CALENDAR,
       FEATURES.VIEW_SETTINGS,
       // Driver views
       FEATURES.VIEW_DRIVER_ACTIVE,
@@ -504,6 +523,8 @@ export const PLAN_SEED_DEFAULTS: {
       FEATURES.VIEW_SMS,
       FEATURES.VIEW_BROKERS,
       FEATURES.VIEW_FLEET,
+      FEATURES.VIEW_CHECKS,
+      FEATURES.VIEW_CALENDAR,
       FEATURES.VIEW_SETTINGS,
       // Driver views
       FEATURES.VIEW_DRIVER_ACTIVE,
@@ -529,6 +550,8 @@ export const NAV_FEATURE_MAP: Record<string, FeatureKey> = {
   '/sms': FEATURES.VIEW_SMS,
   '/brokers': FEATURES.VIEW_BROKERS,
   '/settings': FEATURES.VIEW_SETTINGS,
+  '/checks': FEATURES.VIEW_CHECKS,
+  '/calendar': FEATURES.VIEW_CALENDAR,
 };
 
 /** Format price cents as a display string like "$149.00/mo" or "Free". */
