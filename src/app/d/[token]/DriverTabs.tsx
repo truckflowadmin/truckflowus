@@ -1141,41 +1141,42 @@ function CompletedJobCard({
   }
 
   async function handleFiles() {
-    const files = fileRef.current?.files;
-    if (!files || files.length === 0) return;
+    const input = fileRef.current;
+    if (!input?.files || input.files.length === 0) return;
+    // Capture files into a local array BEFORE any state update,
+    // because setState re-renders may unmount/remount the input ref.
+    const fileArray: File[] = Array.from(input.files).filter((f) => f.type.startsWith('image/'));
+    // Reset the input so the same file can be re-selected
+    input.value = '';
+    if (fileArray.length === 0) return;
     setError(null);
     setSubmitResult(null);
 
     // Create placeholder items
-    const newItems: ScannedTicketItem[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (!file.type.startsWith('image/')) continue;
-      newItems.push({
-        id: `scan-${++_scanIdCounter}`,
-        fileName: file.name,
-        photoUrl: '',
-        status: 'uploading',
-        hauledFrom: job.hauledFrom,
-        hauledTo: job.hauledTo,
-        material: job.material || '',
-        quantity: 1,
-        quantityType: job.quantityType as any,
-        ticketRef: '',
-        date: job.date ? job.date.split('T')[0] : '',
-        driverNotes: '',
-        scannedTons: null,
-        scannedYards: null,
-        scannedTicketNumber: null,
-        scannedDate: null,
-        scannedRawText: null,
-      });
-    }
+    const newItems: ScannedTicketItem[] = fileArray.map((file) => ({
+      id: `scan-${++_scanIdCounter}`,
+      fileName: file.name,
+      photoUrl: '',
+      status: 'uploading' as const,
+      hauledFrom: job.hauledFrom,
+      hauledTo: job.hauledTo,
+      material: job.material || '',
+      quantity: 1,
+      quantityType: job.quantityType as any,
+      ticketRef: '',
+      date: job.date ? job.date.split('T')[0] : '',
+      driverNotes: '',
+      scannedTons: null,
+      scannedYards: null,
+      scannedTicketNumber: null,
+      scannedDate: null,
+      scannedRawText: null,
+    }));
     setItems((prev) => [...prev, ...newItems]);
 
-    // Upload & scan each file
+    // Upload & scan each file (using captured fileArray, not the ref)
     for (let i = 0; i < newItems.length; i++) {
-      const file = files[i];
+      const file = fileArray[i];
       const item = newItems[i];
       const fd = new FormData();
       fd.append('token', token);
@@ -1223,8 +1224,6 @@ function CompletedJobCard({
         updateItem(item.id, { status: 'error', error: err.message || 'Upload failed' });
       }
     }
-
-    if (fileRef.current) fileRef.current.value = '';
   }
 
   async function handleSubmit() {
