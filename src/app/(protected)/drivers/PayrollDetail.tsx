@@ -329,12 +329,12 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
           </div>
 
           {/* Amount in words */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px' }}>
             <div style={{ flex: 1, fontSize: '12px', fontWeight: 'bold', borderBottom: '2px solid #000', paddingBottom: '2px', color: '#000' }}>
               {amountToWords(p.finalAmount)} ★★★★★★★★★★ DOLLARS
             </div>
           </div>
-          {c.checkBankName && <div style={{ fontSize: '11px', color: '#000', fontWeight: 700, marginBottom: '12px' }}>{c.checkBankName}</div>}
+          {c.checkBankName && <div style={{ fontSize: '10px', color: '#000', fontWeight: 700, marginBottom: '0px', lineHeight: '1.2' }}>{c.checkBankName}</div>}
 
           {/* Memo + Signature */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
