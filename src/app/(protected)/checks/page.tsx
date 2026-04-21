@@ -197,7 +197,6 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
             <div>
               <div style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '2px', color: '#000' }}>{company.name}</div>
               <div style={{ fontSize: '11px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#000', fontWeight: 600 }}>{companyAddress}</div>
-              {company.checkBankName && <div style={{ fontSize: '11px', color: '#000', fontWeight: 700, marginTop: '4px' }}>{company.checkBankName}</div>}
             </div>
             {company.logoUrl && (
               <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -225,11 +224,12 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
             <div style={{ flex: 1, fontSize: '12px', fontWeight: 'bold', borderBottom: '2px solid #000', paddingBottom: '2px', color: '#000' }}>
               {amountToWords(amount)} ★★★★★★★★★★ DOLLARS
             </div>
           </div>
+          {company.checkBankName && <div style={{ fontSize: '11px', color: '#000', fontWeight: 700, marginBottom: '12px' }}>{company.checkBankName}</div>}
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>

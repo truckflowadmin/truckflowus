@@ -299,7 +299,6 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
             <div>
               <div style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '2px', color: '#000' }}>{c.name}</div>
               <div style={{ fontSize: '11px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#000', fontWeight: 600 }}>{companyAddress}</div>
-              {c.checkBankName && <div style={{ fontSize: '11px', color: '#000', fontWeight: 700, marginTop: '4px' }}>{c.checkBankName}</div>}
             </div>
             {/* Company logo (center) */}
             {c.logoUrl && (
@@ -330,13 +329,14 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
           </div>
 
           {/* Amount in words */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
             <div style={{ flex: 1, fontSize: '12px', fontWeight: 'bold', borderBottom: '2px solid #000', paddingBottom: '2px', color: '#000' }}>
               {amountToWords(p.finalAmount)} ★★★★★★★★★★ DOLLARS
             </div>
           </div>
+          {c.checkBankName && <div style={{ fontSize: '11px', color: '#000', fontWeight: 700, marginBottom: '12px' }}>{c.checkBankName}</div>}
 
-          {/* Bank name placeholder + Memo */}
+          {/* Memo + Signature */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             {/* Memo + Signature line */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
