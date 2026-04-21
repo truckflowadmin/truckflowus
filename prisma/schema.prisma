@@ -58,6 +58,7 @@ model Company {
   suspended         Boolean  @default(false)
   suspendedAt       DateTime?
   // Check / payment settings
+  checkBankName        String?   // bank name displayed on printed checks
   checkRoutingNumber   String?   // bank routing number for printed checks
   checkAccountNumber   String?   // bank account number for printed checks
   // Billing

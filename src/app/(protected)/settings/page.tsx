@@ -25,6 +25,7 @@ async function saveCompanyAction(formData: FormData) {
       phone: String(formData.get('phone') || '').trim() || null,
       email: String(formData.get('email') || '').trim() || null,
       defaultRate: isNaN(rate) ? 0 : rate,
+      checkBankName: String(formData.get('checkBankName') || '').trim() || null,
       checkRoutingNumber: String(formData.get('checkRoutingNumber') || '').trim() || null,
       checkAccountNumber: String(formData.get('checkAccountNumber') || '').trim() || null,
     } as any,
@@ -330,7 +331,11 @@ export default async function SettingsPage({
         </div>
         <div className="border-t border-steel-200 pt-4 mt-4">
           <h3 className="font-semibold text-sm mb-3">Check / Payment Settings</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="label">Bank Name</label>
+              <input name="checkBankName" defaultValue={(company as any).checkBankName ?? ''} className="input" placeholder="e.g. Chase Bank" />
+            </div>
             <div>
               <label className="label">Routing Number</label>
               <input name="checkRoutingNumber" defaultValue={(company as any).checkRoutingNumber ?? ''} className="input" placeholder="e.g. 021000021" />

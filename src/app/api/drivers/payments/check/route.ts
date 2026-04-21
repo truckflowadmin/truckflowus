@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
       zip: company?.zip ?? '',
       phone: company?.phone ?? '',
       logoUrl: company?.logoUrl ?? null,
+      checkBankName: (company as any)?.checkBankName ?? '',
       checkRoutingNumber: (company as any)?.checkRoutingNumber ?? '',
       checkAccountNumber: (company as any)?.checkAccountNumber ?? '',
     },

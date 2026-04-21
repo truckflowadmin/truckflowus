@@ -61,6 +61,7 @@ interface CheckData {
     zip: string;
     phone: string;
     logoUrl: string | null;
+    checkBankName: string;
     checkRoutingNumber: string;
     checkAccountNumber: string;
   };
@@ -298,7 +299,7 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
             <div>
               <div style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '2px', color: '#000' }}>{c.name}</div>
               <div style={{ fontSize: '11px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#000', fontWeight: 600 }}>{companyAddress}</div>
-              {c.phone && <div style={{ fontSize: '11px', color: '#000', fontWeight: 600 }}>{c.phone}</div>}
+              {c.checkBankName && <div style={{ fontSize: '11px', color: '#000', fontWeight: 700, marginTop: '4px' }}>{c.checkBankName}</div>}
             </div>
             {/* Company logo (center) */}
             {c.logoUrl && (
