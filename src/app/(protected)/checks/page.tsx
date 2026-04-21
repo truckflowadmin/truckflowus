@@ -121,57 +121,57 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
   const companyAddress = [company.address, [company.city, company.state, company.zip].filter(Boolean).join(', ')].filter(Boolean).join('\n');
 
   const VoucherStub = ({ label }: { label: string }) => (
-    <div style={{ height: '3.5in', padding: '0.35in 0.5in', display: 'flex', flexDirection: 'column', fontFamily: "'Courier New', monospace", fontSize: '11px', borderBottom: '2px dashed #aaa' }}>
+    <div style={{ height: '3.5in', padding: '0.35in 0.5in', display: 'flex', flexDirection: 'column', fontFamily: "'Courier New', monospace", fontSize: '11px', color: '#000', borderBottom: '2px dashed #aaa' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
         <div>
-          <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{company.name}</div>
-          <div style={{ fontSize: '10px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#444' }}>{companyAddress}</div>
+          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#000' }}>{company.name}</div>
+          <div style={{ fontSize: '11px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#000', fontWeight: 600 }}>{companyAddress}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Check No.</div>
-          <div style={{ fontSize: '13px', fontWeight: 'bold' }}>{checkNumber}</div>
-          <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Date</div>
-          <div style={{ fontSize: '12px' }}>{checkDate}</div>
+          <div style={{ fontSize: '10px', color: '#000', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Check No.</div>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#000' }}>{checkNumber}</div>
+          <div style={{ fontSize: '10px', color: '#000', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Date</div>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#000' }}>{checkDate}</div>
         </div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #ddd' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #000' }}>
         <div>
-          <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Pay To</div>
-          <div style={{ fontSize: '13px', fontWeight: 'bold' }}>{check.payee}</div>
+          <div style={{ fontSize: '10px', color: '#000', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Pay To</div>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#000' }}>{check.payee}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Amount</div>
-          <div style={{ fontSize: '15px', fontWeight: 'bold' }}>{formatCurrency(amount)}</div>
+          <div style={{ fontSize: '10px', color: '#000', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Amount</div>
+          <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#000' }}>{formatCurrency(amount)}</div>
         </div>
       </div>
-      <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px', fontWeight: 'bold' }}>{label}</div>
-      <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', flex: 1 }}>
+      <div style={{ fontSize: '10px', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px', fontWeight: 'bold' }}>{label}</div>
+      <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', flex: 1, color: '#000' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #ccc' }}>
-            <th style={{ textAlign: 'left', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Description</th>
-            <th style={{ textAlign: 'left', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Category</th>
-            <th style={{ textAlign: 'right', padding: '3px 4px', fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'normal' }}>Amount</th>
+          <tr style={{ borderBottom: '2px solid #000' }}>
+            <th style={{ textAlign: 'left', padding: '3px 4px', fontSize: '10px', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Description</th>
+            <th style={{ textAlign: 'left', padding: '3px 4px', fontSize: '10px', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Category</th>
+            <th style={{ textAlign: 'right', padding: '3px 4px', fontSize: '10px', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Amount</th>
           </tr>
         </thead>
         <tbody>
-          <tr style={{ borderBottom: '1px solid #eee' }}>
-            <td style={{ padding: '4px' }}>{check.memo || 'Manual check payment'}</td>
-            <td style={{ padding: '4px' }}>{check.category || '—'}</td>
+          <tr style={{ borderBottom: '1px solid #000' }}>
+            <td style={{ padding: '4px', fontWeight: 600 }}>{check.memo || 'Manual check payment'}</td>
+            <td style={{ padding: '4px', fontWeight: 600 }}>{check.category || '—'}</td>
             <td style={{ padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(amount)}</td>
           </tr>
           <tr><td style={{ padding: '4px' }} colSpan={3}>&nbsp;</td></tr>
           <tr><td style={{ padding: '4px' }} colSpan={3}>&nbsp;</td></tr>
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: '2px solid #333' }}>
+          <tr style={{ borderTop: '3px solid #000' }}>
             <td style={{ padding: '4px', fontWeight: 'bold' }} colSpan={2}>Total</td>
             <td style={{ padding: '4px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>{formatCurrency(amount)}</td>
           </tr>
         </tfoot>
       </table>
       {check.memo && (
-        <div style={{ marginTop: '4px', fontSize: '10px', color: '#555' }}>
-          <span style={{ fontSize: '9px', color: '#999', textTransform: 'uppercase' }}>Memo: </span>{check.memo}
+        <div style={{ marginTop: '4px', fontSize: '11px', color: '#000', fontWeight: 600 }}>
+          <span style={{ fontSize: '10px', color: '#000', fontWeight: 700, textTransform: 'uppercase' }}>Memo: </span>{check.memo}
         </div>
       )}
     </div>
@@ -194,38 +194,38 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
         <div style={{ height: '3.5in', padding: '0.35in 0.5in', display: 'flex', flexDirection: 'column', borderBottom: '2px dashed #aaa' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '2px' }}>{company.name}</div>
-              <div style={{ fontSize: '10px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#333' }}>{companyAddress}</div>
-              {company.phone && <div style={{ fontSize: '10px', color: '#333' }}>{company.phone}</div>}
+              <div style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '2px', color: '#000' }}>{company.name}</div>
+              <div style={{ fontSize: '11px', lineHeight: '1.4', whiteSpace: 'pre-line', color: '#000', fontWeight: 600 }}>{companyAddress}</div>
+              {company.phone && <div style={{ fontSize: '11px', color: '#000', fontWeight: 600 }}>{company.phone}</div>}
             </div>
             {company.logoUrl && (
               <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={company.logoUrl} alt={company.name} style={{ maxHeight: '50px', maxWidth: '150px', objectFit: 'contain' }} />
+                <img src={company.logoUrl} alt={company.name} style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }} />
               </div>
             )}
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>{checkNumber}</div>
+              <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#000' }}>{checkNumber}</div>
               <div style={{ marginTop: '10px' }}>
-                <span style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Date </span>
-                <span style={{ fontSize: '12px', borderBottom: '1px solid #333', paddingBottom: '1px', paddingLeft: '8px', paddingRight: '4px' }}>{checkDate}</span>
+                <span style={{ fontSize: '11px', color: '#000', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>Date </span>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', borderBottom: '2px solid #000', paddingBottom: '1px', paddingLeft: '8px', paddingRight: '4px', color: '#000' }}>{checkDate}</span>
               </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginBottom: '10px' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px' }}>Pay to the Order of</div>
-              <div style={{ fontSize: '16px', fontWeight: 'bold', borderBottom: '2px solid #333', paddingBottom: '3px', minHeight: '22px' }}>
+              <div style={{ fontSize: '10px', color: '#000', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px' }}>Pay to the Order of</div>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', borderBottom: '2px solid #000', paddingBottom: '3px', minHeight: '22px', color: '#000' }}>
                 {check.payee}
               </div>
             </div>
-            <div style={{ border: '2px solid #333', padding: '6px 14px', fontSize: '18px', fontWeight: 'bold', minWidth: '130px', textAlign: 'center', background: '#fafafa' }}>
+            <div style={{ border: '2px solid #000', padding: '6px 14px', fontSize: '18px', fontWeight: 'bold', minWidth: '130px', textAlign: 'center', background: 'rgba(255,255,255,0.85)', color: '#000' }}>
               {formatCurrency(amount)}
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '16px' }}>
-            <div style={{ flex: 1, fontSize: '12px', borderBottom: '1px solid #666', paddingBottom: '2px' }}>
+            <div style={{ flex: 1, fontSize: '12px', fontWeight: 'bold', borderBottom: '2px solid #000', paddingBottom: '2px', color: '#000' }}>
               {amountToWords(amount)} ★★★★★★★★★★ DOLLARS
             </div>
           </div>
@@ -234,19 +234,19 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
               <div style={{ flex: 1, marginRight: '40px' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <span style={{ fontSize: '9px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px' }}>Memo</span>
-                  <span style={{ flex: 1, fontSize: '11px', borderBottom: '1px solid #999', paddingBottom: '2px' }}>
+                  <span style={{ fontSize: '10px', color: '#000', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Memo</span>
+                  <span style={{ flex: 1, fontSize: '11px', fontWeight: 600, borderBottom: '2px solid #000', paddingBottom: '2px', color: '#000' }}>
                     {check.memo || ''}
                   </span>
                 </div>
               </div>
               <div>
-                <div style={{ borderBottom: '1px solid #333', width: '240px', marginBottom: '3px' }}>&nbsp;</div>
-                <div style={{ fontSize: '9px', color: '#666', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>Authorized Signature</div>
+                <div style={{ borderBottom: '2px solid #000', width: '240px', marginBottom: '3px' }}>&nbsp;</div>
+                <div style={{ fontSize: '10px', color: '#000', fontWeight: 600, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>Authorized Signature</div>
               </div>
             </div>
 
-            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '12px', letterSpacing: '2px', color: '#333', fontFamily: "'Courier New', monospace" }}>
+            <div style={{ marginTop: '20px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '12px', letterSpacing: '2px', color: '#000', fontWeight: 600, fontFamily: "'Courier New', monospace" }}>
               {company.checkRoutingNumber && <span>⑆{company.checkRoutingNumber}⑆ </span>}
               {company.checkAccountNumber && <span>{company.checkAccountNumber}⑈ </span>}
               <span>{checkNumber}</span>
