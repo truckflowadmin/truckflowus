@@ -334,7 +334,7 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
               {amountToWords(p.finalAmount)} ★★★★★★★★★★ DOLLARS
             </div>
           </div>
-          {c.checkBankName && <div style={{ fontSize: '10px', color: '#000', fontWeight: 600, marginTop: '2px' }}>{c.checkBankName}</div>}
+          {c.checkBankName && <div style={{ fontSize: '12px', color: '#000', fontWeight: 700, marginTop: '2px' }}>{c.checkBankName}</div>}
 
           {/* Memo + Signature */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>

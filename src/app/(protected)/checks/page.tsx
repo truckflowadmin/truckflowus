@@ -229,7 +229,7 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
               {amountToWords(amount)} ★★★★★★★★★★ DOLLARS
             </div>
           </div>
-          {company.checkBankName && <div style={{ fontSize: '10px', color: '#000', fontWeight: 600, marginTop: '2px' }}>{company.checkBankName}</div>}
+          {company.checkBankName && <div style={{ fontSize: '12px', color: '#000', fontWeight: 700, marginTop: '2px' }}>{company.checkBankName}</div>}
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
