@@ -1,0 +1,11 @@
+-- Add billing control fields to Company
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "gracePeriodDays" INTEGER NOT NULL DEFAULT 7;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "nextPaymentDue" TIMESTAMP(3);
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "autoSuspendOnOverdue" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "subscriptionPausedAt" TIMESTAMP(3);
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "subscriptionResumedAt" TIMESTAMP(3);
+
+-- Add new BillingEventType enum values
+ALTER TYPE "BillingEventType" ADD VALUE IF NOT EXISTS 'REMINDER';
+ALTER TYPE "BillingEventType" ADD VALUE IF NOT EXISTS 'SUSPENSION';
+ALTER TYPE "BillingEventType" ADD VALUE IF NOT EXISTS 'REACTIVATION';

@@ -63,6 +63,11 @@ model Company {
   // Billing
   customPriceCents     Int?      // override plan price for this tenant (null = use plan price)
   trialEndsAt          DateTime? // free trial end date
+  gracePeriodDays      Int       @default(7)  // days after due date before auto-suspend
+  nextPaymentDue       DateTime? // when the next payment is expected
+  autoSuspendOnOverdue Boolean   @default(false) // auto-suspend if payment overdue past grace
+  subscriptionPausedAt DateTime? // when subscription was paused (null = not paused)
+  subscriptionResumedAt DateTime? // when subscription was last resumed
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -868,6 +873,9 @@ enum BillingEventType {
   PLAN_CHANGE       // superadmin changed the tenant's plan
   TRIAL_STARTED     // trial period began
   OVERDUE           // payment is overdue
+  REMINDER          // payment reminder sent/logged
+  SUSPENSION        // account suspended for non-payment
+  REACTIVATION      // account reactivated after suspension
 }
 
 enum SubscriptionStatus {

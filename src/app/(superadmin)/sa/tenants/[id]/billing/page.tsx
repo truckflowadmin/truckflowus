@@ -4,6 +4,7 @@ import { requireSuperadmin } from '@/lib/auth';
 import { formatPrice } from '@/lib/features';
 import TenantNav from '@/components/TenantNav';
 import { BillingActions } from './BillingActions';
+import { BillingControls } from './BillingControls';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,15 @@ export default async function BillingPage({
   });
 
   if (!company) notFound();
+
+  // Cast to include new billing fields not yet in generated Prisma types
+  const c = company as typeof company & {
+    nextPaymentDue: Date | null;
+    gracePeriodDays: number;
+    autoSuspendOnOverdue: boolean;
+    subscriptionPausedAt: Date | null;
+    subscriptionResumedAt: Date | null;
+  };
 
   const now = new Date();
 
@@ -167,6 +177,22 @@ export default async function BillingPage({
             </span>
           </div>
           <div>
+            <span className="text-purple-400">Next Payment Due:</span>{' '}
+            <span className="text-white">
+              {c.nextPaymentDue ? c.nextPaymentDue.toLocaleDateString() : '—'}
+            </span>
+          </div>
+          <div>
+            <span className="text-purple-400">Grace Period:</span>{' '}
+            <span className="text-white">{c.gracePeriodDays} days</span>
+          </div>
+          <div>
+            <span className="text-purple-400">Auto-Suspend:</span>{' '}
+            <span className={c.autoSuspendOnOverdue ? 'text-red-400' : 'text-white'}>
+              {c.autoSuspendOnOverdue ? 'Enabled' : 'Disabled'}
+            </span>
+          </div>
+          <div>
             <span className="text-purple-400">Total Payments:</span>{' '}
             <span className="text-white">{payments.length}</span>
           </div>
@@ -174,8 +200,29 @@ export default async function BillingPage({
             <span className="text-purple-400">Company Email:</span>{' '}
             <span className="text-white">{company.email || '—'}</span>
           </div>
+          <div>
+            <span className="text-purple-400">Account State:</span>{' '}
+            <span className={company.suspended ? 'text-red-400 font-medium' : 'text-green-400'}>
+              {company.suspended ? 'SUSPENDED' : 'Active'}
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* ── Tenant Controls ── */}
+      <BillingControls
+        companyId={company.id}
+        companyName={company.name}
+        actorEmail={session.email}
+        trialEndsAt={company.trialEndsAt?.toISOString() ?? null}
+        nextPaymentDue={c.nextPaymentDue?.toISOString() ?? null}
+        gracePeriodDays={c.gracePeriodDays ?? 7}
+        autoSuspendOnOverdue={c.autoSuspendOnOverdue ?? false}
+        suspended={company.suspended}
+        subscriptionPausedAt={c.subscriptionPausedAt?.toISOString() ?? null}
+        lastPaymentDate={lastPayment?.createdAt.toISOString() ?? null}
+        currentStatus={currentStatus}
+      />
 
       {/* ── Actions ── */}
       <BillingActions
@@ -267,6 +314,9 @@ function EventBadge({ type }: { type: string }) {
     PLAN_CHANGE: 'bg-blue-900/50 text-blue-300 border-blue-700',
     TRIAL_STARTED: 'bg-cyan-900/50 text-cyan-300 border-cyan-700',
     OVERDUE: 'bg-red-900/50 text-red-300 border-red-700',
+    REMINDER: 'bg-yellow-900/50 text-yellow-300 border-yellow-700',
+    SUSPENSION: 'bg-red-900/60 text-red-200 border-red-600',
+    REACTIVATION: 'bg-green-900/50 text-green-300 border-green-700',
   };
   const labels: Record<string, string> = {
     PAYMENT: 'Payment',
@@ -274,6 +324,9 @@ function EventBadge({ type }: { type: string }) {
     PLAN_CHANGE: 'Plan Change',
     TRIAL_STARTED: 'Trial',
     OVERDUE: 'Overdue',
+    REMINDER: 'Reminder',
+    SUSPENSION: 'Suspension',
+    REACTIVATION: 'Reactivated',
   };
 
   return (
