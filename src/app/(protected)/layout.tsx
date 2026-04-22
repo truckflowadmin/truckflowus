@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { NotificationBell } from '@/components/NotificationBell';
 import { loadCompanyFeatures, NAV_FEATURE_MAP } from '@/lib/features';
 import { LanguageProvider } from '@/components/LanguageProvider';
+import IdleLogout from '@/components/IdleLogout';
 import type { Lang } from '@/lib/i18n';
 
 export const metadata: Metadata = {
@@ -45,6 +46,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   return (
     <LanguageProvider initialLang={lang}>
+      <IdleLogout />
       <div className="min-h-screen lg:flex">
         <Sidebar user={{ name: session.name, email: session.email }} unlockedTabs={unlockedTabs} />
         <main className="flex-1 overflow-x-hidden min-w-0 lg:pr-14">

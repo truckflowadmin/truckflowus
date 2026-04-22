@@ -7,6 +7,7 @@ import RotatableImage from '@/components/RotatableImage';
 import { driverUpdateStatus, uploadTicketPhoto, claimJob, driverUpdateJobStatus, requestTimeOff, cancelTimeOff, driverSubmitReviewedTickets, driverEditTicket } from './actions';
 import { useLanguage } from '@/components/LanguageProvider';
 import LanguageToggle from '@/components/LanguageToggle';
+import IdleLogout from '@/components/IdleLogout';
 
 // ---- Types ----------------------------------------------------------------
 interface TicketData {
@@ -323,6 +324,7 @@ export default function DriverTabs(props: DriverTabsProps) {
 
   return (
     <div className="min-h-screen bg-steel-100">
+      <IdleLogout onIdle={handleLogout} />
       {/* Header */}
       <header className="bg-diesel text-white px-4 py-4 sticky top-0 z-10 shadow">
         <div className="flex items-center gap-3">

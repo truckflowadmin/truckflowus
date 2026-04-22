@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import ConfirmButton from '@/components/ConfirmButton';
 
 async function updateCustomerAction(formData: FormData) {
   'use server';
@@ -25,6 +26,33 @@ async function updateCustomerAction(formData: FormData) {
     },
   });
 
+  revalidatePath('/customers');
+  redirect('/customers');
+}
+
+async function deleteCustomerAction(formData: FormData) {
+  'use server';
+  const session = await requireSession();
+  const id = String(formData.get('id') || '');
+  const customer = await prisma.customer.findFirst({ where: { id, companyId: session.companyId } });
+  if (!customer) throw new Error('Customer not found');
+
+  // Block deletion if customer has any jobs, tickets, or invoices
+  const [jobCount, ticketCount, invoiceCount] = await Promise.all([
+    prisma.job.count({ where: { customerId: id } }),
+    prisma.ticket.count({ where: { customerId: id } }),
+    prisma.invoice.count({ where: { customerId: id } }),
+  ]);
+
+  if (jobCount > 0 || ticketCount > 0 || invoiceCount > 0) {
+    const parts: string[] = [];
+    if (jobCount > 0) parts.push(`${jobCount} job${jobCount !== 1 ? 's' : ''}`);
+    if (ticketCount > 0) parts.push(`${ticketCount} ticket${ticketCount !== 1 ? 's' : ''}`);
+    if (invoiceCount > 0) parts.push(`${invoiceCount} invoice${invoiceCount !== 1 ? 's' : ''}`);
+    throw new Error(`Cannot delete this customer — they have ${parts.join(', ')} linked. Remove or reassign those records first.`);
+  }
+
+  await prisma.customer.delete({ where: { id } });
   revalidatePath('/customers');
   redirect('/customers');
 }
@@ -71,6 +99,21 @@ export default async function EditCustomerPage({ params }: { params: { id: strin
           <button type="submit" className="btn-accent">Save</button>
           <Link href="/customers" className="btn-ghost">Cancel</Link>
         </div>
+      </form>
+
+      {/* Delete customer */}
+      <form action={deleteCustomerAction} className="mt-6 panel p-6 border-red-200 bg-red-50">
+        <input type="hidden" name="id" value={customer.id} />
+        <h3 className="text-sm font-semibold text-red-800 mb-1">Delete Customer</h3>
+        <p className="text-xs text-red-700 mb-3">
+          This will permanently remove this customer. Deletion is only allowed if the customer has no jobs, tickets, or invoices.
+        </p>
+        <ConfirmButton
+          message={`Are you sure you want to delete "${customer.name}"? This cannot be undone.`}
+          className="px-4 py-2 rounded text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+        >
+          Delete Customer
+        </ConfirmButton>
       </form>
     </div>
   );
