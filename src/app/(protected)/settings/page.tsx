@@ -164,6 +164,34 @@ async function addUserAction(formData: FormData) {
   revalidatePath('/settings');
 }
 
+async function saveSmsPrefsAction(formData: FormData) {
+  'use server';
+  const session = await requireSession();
+
+  const smsEnabled = formData.get('smsEnabled') === 'on';
+  const smsDriverIssue = formData.get('smsDriverIssue') === 'on';
+  const smsDriverCompleted = formData.get('smsDriverCompleted') === 'on';
+  const smsNewBrokerJob = formData.get('smsNewBrokerJob') === 'on';
+  const phoneRaw = String(formData.get('dispatcherPhone') || '').trim();
+
+  // Normalize phone
+  let phone: string | null = null;
+  if (phoneRaw) {
+    const digits = phoneRaw.replace(/\D/g, '');
+    if (digits.length === 10) phone = `+1${digits}`;
+    else if (digits.length === 11 && digits.startsWith('1')) phone = `+${digits}`;
+    else if (phoneRaw.startsWith('+')) phone = phoneRaw;
+    else phone = `+${digits}`;
+  }
+
+  await prisma.user.update({
+    where: { id: session.userId },
+    data: { smsEnabled, smsDriverIssue, smsDriverCompleted, smsNewBrokerJob, phone } as any,
+  });
+  revalidatePath('/settings');
+  redirect('/settings?smsOk=1');
+}
+
 async function removeUserAction(formData: FormData) {
   'use server';
   const session = await requireSession();
@@ -179,7 +207,7 @@ async function removeUserAction(formData: FormData) {
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: { pwOk?: string; sqOk?: string; sqErr?: string; setupSQ?: string; saved?: string };
+  searchParams: { pwOk?: string; sqOk?: string; sqErr?: string; setupSQ?: string; saved?: string; smsOk?: string };
 }) {
   const session = await requireSession();
   const lang = getServerLang();
@@ -190,9 +218,12 @@ export default async function SettingsPage({
       where: { id: session.companyId },
       select: { plan: true },
     }).then((c) => c?.plan ?? null),
-    prisma.user.findUnique({
+    (prisma.user.findUnique as any)({
       where: { id: session.userId },
-      select: { securityQ1: true, securityQ2: true, securityQ3: true },
+      select: {
+        securityQ1: true, securityQ2: true, securityQ3: true,
+        smsEnabled: true, smsDriverIssue: true, smsDriverCompleted: true, smsNewBrokerJob: true, phone: true,
+      },
     }),
   ]);
   if (!company) return null;
@@ -493,6 +524,49 @@ export default async function SettingsPage({
           </details>
         </section>
       )}
+
+      {/* SMS Notification Preferences */}
+      <section className="panel p-6 mb-6">
+        <h2 className="font-semibold text-lg text-steel-900 mb-1">SMS Notifications</h2>
+        <p className="text-sm text-steel-500 mb-4">Receive text alerts when drivers report issues or complete jobs.</p>
+        {searchParams.smsOk && (
+          <div className="text-sm text-green-700 bg-green-50 rounded p-2 mb-4">SMS preferences saved.</div>
+        )}
+        <form action={saveSmsPrefsAction} className="space-y-4">
+          <div>
+            <label className="label">Your Phone Number</label>
+            <input name="dispatcherPhone" type="tel" className="input max-w-xs"
+              placeholder="+1 (239) 555-0100"
+              defaultValue={(currentUser as any)?.phone ?? ''} />
+            <p className="text-xs text-steel-400 mt-1">Required to receive SMS alerts. Must be a US mobile number.</p>
+          </div>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="smsEnabled" className="rounded border-steel-300"
+                defaultChecked={(currentUser as any)?.smsEnabled ?? false} />
+              <span className="text-sm font-medium text-steel-800">Enable SMS alerts for me</span>
+            </label>
+            <div className="ml-6 space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="smsDriverIssue" className="rounded border-steel-300"
+                  defaultChecked={(currentUser as any)?.smsDriverIssue ?? true} />
+                <span className="text-sm text-steel-600">Driver reported an issue — alert me when a driver flags a problem</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="smsDriverCompleted" className="rounded border-steel-300"
+                  defaultChecked={(currentUser as any)?.smsDriverCompleted ?? true} />
+                <span className="text-sm text-steel-600">Driver completed a job — alert me when a driver finishes a delivery</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="smsNewBrokerJob" className="rounded border-steel-300"
+                  defaultChecked={(currentUser as any)?.smsNewBrokerJob ?? true} />
+                <span className="text-sm text-steel-600">New broker job received — alert me when a broker submits a job via SMS</span>
+              </label>
+            </div>
+          </div>
+          <button type="submit" className="btn-accent">Save SMS Preferences</button>
+        </form>
+      </section>
 
       {/* Twilio info */}
       <section className="panel p-6 text-sm text-steel-600">

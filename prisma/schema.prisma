@@ -131,6 +131,13 @@ model User {
   sessionInvalidatedAt DateTime?
   // Force re-setup of security questions (set by superadmin after clearing them)
   mustSetSecurityQuestions Boolean @default(false)
+  // SMS notification preferences (dispatcher receives alerts)
+  smsEnabled            Boolean @default(false) // master toggle (off by default for dispatchers)
+  smsDriverIssue        Boolean @default(true)  // notified when a driver reports an issue
+  smsDriverCompleted    Boolean @default(true)  // notified when a driver completes a job
+  smsNewBrokerJob       Boolean @default(true)  // notified when a broker submits a job via SMS
+  phone                 String?                 // dispatcher phone for receiving SMS alerts
+
   createdAt    DateTime @default(now())
 
   company        Company?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -201,6 +208,13 @@ model Driver {
   zip                  String?
   emergencyContactName  String?
   emergencyContactPhone String?
+  // SMS notification preferences (dispatcher toggles per driver)
+  smsEnabled            Boolean @default(true)  // master toggle
+  smsJobAssignment      Boolean @default(true)  // notified when assigned to a job
+  smsJobStatusChange    Boolean @default(true)  // notified when job status changes
+  smsNewJobAvailable    Boolean @default(false) // notified when a new matching job is created
+  smsPayrollReady       Boolean @default(true)  // notified when payroll is calculated
+
   // Payroll fields
   workerType  WorkerType @default(EMPLOYEE)
   payType     PayType    @default(HOURLY)

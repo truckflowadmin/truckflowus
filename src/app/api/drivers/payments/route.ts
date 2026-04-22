@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { notifyDriverPayrollReady } from '@/lib/sms-notify';
 
 /**
  * GET /api/drivers/payments?driverId=X&status=PAID&from=2026-01-01&to=2026-04-17
@@ -106,6 +107,13 @@ export async function POST(req: NextRequest) {
       paidAt: status === 'PAID' ? new Date() : null,
     } as any,
   });
+
+  // Notify driver their payroll is ready (respects preferences)
+  const start = new Date(periodStart);
+  const end = new Date(periodEnd);
+  const periodLabel = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const amt = payment.finalAmount != null ? `$${Number(payment.finalAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : undefined;
+  notifyDriverPayrollReady({ driverId, periodLabel, totalAmount: amt }).catch(() => {});
 
   return NextResponse.json({ payment }, { status: 201 });
 }

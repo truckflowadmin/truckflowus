@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { sendSms, composeAssignmentSms } from '@/lib/sms';
+import { notifyDriverJobAssignment } from '@/lib/sms-notify';
 import type { TicketStatus, QuantityType } from '@prisma/client';
 
 function appUrl() {
@@ -110,21 +111,14 @@ export async function createTicketAction(formData: FormData) {
   });
 
   if (driverId && ticket.driver) {
-    const mobileUrl = `${appUrl()}/d/${ticket.driver.accessToken}`;
-    const message = composeAssignmentSms({
-      ticketNumber: ticket.ticketNumber,
+    await notifyDriverJobAssignment({
+      driverId: ticket.driver.id,
+      jobNumber: ticket.ticketNumber,
       material: ticket.material,
       quantity: Number(ticket.quantity),
       quantityType: ticket.quantityType,
       hauledFrom: ticket.hauledFrom,
       hauledTo: ticket.hauledTo,
-      mobileUrl,
-    });
-    await sendSms({
-      phone: ticket.driver.phone,
-      message,
-      driverId: ticket.driver.id,
-      ticketId: ticket.id,
     });
   }
 
@@ -163,21 +157,14 @@ export async function assignDriverAction(formData: FormData) {
     },
   });
 
-  const mobileUrl = `${appUrl()}/d/${driver.accessToken}`;
-  const message = composeAssignmentSms({
-    ticketNumber: ticket.ticketNumber,
+  await notifyDriverJobAssignment({
+    driverId: driver.id,
+    jobNumber: ticket.ticketNumber,
     material: ticket.material,
     quantity: Number(ticket.quantity),
     quantityType: ticket.quantityType,
     hauledFrom: ticket.hauledFrom,
     hauledTo: ticket.hauledTo,
-    mobileUrl,
-  });
-  await sendSms({
-    phone: driver.phone,
-    message,
-    driverId: driver.id,
-    ticketId: ticket.id,
   });
 
   revalidatePath(`/tickets/${ticketId}`);

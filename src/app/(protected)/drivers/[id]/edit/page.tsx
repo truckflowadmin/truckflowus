@@ -51,6 +51,13 @@ async function updateDriverAction(formData: FormData) {
   const payDay = String(formData.get('payDay') || '').trim() || null;
   const payFrequency = String(formData.get('payFrequency') || '').trim() || null;
 
+  // SMS notification preferences
+  const smsEnabled = formData.get('smsEnabled') === 'on';
+  const smsJobAssignment = formData.get('smsJobAssignment') === 'on';
+  const smsJobStatusChange = formData.get('smsJobStatusChange') === 'on';
+  const smsNewJobAvailable = formData.get('smsNewJobAvailable') === 'on';
+  const smsPayrollReady = formData.get('smsPayrollReady') === 'on';
+
   await prisma.driver.update({
     where: { id },
     data: {
@@ -60,6 +67,7 @@ async function updateDriverAction(formData: FormData) {
       assignedTruckId,
       truckNumber,
       workerType, payType, payRate, payDay, payFrequency,
+      smsEnabled, smsJobAssignment, smsJobStatusChange, smsNewJobAvailable, smsPayrollReady,
     } as any,
   });
 
@@ -208,6 +216,40 @@ export default async function EditDriverPage({ params }: { params: { id: string 
                 <option value="BIWEEKLY">Biweekly</option>
               </select>
             </div>
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-steel-200">
+          <h3 className="text-sm font-semibold text-steel-700 mb-3">SMS Notifications</h3>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="smsEnabled" className="rounded border-steel-300"
+                defaultChecked={(driver as any).smsEnabled ?? true} />
+              <span className="text-sm font-medium text-steel-800">Enable SMS notifications</span>
+            </label>
+            <div className="ml-6 space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="smsJobAssignment" className="rounded border-steel-300"
+                  defaultChecked={(driver as any).smsJobAssignment ?? true} />
+                <span className="text-sm text-steel-600">Job assignment — notified when assigned to a job</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="smsJobStatusChange" className="rounded border-steel-300"
+                  defaultChecked={(driver as any).smsJobStatusChange ?? true} />
+                <span className="text-sm text-steel-600">Job status changes — notified when job is updated or cancelled</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="smsNewJobAvailable" className="rounded border-steel-300"
+                  defaultChecked={(driver as any).smsNewJobAvailable ?? false} />
+                <span className="text-sm text-steel-600">New jobs available — notified when a matching job is created</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="smsPayrollReady" className="rounded border-steel-300"
+                  defaultChecked={(driver as any).smsPayrollReady ?? true} />
+                <span className="text-sm text-steel-600">Payroll ready — notified when payroll is calculated</span>
+              </label>
+            </div>
+            <p className="text-xs text-steel-400 ml-6">Individual preferences only apply when the master toggle is enabled.</p>
           </div>
         </div>
 

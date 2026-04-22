@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { sendSms } from '@/lib/sms';
+import { notifyDriverJobAssignment } from '@/lib/sms-notify';
 
 async function bulkCreateAction(formData: FormData) {
   'use server';
@@ -58,19 +58,16 @@ async function bulkCreateAction(formData: FormData) {
 
   await prisma.ticket.createMany({ data: tickets });
 
-  // If assigned to a driver, send one summary SMS
+  // If assigned to a driver, send notification (respects preferences)
   if (driver) {
-    const message =
-      `TruckFlowUS: ${count} new ticket${count === 1 ? '' : 's'} assigned\n` +
-      `${material ? `${material} • ` : ''}${quantityPerTicket} load${quantityPerTicket === 1 ? '' : 's'} each\n` +
-      `From: ${hauledFrom}\n` +
-      `To: ${hauledTo}\n` +
-      `View jobs: ${appUrl}/d/${driver.accessToken}\n` +
-      `Reply DONE when finished or ISSUE if there's a problem.`;
-    await sendSms({
-      phone: driver.phone,
-      message,
+    await notifyDriverJobAssignment({
       driverId: driver.id,
+      jobNumber: nextNum, // first ticket number
+      material: material || undefined,
+      quantity: quantityPerTicket * count,
+      quantityType: 'LOADS',
+      hauledFrom,
+      hauledTo,
     });
   }
 

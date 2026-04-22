@@ -6,11 +6,8 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
 import type { QuantityType } from '@prisma/client';
-import { sendSms, composeAssignmentSms } from '@/lib/sms';
-
-function appUrl() {
-  return process.env.APP_URL || 'http://localhost:3000';
-}
+import { sendSms } from '@/lib/sms';
+import { notifyDriverJobAssignment, notifyDriverJobStatusChange, notifyDriversNewJobAvailable } from '@/lib/sms-notify';
 
 /* ── Helper: check if a job has any invoiced tickets ── */
 async function jobHasInvoicedTickets(jobId: string): Promise<boolean> {
@@ -175,6 +172,31 @@ export async function createJobAction(formData: FormData) {
       update: {},
       create: { companyId, name: material },
     });
+  }
+
+  // Notify assigned drivers (respects preferences)
+  for (const dt of driverTrucks) {
+    notifyDriverJobAssignment({
+      driverId: dt.driverId,
+      jobNumber,
+      material,
+      quantity: totalLoads,
+      quantityType,
+      hauledFrom,
+      hauledTo,
+    }).catch(() => {});
+  }
+
+  // Notify opted-in drivers that a new job is available (if open for self-assign)
+  if (openForDrivers) {
+    notifyDriversNewJobAvailable({
+      companyId,
+      jobNumber,
+      material,
+      hauledFrom,
+      hauledTo,
+      requiredTruckType,
+    }).catch(() => {});
   }
 
   revalidatePath('/jobs');
@@ -453,21 +475,15 @@ export async function updateJobStatusAction(jobId: string, newStatus: string, as
   revalidatePath('/jobs');
   revalidatePath(`/jobs/${jobId}`);
 
-  // Notify assigned drivers via SMS when a job is cancelled
-  if (newStatus === 'CANCELLED') {
-    const drivers = await prisma.driver.findMany({
-      where: {
-        id: { in: allAssignments.map((a: any) => a.driverId) },
-        active: true,
-      },
-      select: { id: true, phone: true, name: true },
-    });
-    for (const d of drivers) {
-      sendSms({
-        phone: d.phone,
-        message: `Job #${job.jobNumber} "${job.name}" has been cancelled. Please check your app for updates.`,
-        driverId: d.id,
-      }).catch(() => {}); // fire-and-forget, don't block the response
+  // Notify assigned drivers via SMS when job status changes (respects preferences)
+  if (['CANCELLED', 'COMPLETED', 'IN_PROGRESS'].includes(newStatus) && allAssignments.length > 0) {
+    for (const a of allAssignments) {
+      notifyDriverJobStatusChange({
+        driverId: a.driverId,
+        jobNumber: job.jobNumber || 0,
+        newStatus,
+        jobName: job.name || undefined,
+      }).catch(() => {}); // fire-and-forget
     }
   }
 
@@ -651,28 +667,16 @@ export async function assignDriverToJobAction(jobId: string, driverId: string) {
     await prisma.job.update({ where: { id: jobId }, data: updateData });
   }
 
-  // Send SMS notification to the assigned driver
-  const driver = await prisma.driver.findUnique({
-    where: { id: driverId },
-    select: { id: true, phone: true, accessToken: true },
+  // Send SMS notification to the assigned driver (respects preferences)
+  await notifyDriverJobAssignment({
+    driverId,
+    jobNumber: job.jobNumber || 0,
+    material: job.material,
+    quantity: Number(job.totalLoads || 0),
+    quantityType: job.quantityType || 'LOADS',
+    hauledFrom: job.hauledFrom,
+    hauledTo: job.hauledTo,
   });
-  if (driver?.phone) {
-    const mobileUrl = `${appUrl()}/d/${driver.accessToken}`;
-    const message = composeAssignmentSms({
-      ticketNumber: job.jobNumber || 0,
-      material: job.material,
-      quantity: Number(job.totalLoads || 0),
-      quantityType: job.quantityType || 'LOADS',
-      hauledFrom: job.hauledFrom,
-      hauledTo: job.hauledTo,
-      mobileUrl,
-    });
-    await sendSms({
-      phone: driver.phone,
-      message,
-      driverId: driver.id,
-    });
-  }
 
   revalidatePath('/jobs');
   revalidatePath(`/jobs/${jobId}`);

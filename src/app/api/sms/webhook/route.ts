@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendSms, validateTwilioSignature } from '@/lib/sms';
 import { parseJobSms } from '@/lib/sms-job-parser';
+import { notifyDispatchersDriverIssue, notifyDispatchersDriverCompleted, notifyDispatchersNewBrokerJob } from '@/lib/sms-notify';
 
 // Twilio expects TwiML responses
 function twimlResponse(message?: string): NextResponse {
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
 /* ── Driver SMS handler ──────────────────────────────────────── */
 
 async function handleDriverSms(
-  driver: { id: string },
+  driver: { id: string; name: string; companyId: string },
   fromNumber: string,
   text: string,
   messageSid?: string,
@@ -177,6 +178,12 @@ async function handleDriverSms(
           : `[SMS] ${text}`,
       },
     });
+    // Notify dispatchers that driver completed
+    notifyDispatchersDriverCompleted({
+      companyId: driver.companyId,
+      driverName: driver.name,
+      jobNumber: ticket.ticketNumber ?? 0,
+    }).catch(() => {});
     return twimlResponse();
   }
 
@@ -190,6 +197,13 @@ async function handleDriverSms(
           : `[SMS ISSUE] ${text}`,
       },
     });
+    // Notify dispatchers about the issue
+    notifyDispatchersDriverIssue({
+      companyId: driver.companyId,
+      driverName: driver.name,
+      jobNumber: ticket.ticketNumber ?? 0,
+      issueText: text.replace(/^ISSUE\s*/i, '').trim() || undefined,
+    }).catch(() => {});
     return twimlResponse();
   }
 
@@ -330,6 +344,15 @@ async function handleBrokerJobSms(
     phone: fromNumber,
     message: confirmMsg,
   });
+
+  // Notify dispatchers about new broker job
+  notifyDispatchersNewBrokerJob({
+    companyId,
+    brokerName: broker.name,
+    jobNumber,
+    hauledFrom: parsed.hauledFrom || undefined,
+    hauledTo: parsed.hauledTo || undefined,
+  }).catch(() => {});
 
   return twimlResponse();
 }
