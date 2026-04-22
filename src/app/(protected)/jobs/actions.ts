@@ -174,29 +174,31 @@ export async function createJobAction(formData: FormData) {
     });
   }
 
-  // Notify assigned drivers (respects preferences)
-  for (const dt of driverTrucks) {
-    notifyDriverJobAssignment({
-      driverId: dt.driverId,
-      jobNumber,
-      material,
-      quantity: totalLoads,
-      quantityType,
-      hauledFrom,
-      hauledTo,
-    }).catch(() => {});
-  }
+  // Notify assigned drivers (respects preferences) — must await before redirect
+  await Promise.all(
+    driverTrucks.map((dt) =>
+      notifyDriverJobAssignment({
+        driverId: dt.driverId,
+        jobNumber,
+        material,
+        quantity: totalLoads,
+        quantityType,
+        hauledFrom,
+        hauledTo,
+      }).catch((err) => console.error('[sms-notify] createJob driver notify error:', err))
+    )
+  );
 
   // Notify opted-in drivers that a new job is available (if open for self-assign)
   if (openForDrivers) {
-    notifyDriversNewJobAvailable({
+    await notifyDriversNewJobAvailable({
       companyId,
       jobNumber,
       material,
       hauledFrom,
       hauledTo,
       requiredTruckType,
-    }).catch(() => {});
+    }).catch((err) => console.error('[sms-notify] newJobAvailable notify error:', err));
   }
 
   revalidatePath('/jobs');
@@ -477,14 +479,16 @@ export async function updateJobStatusAction(jobId: string, newStatus: string, as
 
   // Notify assigned drivers via SMS when job status changes (respects preferences)
   if (['CANCELLED', 'COMPLETED', 'IN_PROGRESS'].includes(newStatus) && allAssignments.length > 0) {
-    for (const a of allAssignments) {
-      notifyDriverJobStatusChange({
-        driverId: a.driverId,
-        jobNumber: job.jobNumber || 0,
-        newStatus,
-        jobName: job.name || undefined,
-      }).catch(() => {}); // fire-and-forget
-    }
+    await Promise.all(
+      allAssignments.map((a) =>
+        notifyDriverJobStatusChange({
+          driverId: a.driverId,
+          jobNumber: job.jobNumber || 0,
+          newStatus,
+          jobName: job.name || undefined,
+        }).catch((err) => console.error('[sms-notify] statusChange notify error:', err))
+      )
+    );
   }
 
   return { ok: true };
