@@ -6,7 +6,11 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
 import type { QuantityType } from '@prisma/client';
-import { sendSms } from '@/lib/sms';
+import { sendSms, composeAssignmentSms } from '@/lib/sms';
+
+function appUrl() {
+  return process.env.APP_URL || 'http://localhost:3000';
+}
 
 /* ── Helper: check if a job has any invoiced tickets ── */
 async function jobHasInvoicedTickets(jobId: string): Promise<boolean> {
@@ -645,6 +649,29 @@ export async function assignDriverToJobAction(jobId: string, driverId: string) {
 
   if (Object.keys(updateData).length > 0) {
     await prisma.job.update({ where: { id: jobId }, data: updateData });
+  }
+
+  // Send SMS notification to the assigned driver
+  const driver = await prisma.driver.findUnique({
+    where: { id: driverId },
+    select: { id: true, phone: true, accessToken: true },
+  });
+  if (driver?.phone) {
+    const mobileUrl = `${appUrl()}/d/${driver.accessToken}`;
+    const message = composeAssignmentSms({
+      ticketNumber: job.jobNumber || 0,
+      material: job.material,
+      quantity: Number(job.totalLoads || 0),
+      quantityType: job.quantityType || 'LOADS',
+      hauledFrom: job.hauledFrom,
+      hauledTo: job.hauledTo,
+      mobileUrl,
+    });
+    await sendSms({
+      phone: driver.phone,
+      message,
+      driverId: driver.id,
+    });
   }
 
   revalidatePath('/jobs');
