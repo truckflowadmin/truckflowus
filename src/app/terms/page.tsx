@@ -56,7 +56,7 @@ export default function TermsOfServicePage() {
             </p>
             <p className="mt-3">
               You must notify us immediately at{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>{' '}
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>{' '}
               if you become aware of any unauthorized use of your account.
             </p>
           </section>
@@ -277,7 +277,7 @@ export default function TermsOfServicePage() {
             <p>
               We may suspend or terminate your access to the Service at any time, with or without cause,
               with or without notice. You may terminate your account at any time by contacting us at{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>.
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>.
             </p>
             <p className="mt-3">
               Upon termination, your right to use the Service ceases immediately. We may retain your
@@ -338,7 +338,7 @@ export default function TermsOfServicePage() {
             </p>
             <p className="mt-3">
               You may withdraw your consent to receive electronic communications by contacting us at{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>,
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>,
               but doing so may result in termination of your access to the Service, as electronic
               communication is essential to the operation of the platform.
             </p>
@@ -371,7 +371,7 @@ export default function TermsOfServicePage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-3">20. Notices</h2>
             <p>
               All legal notices to TruckFlowUS must be sent via email to{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>{' '}
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>{' '}
               with the subject line &ldquo;Legal Notice.&rdquo; Notices are deemed received on the date
               the email is sent, provided no delivery failure notification is received.
             </p>
@@ -449,7 +449,7 @@ export default function TermsOfServicePage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-3">27. Contact Us</h2>
             <p>
               If you have any questions about these Terms, please contact us at:{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>
             </p>
           </section>
         </div>

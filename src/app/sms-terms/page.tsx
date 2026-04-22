@@ -103,8 +103,8 @@ export default function SmsTermsPage() {
             <p>
               For help, reply <strong>HELP</strong> to any message from TruckFlowUS, or
               contact us at{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">
-                support@truckflowus.com
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">
+                admin@truckflowus.com
               </a>.
             </p>
           </section>
@@ -144,8 +144,8 @@ export default function SmsTermsPage() {
               You may revoke your consent to receive SMS messages at any time by any reasonable means,
               including replying <strong>STOP</strong> to any message, contacting your dispatching
               company, or emailing us at{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">
-                support@truckflowus.com
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">
+                admin@truckflowus.com
               </a>. Upon revocation, we will cease sending SMS messages within a reasonable time
               (typically within 24 hours). Revocation of SMS consent does not affect your ability to
               use other features of the Service.
@@ -180,8 +180,8 @@ export default function SmsTermsPage() {
             <p className="mt-3">
               If you believe you have received a message from TruckFlowUS without proper consent
               or in violation of any applicable law, please contact us immediately at{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">
-                support@truckflowus.com
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">
+                admin@truckflowus.com
               </a>{' '}
               so we can investigate and resolve the issue.
             </p>

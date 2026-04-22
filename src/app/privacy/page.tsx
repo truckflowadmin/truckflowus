@@ -216,7 +216,7 @@ export default function PrivacyPolicyPage() {
               We strongly recommend that you limit who within your organization has access to
               financial settings, regularly review stored banking information for accuracy, and
               immediately contact us at{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>{' '}
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>{' '}
               if you suspect unauthorized access to your financial data.
             </p>
           </section>
@@ -326,7 +326,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <p className="mt-3">
               To exercise any of these rights, contact us at{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>.
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>.
               We will respond to your request within the timeframe required by your state&apos;s law
               (typically 30–45 days). We will not discriminate against you for exercising your privacy rights.
             </p>
@@ -360,7 +360,7 @@ export default function PrivacyPolicyPage() {
             <p className="mt-2">
               <strong>TruckFlowUS</strong><br />
               Email:{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a><br />
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a><br />
               Website:{' '}
               <Link href="/contact" className="text-blue-600 underline">truckflowus.com/contact</Link>
             </p>

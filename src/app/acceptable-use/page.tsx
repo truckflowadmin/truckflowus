@@ -92,7 +92,7 @@ export default function AcceptableUsePolicyPage() {
               <li>Keeping your login credentials, PINs, and access tokens confidential</li>
               <li>Ensuring only authorized personnel have access to your company&apos;s account</li>
               <li>Promptly reporting any suspected security breach to{' '}
-                <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>
+                <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>
               </li>
               <li>Logging out of shared or public devices after use</li>
             </ul>
@@ -121,7 +121,7 @@ export default function AcceptableUsePolicyPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-3">7. Reporting Violations</h2>
             <p>
               If you become aware of any violation of this AUP, please report it to us at{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>.
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>.
               We take all reports seriously and will investigate promptly.
             </p>
           </section>

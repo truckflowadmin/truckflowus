@@ -148,7 +148,7 @@ export default function CookiePolicyPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-3">9. Contact Us</h2>
             <p>
               If you have questions about our use of cookies, please contact us at:{' '}
-              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">support@truckflowus.com</a>
+              <a href="mailto:admin@truckflowus.com" className="text-blue-600 underline">admin@truckflowus.com</a>
             </p>
           </section>
         </div>
