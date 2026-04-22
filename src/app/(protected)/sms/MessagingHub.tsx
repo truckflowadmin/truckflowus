@@ -52,7 +52,9 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, faxL
 
   // Send Fax form state
   const [faxNumber, setFaxNumber] = useState('');
-  const [faxMediaUrl, setFaxMediaUrl] = useState('');
+  const [faxFile, setFaxFile] = useState<File | null>(null);
+  const [faxUploading, setFaxUploading] = useState(false);
+  const [faxDragOver, setFaxDragOver] = useState(false);
 
   const buildUrl = (overrides: Record<string, string>) => {
     const p = new URLSearchParams();
@@ -112,32 +114,63 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, faxL
     setSending(false);
   };
 
+  const handleFaxFileSelect = (file: File | null) => {
+    if (!file) return;
+    const allowed = ['application/pdf', 'image/tiff', 'image/png', 'image/jpeg'];
+    if (!allowed.includes(file.type)) {
+      setSendResult({ ok: false, msg: 'Invalid file type. Allowed: PDF, TIFF, PNG, JPEG.' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setSendResult({ ok: false, msg: 'File too large. Maximum size is 10 MB.' });
+      return;
+    }
+    setFaxFile(file);
+    setSendResult(null);
+  };
+
   const handleSendFax = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
     setSendResult(null);
 
-    if (!faxNumber || !faxMediaUrl) {
-      setSendResult({ ok: false, msg: 'Fax number and PDF URL are required' });
+    if (!faxNumber || !faxFile) {
+      setSendResult({ ok: false, msg: 'Fax number and a document are required.' });
       setSending(false);
       return;
     }
 
     try {
+      // Step 1: Upload the file
+      setFaxUploading(true);
+      const formData = new FormData();
+      formData.append('file', faxFile);
+      const uploadRes = await fetch('/api/fax/upload', { method: 'POST', body: formData });
+      const uploadData = await uploadRes.json();
+      setFaxUploading(false);
+
+      if (!uploadRes.ok) {
+        setSendResult({ ok: false, msg: uploadData.error || 'File upload failed.' });
+        setSending(false);
+        return;
+      }
+
+      // Step 2: Send the fax with the uploaded URL
       const res = await fetch('/api/fax/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ faxNumber, mediaUrl: faxMediaUrl }),
+        body: JSON.stringify({ faxNumber, mediaUrl: uploadData.url }),
       });
       const data = await res.json();
       if (res.ok) {
         setSendResult({ ok: true, msg: 'Fax queued successfully!' });
         setFaxNumber('');
-        setFaxMediaUrl('');
+        setFaxFile(null);
       } else {
         setSendResult({ ok: false, msg: data.error || 'Failed to send fax' });
       }
     } catch {
+      setFaxUploading(false);
       setSendResult({ ok: false, msg: 'Network error' });
     }
     setSending(false);
@@ -465,25 +498,67 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, faxL
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-steel-700 mb-1">PDF Document URL</label>
-              <input
-                type="url"
-                value={faxMediaUrl}
-                onChange={(e) => setFaxMediaUrl(e.target.value)}
-                placeholder="https://example.com/document.pdf"
-                className="w-full px-3 py-2 border border-steel-300 rounded text-sm"
-              />
-              <p className="text-xs text-steel-400 mt-1">
-                Enter the URL of a publicly accessible PDF document to fax. You can use trip sheet or invoice PDF URLs from TruckFlowUS.
-              </p>
+              <label className="block text-sm font-medium text-steel-700 mb-1">Document</label>
+              <div
+                onDragOver={(e) => { e.preventDefault(); setFaxDragOver(true); }}
+                onDragLeave={() => setFaxDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setFaxDragOver(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) handleFaxFileSelect(f);
+                }}
+                onClick={() => document.getElementById('fax-file-input')?.click()}
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                  faxDragOver
+                    ? 'border-safety bg-safety/5'
+                    : faxFile
+                    ? 'border-green-400 bg-green-50'
+                    : 'border-steel-300 hover:border-steel-400 bg-steel-50'
+                }`}
+              >
+                <input
+                  id="fax-file-input"
+                  type="file"
+                  accept=".pdf,.tiff,.tif,.png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (f) handleFaxFileSelect(f);
+                    e.target.value = '';
+                  }}
+                />
+                {faxFile ? (
+                  <div className="space-y-1">
+                    <div className="text-2xl">📄</div>
+                    <div className="text-sm font-medium text-steel-800">{faxFile.name}</div>
+                    <div className="text-xs text-steel-500">{(faxFile.size / 1024).toFixed(0)} KB — {faxFile.type}</div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setFaxFile(null); }}
+                      className="text-xs text-red-600 hover:underline mt-1"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <div className="text-2xl text-steel-400">📎</div>
+                    <div className="text-sm text-steel-600">
+                      Drag &amp; drop a file here, or <span className="text-safety font-medium">click to browse</span>
+                    </div>
+                    <div className="text-xs text-steel-400">PDF, TIFF, PNG, or JPEG — max 10 MB</div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <button
               type="submit"
-              disabled={sending}
+              disabled={sending || !faxFile}
               className="px-6 py-2.5 bg-diesel text-white rounded font-medium text-sm hover:bg-steel-800 disabled:opacity-50"
             >
-              {sending ? 'Sending...' : 'Send Fax'}
+              {faxUploading ? 'Uploading document...' : sending ? 'Sending fax...' : 'Send Fax'}
             </button>
           </form>
         </div>

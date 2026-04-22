@@ -90,7 +90,7 @@ export default async function SuperadminMessagingPage({
           href="/sa/messaging?type=sms"
           className={`px-4 py-2 rounded text-sm font-medium border ${type === 'sms' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-steel-600 border-steel-300 hover:bg-steel-50'}`}
         >
-          SMS Log ({smsTotal})
+          SMS ({smsTotal})
         </Link>
         <Link
           href="/sa/messaging?type=fax"

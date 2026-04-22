@@ -283,8 +283,8 @@ export const FEATURE_CATALOG: {
   },
   {
     key: FEATURES.VIEW_SMS,
-    label: 'SMS Log tab',
-    description: 'Access to the SMS activity log',
+    label: 'SMS & Fax tab',
+    description: 'Access to SMS & Fax messaging hub — send/receive SMS and faxes',
     side: 'dispatcher_views',
   },
   {
@@ -458,7 +458,7 @@ export const PLAN_SEED_DEFAULTS: {
       FEATURES.DRIVER_AI_EXTRACTION,
       FEATURES.DRIVER_CLAIM_JOBS,
       FEATURES.DRIVER_PIN_RESET,
-      // Dispatcher views — Pro adds Reports + SMS + Brokers + Fleet
+      // Dispatcher views — Pro adds Reports + SMS & Fax + Brokers + Fleet
       FEATURES.VIEW_DASHBOARD,
       FEATURES.VIEW_JOBS,
       FEATURES.VIEW_TICKETS,
