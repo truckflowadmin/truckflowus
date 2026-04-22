@@ -125,7 +125,6 @@ export async function createTicketAction(formData: FormData) {
       message,
       driverId: ticket.driver.id,
       ticketId: ticket.id,
-      replyWebhookUrl: `${appUrl()}/api/sms/webhook`,
     });
   }
 
@@ -179,7 +178,6 @@ export async function assignDriverAction(formData: FormData) {
     message,
     driverId: driver.id,
     ticketId: ticket.id,
-    replyWebhookUrl: `${appUrl()}/api/sms/webhook`,
   });
 
   revalidatePath(`/tickets/${ticketId}`);

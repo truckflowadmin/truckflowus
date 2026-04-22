@@ -494,16 +494,18 @@ export default async function SettingsPage({
         </section>
       )}
 
-      {/* Textbelt info */}
+      {/* Twilio info */}
       <section className="panel p-6 text-sm text-steel-600">
-        <h2 className="font-semibold text-steel-900 mb-3">Textbelt Configuration</h2>
+        <h2 className="font-semibold text-steel-900 mb-3">Twilio SMS Configuration</h2>
         <p className="mb-2">SMS sending is controlled by environment variables:</p>
         <ul className="list-disc pl-5 space-y-1 text-xs font-mono">
-          <li>TEXTBELT_KEY — your paid Textbelt key (or <code>textbelt_test</code> for dev)</li>
-          <li>APP_URL — public URL of this app, used for SMS links and reply webhook</li>
+          <li>TWILIO_ACCOUNT_SID — your Twilio Account SID</li>
+          <li>TWILIO_AUTH_TOKEN — your Twilio Auth Token</li>
+          <li>TWILIO_PHONE_NUMBER — your Twilio phone number (E.164, e.g. +12395550100)</li>
+          <li>APP_URL — public URL of this app, used for SMS links</li>
         </ul>
         <p className="mt-3">
-          Inbound reply webhook: <code className="text-xs">{process.env.APP_URL || 'http://localhost:3000'}/api/sms/webhook</code>
+          Inbound webhook URL (set in Twilio console): <code className="text-xs">{process.env.APP_URL || 'https://yourapp.com'}/api/sms/webhook</code>
         </p>
       </section>
     </div>

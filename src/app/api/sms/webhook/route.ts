@@ -1,16 +1,38 @@
 /**
- * Textbelt inbound reply webhook.
- * Textbelt POSTs JSON: { textId, fromNumber, text }
+ * Twilio inbound SMS webhook.
+ *
+ * Twilio POSTs form-urlencoded data with fields including:
+ *   From, To, Body, MessageSid, AccountSid, NumMedia, etc.
+ *
+ * Authentication: Twilio signs each request with X-Twilio-Signature header.
+ * We validate it using HMAC-SHA1 of the full URL + sorted POST params.
  *
  * Flow:
- *   1. Try to match the sender to a Driver by phone → handle ticket commands
- *   2. Try to match the sender to a Broker by phone → handle job requests
- *   3. Log the message even if no match
+ *   1. Validate Twilio signature
+ *   2. Try to match the sender to a Driver by phone → handle ticket commands
+ *   3. Try to match the sender to a Broker by phone → handle job requests
+ *   4. Log the message even if no match
+ *   5. Return TwiML (empty <Response/>) to acknowledge receipt
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendSms } from '@/lib/sms';
+import { sendSms, validateTwilioSignature } from '@/lib/sms';
 import { parseJobSms } from '@/lib/sms-job-parser';
+
+// Twilio expects TwiML responses
+function twimlResponse(message?: string): NextResponse {
+  const body = message
+    ? `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(message)}</Message></Response>`
+    : `<?xml version="1.0" encoding="UTF-8"?><Response/>`;
+  return new NextResponse(body, {
+    status: 200,
+    headers: { 'Content-Type': 'text/xml' },
+  });
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 // Normalize US-style numbers to E.164 +1XXXXXXXXXX for lookup.
 function normalizePhone(raw: string): string[] {
@@ -23,33 +45,47 @@ function normalizePhone(raw: string): string[] {
   return Array.from(variants);
 }
 
+// Parse form-urlencoded body into a plain object
+async function parseFormBody(req: NextRequest): Promise<Record<string, string>> {
+  const text = await req.text();
+  const params: Record<string, string> = {};
+  for (const pair of text.split('&')) {
+    const [key, val] = pair.split('=');
+    if (key) params[decodeURIComponent(key)] = decodeURIComponent(val || '');
+  }
+  return params;
+}
+
 export async function POST(req: NextRequest) {
-  // ── Webhook authentication (fail closed in ALL environments) ────────────────────
-  const webhookSecret = process.env.TEXTBELT_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    console.error('[sms-webhook] TEXTBELT_WEBHOOK_SECRET not set — rejecting request');
+  // ── Parse the form body ────────────────────────────────────────
+  const params = await parseFormBody(req);
+
+  // ── Webhook authentication via Twilio signature ────────────────
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!authToken) {
+    console.error('[sms-webhook] TWILIO_AUTH_TOKEN not set — rejecting request');
     return NextResponse.json({ ok: false, error: 'Webhook not configured' }, { status: 503 });
   }
-  // Only accept secret via header — query strings leak in logs
-  const provided = req.headers.get('x-webhook-secret');
-  if (provided !== webhookSecret) {
-    console.warn('[sms-webhook] Rejected: invalid or missing webhook secret');
+
+  const signature = req.headers.get('x-twilio-signature') || '';
+  // Build the full webhook URL from request headers
+  const proto = req.headers.get('x-forwarded-proto') || 'https';
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'localhost:3000';
+  const webhookUrl = `${proto}://${host}/api/sms/webhook`;
+
+  const valid = await validateTwilioSignature(webhookUrl, params, signature);
+  if (!valid) {
+    console.warn('[sms-webhook] Rejected: invalid Twilio signature');
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: any;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const fromNumber: string = body.fromNumber || '';
-  const text: string = (body.text || '').toString().substring(0, 2000); // Truncate
-  const textbeltId: string | undefined = body.textId ? String(body.textId) : undefined;
+  // ── Extract Twilio fields ──────────────────────────────────────
+  const fromNumber: string = params.From || '';
+  const text: string = (params.Body || '').substring(0, 2000); // Truncate
+  const messageSid: string | undefined = params.MessageSid || undefined;
 
   if (!fromNumber || !text) {
-    return NextResponse.json({ ok: false, error: 'Missing fromNumber or text' }, { status: 400 });
+    return twimlResponse(); // Empty response, nothing to process
   }
 
   const candidates = normalizePhone(fromNumber);
@@ -60,7 +96,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (driver) {
-    return handleDriverSms(driver, fromNumber, text, textbeltId);
+    return handleDriverSms(driver, fromNumber, text, messageSid);
   }
 
   // ─── Try matching a Broker ──────────────────────────────────
@@ -70,7 +106,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (broker && broker.companyId) {
-    return handleBrokerJobSms(broker, fromNumber, text, textbeltId);
+    return handleBrokerJobSms(broker, fromNumber, text, messageSid);
   }
 
   // ─── No match — log it anyway ──────────────────────────────
@@ -79,21 +115,21 @@ export async function POST(req: NextRequest) {
       direction: 'INBOUND',
       phone: fromNumber,
       message: text,
-      textbeltId,
+      textbeltId: messageSid, // reusing column for Twilio MessageSid
       success: true,
     },
   });
 
-  return NextResponse.json({ ok: true, matched: false });
+  return twimlResponse();
 }
 
-/* ── Driver SMS handler (existing logic) ──────────────────────── */
+/* ── Driver SMS handler ──────────────────────────────────────── */
 
 async function handleDriverSms(
   driver: { id: string },
   fromNumber: string,
   text: string,
-  textbeltId?: string,
+  messageSid?: string,
 ) {
   // Find their active ticket (most recently dispatched, not yet completed)
   const ticket = await prisma.ticket.findFirst({
@@ -112,18 +148,18 @@ async function handleDriverSms(
       message: text,
       driverId: driver.id,
       ticketId: ticket?.id,
-      textbeltId,
+      textbeltId: messageSid,
       success: true,
     },
   });
 
   if (!ticket) {
-    return NextResponse.json({ ok: true, matched: true, ticketUpdated: false });
+    return twimlResponse();
   }
 
   // Block changes on invoiced tickets
   if (ticket.invoiceId) {
-    return NextResponse.json({ ok: true, matched: true, ticketUpdated: false, reason: 'invoiced' });
+    return twimlResponse();
   }
 
   const normalized = text.trim().toUpperCase();
@@ -141,7 +177,7 @@ async function handleDriverSms(
           : `[SMS] ${text}`,
       },
     });
-    return NextResponse.json({ ok: true, matched: true, action: 'completed' });
+    return twimlResponse();
   }
 
   if (normalized.startsWith('ISSUE')) {
@@ -154,7 +190,7 @@ async function handleDriverSms(
           : `[SMS ISSUE] ${text}`,
       },
     });
-    return NextResponse.json({ ok: true, matched: true, action: 'issue' });
+    return twimlResponse();
   }
 
   // Free-text reply — append as a note
@@ -167,7 +203,7 @@ async function handleDriverSms(
     },
   });
 
-  return NextResponse.json({ ok: true, matched: true, action: 'note' });
+  return twimlResponse();
 }
 
 /* ── Broker SMS handler — create a job ────────────────────────── */
@@ -176,7 +212,7 @@ async function handleBrokerJobSms(
   broker: { id: string; companyId: string | null; name: string; phone: string | null },
   fromNumber: string,
   text: string,
-  textbeltId?: string,
+  messageSid?: string,
 ) {
   const companyId = broker.companyId!;
 
@@ -192,7 +228,7 @@ async function handleBrokerJobSms(
       phone: fromNumber,
       message: text,
       brokerId: broker.id,
-      textbeltId,
+      textbeltId: messageSid,
       success: true,
     },
   });
@@ -205,7 +241,7 @@ async function handleBrokerJobSms(
       `Or just text the details naturally and we'll figure it out.`;
 
     await sendSms({ phone: fromNumber, message: helpMsg });
-    return NextResponse.json({ ok: true, matched: true, action: 'parse_failed' });
+    return twimlResponse();
   }
 
   // Auto-match or create the customer by name
@@ -268,7 +304,6 @@ async function handleBrokerJobSms(
   }
 
   // Update the SMS log with the job ID
-  // (find the most recent inbound from this broker)
   await prisma.smsLog.updateMany({
     where: {
       brokerId: broker.id,
@@ -296,16 +331,9 @@ async function handleBrokerJobSms(
     message: confirmMsg,
   });
 
-  return NextResponse.json({
-    ok: true,
-    matched: true,
-    action: 'job_created',
-    jobId: job.id,
-    jobNumber,
-    parseMethod: parsed.parseMethod,
-  });
+  return twimlResponse();
 }
 
 export async function GET() {
-  return NextResponse.json({ ok: true, hint: 'POST Textbelt reply payloads here' });
+  return NextResponse.json({ ok: true, hint: 'POST Twilio inbound SMS webhooks here' });
 }

@@ -71,7 +71,6 @@ async function bulkCreateAction(formData: FormData) {
       phone: driver.phone,
       message,
       driverId: driver.id,
-      replyWebhookUrl: `${appUrl}/api/sms/webhook`,
     });
   }
 
