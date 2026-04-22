@@ -31,7 +31,18 @@ export async function notifyDriverJobAssignment(params: {
   const driver = await prisma.driver.findUnique({
     where: { id: params.driverId },
   }) as any;
-  if (!driver?.phone || !driver.smsEnabled || !driver.smsJobAssignment) return;
+
+  console.log('[sms-notify] notifyDriverJobAssignment:', {
+    driverId: params.driverId,
+    found: !!driver,
+    phone: driver?.phone ?? 'NONE',
+    smsEnabled: driver?.smsEnabled,
+    smsJobAssignment: driver?.smsJobAssignment,
+  });
+
+  if (!driver?.phone) { console.log('[sms-notify] Skipped: no phone'); return; }
+  if (driver.smsEnabled === false) { console.log('[sms-notify] Skipped: smsEnabled=false'); return; }
+  if (driver.smsJobAssignment === false) { console.log('[sms-notify] Skipped: smsJobAssignment=false'); return; }
 
   const mobileUrl = `${appUrl()}/d/${driver.accessToken}`;
   const message = composeAssignmentSms({
@@ -43,7 +54,9 @@ export async function notifyDriverJobAssignment(params: {
     hauledTo: params.hauledTo,
     mobileUrl,
   });
-  await sendSms({ phone: driver.phone, message, driverId: driver.id });
+  console.log('[sms-notify] Sending SMS to', driver.phone);
+  const result = await sendSms({ phone: driver.phone, message, driverId: driver.id });
+  console.log('[sms-notify] Send result:', result);
 }
 
 /** Notify driver their job status changed (completed, cancelled, etc.) */
