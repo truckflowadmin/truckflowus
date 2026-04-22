@@ -23,6 +23,24 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   // edit a single tenant's data via dispatcher routes.
   if (session.role === 'SUPERADMIN') redirect('/sa/overview');
 
+  // Check subscription status — block if suspended or paused
+  if (session.companyId) {
+    try {
+      const company = await prisma.$queryRaw<{ suspended: boolean; subscriptionPausedAt: Date | null }[]>`
+        SELECT "suspended", "subscriptionPausedAt" FROM "Company" WHERE "id" = ${session.companyId} LIMIT 1
+      `;
+      const co = company[0];
+      if (co?.suspended) {
+        redirect('/suspended?reason=suspended');
+      }
+      if (co?.subscriptionPausedAt) {
+        redirect('/suspended?reason=paused');
+      }
+    } catch {
+      // Columns may not exist yet — skip check
+    }
+  }
+
   // Check if user must re-set security questions (cleared by superadmin)
   try {
     const rows = await prisma.$queryRaw<{ mustSetSecurityQuestions: boolean }[]>`

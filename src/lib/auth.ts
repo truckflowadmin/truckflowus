@@ -201,13 +201,18 @@ export async function loginWithCredentials(email: string, password: string) {
   // Successful login — clear failed attempts
   await clearAttempts(normalizedEmail, 'dispatcher_login');
 
-  // Block login for dispatchers whose company has been suspended by superadmin.
+  // Block login for dispatchers whose company has been suspended or paused.
   if (user.companyId) {
-    const co = await prisma.company.findUnique({
-      where: { id: user.companyId },
-      select: { suspended: true },
-    });
-    if (co?.suspended) return { suspended: true as const };
+    try {
+      const rows = await prisma.$queryRaw<{ suspended: boolean; subscriptionPausedAt: Date | null }[]>`
+        SELECT "suspended", "subscriptionPausedAt" FROM "Company" WHERE "id" = ${user.companyId} LIMIT 1
+      `;
+      const co = rows[0];
+      if (co?.suspended) return { suspended: true as const };
+      if (co?.subscriptionPausedAt) return { suspended: true as const };
+    } catch {
+      // Columns may not exist yet — fall through
+    }
   }
 
   // Track last login time
