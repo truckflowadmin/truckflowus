@@ -58,13 +58,29 @@ export default function SmsTermsPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-3">How Consent Is Collected</h2>
             <p>
               Your phone number is provided to TruckFlowUS by your dispatching company when
-              they add you as a driver or broker on the platform. By providing your phone
-              number to your dispatcher for use with TruckFlowUS, you consent to receive
-              transactional SMS messages related to job assignments and dispatch operations.
+              they add you as a driver or broker on the platform. <strong>By providing your phone
+              number to your dispatcher for use with TruckFlowUS, you expressly consent to receive
+              transactional SMS messages related to job assignments and dispatch operations, in
+              accordance with the Telephone Consumer Protection Act (TCPA, 47 U.S.C. &sect; 227)
+              and applicable FCC regulations.</strong>
             </p>
             <p className="mt-3">
-              Consent is not required as a condition of purchasing any goods or services.
+              This consent applies to messages sent to the mobile number provided, including messages
+              sent using an automated telephone dialing system or prerecorded voice. Consent is not
+              required as a condition of purchasing any goods or services.
               Message frequency varies based on job activity — typically 1–10 messages per week.
+            </p>
+            <p className="mt-3 font-medium text-gray-900">
+              Dispatcher Responsibilities Regarding Consent:
+            </p>
+            <p className="mt-1">
+              Dispatching companies that add drivers or brokers to TruckFlowUS are responsible for
+              obtaining prior express consent from each individual before entering their phone number
+              into the platform. By entering a phone number, the dispatching company represents and
+              warrants that it has obtained the necessary consent from the individual to receive
+              transactional SMS messages from TruckFlowUS. TruckFlowUS shall not be liable for any
+              claims, fines, or penalties arising from a dispatching company&apos;s failure to obtain
+              proper consent.
             </p>
           </section>
 
@@ -107,8 +123,8 @@ export default function SmsTermsPage() {
               Your phone number and message content are stored securely and used only for
               dispatch operations. We do not sell, share, or rent your phone number to third
               parties for marketing purposes. For more information, see our{' '}
-              <Link href="/contact" className="text-blue-600 underline">
-                Contact page
+              <Link href="/privacy" className="text-blue-600 underline">
+                Privacy Policy
               </Link>.
             </p>
           </section>
@@ -119,6 +135,64 @@ export default function SmsTermsPage() {
               SMS messaging is supported on all major US carriers including AT&amp;T, Verizon,
               T-Mobile, Sprint, and most regional carriers. Carriers are not liable for
               delayed or undelivered messages.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">Revocation of Consent</h2>
+            <p>
+              You may revoke your consent to receive SMS messages at any time by any reasonable means,
+              including replying <strong>STOP</strong> to any message, contacting your dispatching
+              company, or emailing us at{' '}
+              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">
+                support@truckflowus.com
+              </a>. Upon revocation, we will cease sending SMS messages within a reasonable time
+              (typically within 24 hours). Revocation of SMS consent does not affect your ability to
+              use other features of the Service.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">No Warranty &amp; Carrier Liability</h2>
+            <p>
+              TruckFlowUS provides SMS notifications on an &ldquo;as is&rdquo; basis. We do not
+              guarantee that messages will be delivered, that delivery will be timely, or that
+              messages will be received in their entirety. Wireless carriers, network conditions,
+              and device settings may affect message delivery.
+            </p>
+            <p className="mt-3">
+              <strong>Neither TruckFlowUS nor any wireless carrier shall be liable for any
+              delayed, undelivered, or misdirected messages, or for any errors in the content
+              of any message.</strong> You should not rely solely on SMS notifications for
+              time-critical dispatch operations. TruckFlowUS is not responsible for any missed
+              jobs, late arrivals, or operational disruptions resulting from SMS delivery failures.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">TCPA Compliance</h2>
+            <p>
+              TruckFlowUS is committed to compliance with the Telephone Consumer Protection Act
+              (TCPA) and all applicable FCC regulations governing SMS communications. All messages
+              sent through TruckFlowUS are transactional in nature and relate directly to dispatch
+              operations. We do not send marketing, promotional, or advertising messages.
+            </p>
+            <p className="mt-3">
+              If you believe you have received a message from TruckFlowUS without proper consent
+              or in violation of any applicable law, please contact us immediately at{' '}
+              <a href="mailto:support@truckflowus.com" className="text-blue-600 underline">
+                support@truckflowus.com
+              </a>{' '}
+              so we can investigate and resolve the issue.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">Changes to SMS Terms</h2>
+            <p>
+              We may update these SMS Terms from time to time. Changes will be posted on this page
+              with an updated date. Continued receipt of messages after changes constitutes acceptance
+              of the updated terms. You may opt out at any time as described above.
             </p>
           </section>
         </div>

@@ -580,7 +580,7 @@ export default function HomeContent() {
       {/* ── Footer ── */}
       <footer className="border-t border-steel-800 bg-steel-900/40">
         <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="grid sm:grid-cols-3 gap-8 mb-8">
+          <div className="grid sm:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 bg-safety rounded flex items-center justify-center font-black text-diesel text-xs">
@@ -614,6 +614,16 @@ export default function HomeContent() {
                 <li>{t('pub.footer.feat3')}</li>
                 <li>{t('pub.footer.feat4')}</li>
                 <li>{t('pub.footer.feat5')}</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-3">{t('pub.footer.legal')}</h3>
+              <ul className="space-y-2 text-sm text-steel-400">
+                <li><Link href="/terms" className="hover:text-steel-200 transition-colors">{t('pub.footer.terms')}</Link></li>
+                <li><Link href="/privacy" className="hover:text-steel-200 transition-colors">{t('pub.footer.privacy')}</Link></li>
+                <li><Link href="/acceptable-use" className="hover:text-steel-200 transition-colors">{t('pub.footer.acceptableUse')}</Link></li>
+                <li><Link href="/sms-terms" className="hover:text-steel-200 transition-colors">{t('pub.footer.smsTerms')}</Link></li>
+                <li><Link href="/cookies" className="hover:text-steel-200 transition-colors">{t('pub.footer.cookies')}</Link></li>
               </ul>
             </div>
           </div>
