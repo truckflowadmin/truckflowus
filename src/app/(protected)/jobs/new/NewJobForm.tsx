@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createJobAction } from '../actions';
-import AddressAutocomplete from '@/components/AddressAutocomplete';
 import ScanPreviewModal, { type ScanPreviewData } from './ScanPreviewModal';
 
 const TRUCK_TYPE_LABELS: Record<string, string> = {
@@ -326,12 +325,12 @@ export default function NewJobForm({ customers, drivers, materials, brokers }: P
         <div>
           <label className="label">Hauled From *</label>
           <input name="hauledFrom" required className="input" placeholder="Pickup location name" value={hauledFrom} onChange={(e) => setHauledFrom(e.target.value)} />
-          <AddressAutocomplete name="hauledFromAddress" className="input mt-1.5" externalValue={hauledFromAddress} />
+          <input name="hauledFromAddress" className="input mt-1.5" placeholder="Address, coordinates, or Maps link" value={hauledFromAddress} onChange={(e) => setHauledFromAddress(e.target.value)} />
         </div>
         <div>
           <label className="label">Hauled To *</label>
           <input name="hauledTo" required className="input" placeholder="Delivery location name" value={hauledTo} onChange={(e) => setHauledTo(e.target.value)} />
-          <AddressAutocomplete name="hauledToAddress" className="input mt-1.5" externalValue={hauledToAddress} />
+          <input name="hauledToAddress" className="input mt-1.5" placeholder="Address, coordinates, or Maps link" value={hauledToAddress} onChange={(e) => setHauledToAddress(e.target.value)} />
         </div>
       </div>
 

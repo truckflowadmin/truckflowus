@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { updateJobAction } from '../../actions';
-import AddressAutocomplete from '@/components/AddressAutocomplete';
-
 const TRUCK_TYPE_LABELS: Record<string, string> = {
   SINGLE_AXLE: 'Single Axle',
   TANDEM: 'Tandem',
@@ -124,12 +122,12 @@ export default function EditJobForm({ job, customers, drivers, materials, broker
         <div>
           <label className="label">Hauled From *</label>
           <input name="hauledFrom" required className="input" defaultValue={job.hauledFrom} />
-          <AddressAutocomplete name="hauledFromAddress" className="input mt-1.5" defaultValue={job.hauledFromAddress || ''} />
+          <input name="hauledFromAddress" className="input mt-1.5" placeholder="Address, coordinates, or Maps link" defaultValue={job.hauledFromAddress || ''} />
         </div>
         <div>
           <label className="label">Hauled To *</label>
           <input name="hauledTo" required className="input" defaultValue={job.hauledTo} />
-          <AddressAutocomplete name="hauledToAddress" className="input mt-1.5" defaultValue={job.hauledToAddress || ''} />
+          <input name="hauledToAddress" className="input mt-1.5" placeholder="Address, coordinates, or Maps link" defaultValue={job.hauledToAddress || ''} />
         </div>
       </div>
 

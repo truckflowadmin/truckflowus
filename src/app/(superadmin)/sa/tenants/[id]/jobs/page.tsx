@@ -5,7 +5,6 @@ import { requireSuperadmin } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import TenantNav from '@/components/TenantNav';
 import AddressLink from '@/components/AddressLink';
-import AddressAutocomplete from '@/components/AddressAutocomplete';
 import AutoSubmitSelect from '@/components/AutoSubmitSelect';
 import ConfirmButton from '@/components/ConfirmButton';
 import BrokerToggleSelect from '@/components/BrokerToggleSelect';
@@ -306,12 +305,12 @@ export default async function TenantJobsPage({ params }: { params: { id: string 
             <div>
               <label className="label-sa">Hauled From *</label>
               <input name="hauledFrom" required className="input-sa" placeholder="Pickup location" />
-              <AddressAutocomplete name="hauledFromAddress" className="input-sa mt-1" />
+              <input name="hauledFromAddress" className="input-sa mt-1" placeholder="Address" />
             </div>
             <div>
               <label className="label-sa">Hauled To *</label>
               <input name="hauledTo" required className="input-sa" placeholder="Delivery location" />
-              <AddressAutocomplete name="hauledToAddress" className="input-sa mt-1" />
+              <input name="hauledToAddress" className="input-sa mt-1" placeholder="Address" />
             </div>
             <div>
               <label className="label-sa">Material</label>
@@ -476,12 +475,12 @@ export default async function TenantJobsPage({ params }: { params: { id: string 
                             <div>
                               <label className="label-sa text-xs">Hauled From</label>
                               <input name="hauledFrom" defaultValue={j.hauledFrom} required className="input-sa text-xs" />
-                              <AddressAutocomplete name="hauledFromAddress" defaultValue={j.hauledFromAddress ?? ''} className="input-sa text-xs mt-1" />
+                              <input name="hauledFromAddress" defaultValue={j.hauledFromAddress ?? ''} className="input-sa text-xs mt-1" placeholder="Address" />
                             </div>
                             <div>
                               <label className="label-sa text-xs">Hauled To</label>
                               <input name="hauledTo" defaultValue={j.hauledTo} required className="input-sa text-xs" />
-                              <AddressAutocomplete name="hauledToAddress" defaultValue={j.hauledToAddress ?? ''} className="input-sa text-xs mt-1" />
+                              <input name="hauledToAddress" defaultValue={j.hauledToAddress ?? ''} className="input-sa text-xs mt-1" placeholder="Address" />
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
