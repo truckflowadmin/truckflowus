@@ -89,6 +89,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'nav.checks': { en: 'Checks', es: 'Cheques' },
   'nav.reports': { en: 'Reports', es: 'Reportes' },
   'nav.sms': { en: 'SMS Log', es: 'Registro SMS' },
+  'nav.messaging': { en: 'SMS & Fax', es: 'SMS y Fax' },
   'nav.brokers': { en: 'Brokers', es: 'Corredores' },
   'nav.calendar': { en: 'Calendar', es: 'Calendario' },
   'nav.settings': { en: 'Settings', es: 'Configuración' },

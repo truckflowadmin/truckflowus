@@ -55,7 +55,7 @@ export async function notifyDriverJobAssignment(params: {
     mobileUrl,
   });
   console.log('[sms-notify] Sending SMS to', driver.phone);
-  const result = await sendSms({ phone: driver.phone, message, driverId: driver.id });
+  const result = await sendSms({ phone: driver.phone, message, driverId: driver.id, companyId: driver.companyId });
   console.log('[sms-notify] Send result:', result);
 }
 
@@ -74,7 +74,7 @@ export async function notifyDriverJobStatusChange(params: {
   const num = String(params.jobNumber).padStart(4, '0');
   const status = params.newStatus.replace(/_/g, ' ').toLowerCase();
   const message = `TruckFlowUS #${num}${params.jobName ? ` (${params.jobName})` : ''}\nJob status updated: ${status}`;
-  await sendSms({ phone: driver.phone, message, driverId: driver.id });
+  await sendSms({ phone: driver.phone, message, driverId: driver.id, companyId: driver.companyId });
 }
 
 /** Notify eligible drivers when a new job is created that they could self-assign to */
@@ -115,7 +115,7 @@ export async function notifyDriversNewJobAvailable(params: {
     `Open the app to accept this job.`;
 
   await Promise.all(
-    drivers.map((d) => sendSms({ phone: d.phone, message, driverId: d.id }))
+    drivers.map((d) => sendSms({ phone: d.phone, message, driverId: d.id, companyId: params.companyId }))
   );
 }
 
@@ -136,7 +136,7 @@ export async function notifyDriverPayrollReady(params: {
     `TruckFlowUS — Payroll ready\n` +
     `Period: ${params.periodLabel}${amountLine}\n` +
     `View details: ${mobileUrl}`;
-  await sendSms({ phone: driver.phone, message, driverId: driver.id });
+  await sendSms({ phone: driver.phone, message, driverId: driver.id, companyId: driver.companyId });
 }
 
 /* ── Dispatcher notifications ─────────────────────────────────── */
@@ -167,7 +167,7 @@ export async function notifyDispatchersDriverIssue(params: {
   await Promise.all(
     dispatchers
       .filter((d: any) => d.phone)
-      .map((d: any) => sendSms({ phone: d.phone, message }))
+      .map((d: any) => sendSms({ phone: d.phone, message, companyId: params.companyId }))
   );
 }
 
@@ -195,7 +195,7 @@ export async function notifyDispatchersDriverCompleted(params: {
   await Promise.all(
     dispatchers
       .filter((d: any) => d.phone)
-      .map((d: any) => sendSms({ phone: d.phone, message }))
+      .map((d: any) => sendSms({ phone: d.phone, message, companyId: params.companyId }))
   );
 }
 
@@ -226,6 +226,6 @@ export async function notifyDispatchersNewBrokerJob(params: {
   await Promise.all(
     dispatchers
       .filter((d: any) => d.phone)
-      .map((d: any) => sendSms({ phone: d.phone, message }))
+      .map((d: any) => sendSms({ phone: d.phone, message, companyId: params.companyId }))
   );
 }

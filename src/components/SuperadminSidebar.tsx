@@ -12,6 +12,7 @@ const NAV = [
   { href: '/sa/plans', labelKey: 'nav.plans', icon: '$' },
   { href: '/sa/requests', labelKey: 'nav.requests', icon: '⬆' },
   { href: '/sa/brokers', labelKey: 'nav.brokers', icon: '⇆' },
+  { href: '/sa/messaging', labelKey: 'nav.messaging', icon: '📨' },
 ];
 
 export function SuperadminSidebar({ user }: { user: { name: string; email: string } }) {

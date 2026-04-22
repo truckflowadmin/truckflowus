@@ -17,8 +17,11 @@ import { prisma } from './prisma';
 export interface SendSmsOptions {
   phone: string;              // E.164 e.g. +12395550111
   message: string;
+  companyId?: string;
   driverId?: string;
+  brokerId?: string;
   ticketId?: string;
+  jobId?: string;
   statusCallback?: string;    // URL Twilio calls with delivery status updates
 }
 
@@ -88,8 +91,11 @@ async function logSms(opts: SendSmsOptions, result: SendSmsResult) {
       direction: 'OUTBOUND',
       phone: opts.phone,
       message: opts.message,
+      companyId: opts.companyId,
       driverId: opts.driverId,
+      brokerId: opts.brokerId,
       ticketId: opts.ticketId,
+      jobId: opts.jobId,
       textbeltId: result.twilioSid,  // reusing existing column for external message ID
       success: result.success,
       error: result.error,

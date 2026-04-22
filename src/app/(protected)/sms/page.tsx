@@ -1,105 +1,133 @@
-import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
-import { format } from 'date-fns';
+import { MessagingHub } from './MessagingHub';
 
-export default async function SmsLogPage({
+export default async function SmsAndFaxPage({
   searchParams,
 }: {
-  searchParams: { page?: string };
+  searchParams: { tab?: string; page?: string; dir?: string; search?: string };
 }) {
   const session = await requireSession();
+  const tab = searchParams.tab || 'all';
   const page = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
-  const pageSize = 50;
+  const dir = searchParams.dir || 'all'; // all, in, out
+  const search = searchParams.search || '';
+  const pageSize = 30;
 
-  const drivers = await prisma.driver.findMany({ where: { companyId: session.companyId }, select: { id: true } });
-  const driverIds = drivers.map(d => d.id);
+  // Build SMS filter
+  const smsWhere: any = { companyId: session.companyId };
+  if (dir === 'in') smsWhere.direction = 'INBOUND';
+  if (dir === 'out') smsWhere.direction = 'OUTBOUND';
+  if (search) {
+    smsWhere.OR = [
+      { phone: { contains: search } },
+      { message: { contains: search, mode: 'insensitive' } },
+    ];
+  }
 
-  const where = { OR: [{ driverId: { in: driverIds } }] };
+  // Build Fax filter
+  const faxWhere: any = { companyId: session.companyId };
+  if (dir === 'in') faxWhere.direction = 'INBOUND';
+  if (dir === 'out') faxWhere.direction = 'OUTBOUND';
+  if (search) {
+    faxWhere.faxNumber = { contains: search };
+  }
 
-  const [logs, total] = await Promise.all([
-    prisma.smsLog.findMany({
-      where,
-      include: { driver: true },
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+  // Fetch data based on tab
+  let smsLogs: any[] = [];
+  let faxLogs: any[] = [];
+  let smsTotal = 0;
+  let faxTotal = 0;
+
+  if (tab === 'all' || tab === 'sms' || tab === 'incoming' || tab === 'outgoing') {
+    // For incoming/outgoing tabs, override direction filter
+    const smsFilter = { ...smsWhere };
+    if (tab === 'incoming') smsFilter.direction = 'INBOUND';
+    if (tab === 'outgoing') smsFilter.direction = 'OUTBOUND';
+
+    [smsLogs, smsTotal] = await Promise.all([
+      prisma.smsLog.findMany({
+        where: smsFilter,
+        include: { driver: { select: { name: true } }, broker: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.smsLog.count({ where: smsFilter }),
+    ]);
+  }
+
+  if (tab === 'all' || tab === 'fax') {
+    const faxFilter = { ...faxWhere };
+    [faxLogs, faxTotal] = await Promise.all([
+      prisma.faxLog.findMany({
+        where: faxFilter,
+        include: { driver: { select: { name: true } }, broker: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip: (tab === 'fax') ? (page - 1) * pageSize : 0,
+        take: (tab === 'fax') ? pageSize : pageSize,
+      }),
+      prisma.faxLog.count({ where: faxFilter }),
+    ]);
+  }
+
+  // Contacts for send forms
+  const [drivers, brokers] = await Promise.all([
+    prisma.driver.findMany({
+      where: { companyId: session.companyId },
+      select: { id: true, name: true, phone: true },
+      orderBy: { name: 'asc' },
     }),
-    prisma.smsLog.count({ where }),
+    prisma.broker.findMany({
+      where: { companyId: session.companyId },
+      select: { id: true, name: true, phone: true },
+      orderBy: { name: 'asc' },
+    }),
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  // SMS stats
+  const [smsInCount, smsOutCount, faxCount] = await Promise.all([
+    prisma.smsLog.count({ where: { companyId: session.companyId, direction: 'INBOUND' } }),
+    prisma.smsLog.count({ where: { companyId: session.companyId, direction: 'OUTBOUND' } }),
+    prisma.faxLog.count({ where: { companyId: session.companyId } }),
+  ]);
+
+  const totalMessages = tab === 'fax' ? faxTotal : smsTotal;
+  const totalPages = Math.max(1, Math.ceil(totalMessages / pageSize));
 
   return (
-    <div className="p-8 max-w-6xl">
-      <header className="mb-6">
-        <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Activity</div>
-        <h1 className="text-3xl font-bold tracking-tight">SMS Log</h1>
-        <p className="text-sm text-steel-500 mt-1">{total} message{total === 1 ? '' : 's'} total</p>
-      </header>
-
-      <div className="panel overflow-hidden">
-        {logs.length === 0 ? (
-          <div className="p-10 text-center text-steel-500">No SMS activity yet.</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
-              <tr>
-                <th className="text-left px-5 py-2">Time</th>
-                <th className="text-left px-5 py-2">Dir</th>
-                <th className="text-left px-5 py-2">Driver</th>
-                <th className="text-left px-5 py-2">Phone</th>
-                <th className="text-left px-5 py-2">Message</th>
-                <th className="text-left px-5 py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((l) => (
-                <tr key={l.id} className="border-b border-steel-100 align-top">
-                  <td className="px-5 py-3 text-xs text-steel-500 whitespace-nowrap">{format(l.createdAt, 'MMM d h:mm a')}</td>
-                  <td className="px-5 py-3">
-                    <span className={`badge ${l.direction === 'OUTBOUND' ? 'bg-safety text-diesel' : 'bg-steel-200 text-steel-800'}`}>
-                      {l.direction === 'OUTBOUND' ? 'OUT' : 'IN'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">{l.driver?.name ?? <span className="text-steel-400">—</span>}</td>
-                  <td className="px-5 py-3 font-mono text-xs">{l.phone}</td>
-                  <td className="px-5 py-3 max-w-md">
-                    <pre className="whitespace-pre-wrap text-xs">{l.message}</pre>
-                  </td>
-                  <td className="px-5 py-3 text-xs">
-                    {l.success ? (
-                      <span className="text-green-700">OK</span>
-                    ) : (
-                      <span className="text-red-600">{l.error ?? 'Failed'}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm">
-          <div className="text-steel-500">
-            Page {page} of {totalPages}
-          </div>
-          <div className="flex gap-1">
-            {page > 1 && (
-              <Link href={`/sms?page=${page - 1}`} className="px-3 py-1.5 rounded border border-steel-300 bg-white hover:bg-steel-50">
-                ← Prev
-              </Link>
-            )}
-            {page < totalPages && (
-              <Link href={`/sms?page=${page + 1}`} className="px-3 py-1.5 rounded border border-steel-300 bg-white hover:bg-steel-50">
-                Next →
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+    <MessagingHub
+      tab={tab}
+      page={page}
+      totalPages={totalPages}
+      dir={dir}
+      search={search}
+      smsLogs={smsLogs.map((l: any) => ({
+        id: l.id,
+        direction: l.direction,
+        phone: l.phone,
+        message: l.message,
+        driverName: l.driver?.name || null,
+        brokerName: l.broker?.name || null,
+        success: l.success,
+        error: l.error,
+        createdAt: l.createdAt.toISOString(),
+      }))}
+      faxLogs={faxLogs.map((f: any) => ({
+        id: f.id,
+        direction: f.direction,
+        faxNumber: f.faxNumber,
+        pages: f.pages,
+        mediaUrl: f.mediaUrl,
+        status: f.status,
+        driverName: f.driver?.name || null,
+        brokerName: f.broker?.name || null,
+        error: f.error,
+        createdAt: f.createdAt.toISOString(),
+      }))}
+      drivers={drivers}
+      brokers={brokers}
+      stats={{ incoming: smsInCount, outgoing: smsOutCount, fax: faxCount }}
+    />
   );
 }
