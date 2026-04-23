@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { requireSuperadmin } from '@/lib/auth';
+import { cancelSubscription as cancelPaypalSub } from '@/lib/paypal';
 
 // ── Record a payment (Zelle, cash, check, etc.) ───────────────────────────
 
@@ -512,6 +513,77 @@ export async function resumeSubscriptionAction(
         actor,
         actorRole: 'SUPERADMIN',
         summary: 'Subscription resumed',
+      },
+    }),
+  ]);
+}
+
+// ── Cancel PayPal subscription (superadmin) ─────────────────────────
+
+export async function cancelPaypalSubscriptionAction(
+  companyId: string,
+  actor: string,
+  note?: string,
+) {
+  await requireSuperadmin();
+
+  // Get the PayPal subscription ID
+  const rows = await prisma.$queryRaw<{
+    paypalSubscriptionId: string | null;
+    subscriptionStatus: string | null;
+  }[]>`
+    SELECT "paypalSubscriptionId", "subscriptionStatus"
+    FROM "Company" WHERE "id" = ${companyId} LIMIT 1
+  `;
+  const subId = rows[0]?.paypalSubscriptionId;
+
+  if (!subId) {
+    throw new Error('No PayPal subscription found for this tenant');
+  }
+
+  if (rows[0]?.subscriptionStatus === 'CANCELLED') {
+    throw new Error('Subscription is already cancelled');
+  }
+
+  // Cancel on PayPal
+  await cancelPaypalSub(subId, note || 'Cancelled by superadmin');
+
+  const now = new Date();
+
+  // Update Company status + suspend
+  await prisma.$executeRaw`
+    UPDATE "Company"
+    SET "subscriptionStatus" = 'CANCELLED',
+        "subscriptionPausedAt" = ${now},
+        "suspended" = true,
+        "suspendedAt" = ${now},
+        "nextPaymentDue" = NULL
+    WHERE "id" = ${companyId}
+  `;
+
+  // Log billing event + audit
+  await prisma.$transaction([
+    prisma.billingEvent.create({
+      data: {
+        companyId,
+        type: 'PLAN_CHANGE',
+        subscriptionStatus: 'CANCELLED' as any,
+        paymentMethod: 'PayPal',
+        description: `PayPal subscription cancelled by superadmin (${subId})`,
+        note,
+        amountCents: 0,
+        actor,
+      } as any,
+    }),
+    prisma.auditLog.create({
+      data: {
+        companyId,
+        entityType: 'billing',
+        action: 'paypal_subscription_cancelled',
+        actor,
+        actorRole: 'SUPERADMIN',
+        summary: `Cancelled PayPal subscription ${subId}`,
+        details: note ? JSON.stringify({ note }) : undefined,
       },
     }),
   ]);

@@ -56,19 +56,20 @@ export default function BillingSection({
     }
   }
 
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
   async function handleCancel() {
-    if (!confirm('Are you sure you want to cancel your subscription? Your account will be suspended.')) {
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
       const res = await fetch('/api/paypal/cancel', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to cancel');
-      setSuccess('Subscription cancelled. Your account will remain active until the end of the current billing period.');
-      // Reload after short delay to refresh status
-      setTimeout(() => window.location.reload(), 2000);
+      setSuccess('Subscription cancelled. Redirecting to plans page...');
+      // Redirect to subscribe page so they can resubscribe
+      setTimeout(() => {
+        window.location.href = '/subscribe';
+      }, 2000);
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
@@ -153,15 +154,11 @@ export default function BillingSection({
         )}
 
         {/* Show Cancel button when subscription is active */}
-        {isActive && hasSubscription && (
+        {isActive && hasSubscription && !showCancelConfirm && (
           <button
-            onClick={handleCancel}
-            disabled={loading}
+            onClick={() => setShowCancelConfirm(true)}
             className="btn-outline text-red-600 border-red-300 hover:bg-red-50 flex items-center gap-2"
           >
-            {loading && (
-              <span className="inline-block w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-            )}
             Cancel Subscription
           </button>
         )}
@@ -176,6 +173,35 @@ export default function BillingSection({
           </p>
         )}
       </div>
+
+      {/* Cancel confirmation */}
+      {showCancelConfirm && (
+        <div className="mt-4 border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-red-800">Are you sure you want to cancel?</h3>
+          <p className="text-sm text-red-700">
+            Your PayPal subscription will be cancelled immediately. Your account will be suspended
+            and you will lose access to all dispatcher features until you resubscribe.
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCancel}
+              disabled={loading}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              {loading && (
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              )}
+              Yes, Cancel My Subscription
+            </button>
+            <button
+              onClick={() => setShowCancelConfirm(false)}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-steel-600 hover:text-steel-800"
+            >
+              Keep Subscription
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -287,6 +287,8 @@ export default async function BillingPage({
         currentStatus={currentStatus}
         customPriceCents={company.customPriceCents}
         actorEmail={session.email}
+        paypalSubscriptionId={paypalInfo.paypalSubscriptionId}
+        paypalSubscriptionStatus={paypalInfo.subscriptionStatus}
       />
 
       {/* ── Payment History ── */}

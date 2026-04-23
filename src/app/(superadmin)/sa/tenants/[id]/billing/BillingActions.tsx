@@ -8,6 +8,7 @@ import {
   updateCustomPriceAction,
   markOverdueAction,
   updateStatusAction,
+  cancelPaypalSubscriptionAction,
 } from './actions';
 
 interface BillingActionsProps {
@@ -16,6 +17,8 @@ interface BillingActionsProps {
   currentStatus: string;
   customPriceCents: number | null;
   actorEmail: string;
+  paypalSubscriptionId: string | null;
+  paypalSubscriptionStatus: string | null;
 }
 
 export function BillingActions({
@@ -24,6 +27,8 @@ export function BillingActions({
   currentStatus,
   customPriceCents,
   actorEmail,
+  paypalSubscriptionId,
+  paypalSubscriptionStatus,
 }: BillingActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -49,12 +54,17 @@ export function BillingActions({
     customPriceCents !== null ? (customPriceCents / 100).toFixed(2) : '',
   );
 
+  // Cancel PayPal
+  const [showCancelPaypal, setShowCancelPaypal] = useState(false);
+  const [cancelNote, setCancelNote] = useState('');
+
   const [message, setMessage] = useState('');
 
   function closeAll() {
     setShowPaymentForm(false);
     setShowAdjustForm(false);
     setShowPriceForm(false);
+    setShowCancelPaypal(false);
   }
 
   async function handleRecordPayment(e: React.FormEvent) {
@@ -166,6 +176,24 @@ export function BillingActions({
     });
   }
 
+  async function handleCancelPaypal() {
+    startTransition(async () => {
+      try {
+        await cancelPaypalSubscriptionAction(companyId, actorEmail, cancelNote || undefined);
+        setMessage('PayPal subscription cancelled and account suspended');
+        setShowCancelPaypal(false);
+        setCancelNote('');
+        router.refresh();
+      } catch (err: any) {
+        setMessage(err.message || 'Failed to cancel PayPal subscription');
+      }
+    });
+  }
+
+  const canCancelPaypal = !!paypalSubscriptionId &&
+    paypalSubscriptionStatus !== 'CANCELLED' &&
+    paypalSubscriptionStatus !== 'EXPIRED';
+
   return (
     <div className="panel-sa space-y-4">
       <h2 className="font-semibold text-white">Actions</h2>
@@ -213,7 +241,48 @@ export function BillingActions({
             Mark Active
           </button>
         )}
+        {canCancelPaypal && (
+          <button
+            onClick={() => { closeAll(); setShowCancelPaypal(true); }}
+            className="btn-sa-secondary text-red-400"
+          >
+            Cancel PayPal Subscription
+          </button>
+        )}
       </div>
+
+      {/* ── Cancel PayPal Confirmation ── */}
+      {showCancelPaypal && (
+        <div className="border border-red-700 rounded-lg p-4 space-y-3 bg-red-900/20">
+          <h3 className="text-sm font-semibold text-red-200">Cancel PayPal Subscription</h3>
+          <p className="text-xs text-red-300">
+            This will cancel the PayPal subscription for <strong>{companyName}</strong> and suspend their account.
+            Dispatchers and drivers will lose access until the account is reactivated.
+          </p>
+          <div>
+            <label className="block text-xs text-purple-400 mb-1">Reason (optional)</label>
+            <textarea
+              value={cancelNote}
+              onChange={(e) => setCancelNote(e.target.value)}
+              placeholder="Reason for cancellation..."
+              rows={2}
+              className="input-sa w-full"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancelPaypal}
+              disabled={isPending}
+              className="btn-sa-primary bg-red-700 hover:bg-red-600 text-sm"
+            >
+              {isPending ? 'Cancelling...' : 'Confirm Cancel Subscription'}
+            </button>
+            <button onClick={closeAll} className="btn-sa-secondary text-sm">
+              Go Back
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Record Payment Form ── */}
       {showPaymentForm && (
