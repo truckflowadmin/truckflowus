@@ -1,6 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+interface BillingEvent {
+  id: string;
+  type: string;
+  amountCents: number;
+  subscriptionStatus: string | null;
+  paymentMethod: string | null;
+  description: string;
+  note: string | null;
+  createdAt: string;
+}
 
 interface BillingSectionProps {
   planName: string | null;
@@ -24,6 +35,29 @@ export default function BillingSection({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [billingHistory, setBillingHistory] = useState<BillingEvent[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [receiptEvent, setReceiptEvent] = useState<BillingEvent | null>(null);
+
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch('/api/billing/history');
+      const data = await res.json();
+      setBillingHistory(data.events || []);
+    } catch {
+      // silent
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showHistory && billingHistory.length === 0) {
+      fetchHistory();
+    }
+  }, [showHistory, billingHistory.length, fetchHistory]);
 
   const isActive = subscriptionStatus === 'ACTIVE';
   const isPending = subscriptionStatus === 'APPROVAL_PENDING';
@@ -199,6 +233,185 @@ export default function BillingSection({
             >
               Keep Subscription
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Payment History */}
+      <div className="border-t border-steel-200 mt-5 pt-4">
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="flex items-center gap-2 text-sm font-semibold text-steel-700 hover:text-steel-900 transition-colors"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`h-4 w-4 transition-transform ${showHistory ? 'rotate-90' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          Payment History
+        </button>
+
+        {showHistory && (
+          <div className="mt-3">
+            {historyLoading ? (
+              <div className="flex items-center gap-2 text-sm text-steel-500 py-4">
+                <span className="inline-block w-4 h-4 border-2 border-steel-400 border-t-transparent rounded-full animate-spin" />
+                Loading history...
+              </div>
+            ) : billingHistory.length === 0 ? (
+              <p className="text-sm text-steel-500 py-3">No billing events yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {billingHistory.map((ev) => {
+                  const isPayment = ev.type === 'PAYMENT' && ev.amountCents > 0;
+                  const date = new Date(ev.createdAt);
+                  const dateStr = date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  });
+                  const timeStr = date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  });
+
+                  return (
+                    <div
+                      key={ev.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        isPayment
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-steel-200 bg-steel-50'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {isPayment ? (
+                            <span className="text-green-600 text-xs font-semibold">PAYMENT</span>
+                          ) : (
+                            <span className="text-steel-500 text-xs font-semibold uppercase">
+                              {ev.type.replace('_', ' ')}
+                            </span>
+                          )}
+                          <span className="text-xs text-steel-400">{dateStr} {timeStr}</span>
+                        </div>
+                        <p className="text-sm text-steel-700 mt-0.5 truncate">{ev.description}</p>
+                        {ev.paymentMethod && (
+                          <span className="text-xs text-steel-500">via {ev.paymentMethod}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 ml-3 flex-shrink-0">
+                        {isPayment && (
+                          <span className="text-sm font-semibold text-green-700">
+                            ${(ev.amountCents / 100).toFixed(2)}
+                          </span>
+                        )}
+                        {isPayment && (
+                          <button
+                            onClick={() => setReceiptEvent(ev)}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium hover:underline"
+                            title="View receipt"
+                          >
+                            Receipt
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Receipt Modal */}
+      {receiptEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setReceiptEvent(null)}>
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 print:shadow-none print:max-w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Receipt header */}
+            <div className="bg-diesel text-white p-5 rounded-t-xl print:bg-gray-900">
+              <div className="text-center">
+                <h3 className="text-lg font-bold tracking-wide text-safety">TruckFlowUS</h3>
+                <p className="text-xs text-steel-300 mt-1">Payment Receipt</p>
+              </div>
+            </div>
+
+            {/* Receipt body */}
+            <div className="p-6 space-y-4">
+              <div className="text-center border-b border-steel-200 pb-4">
+                <span className="text-3xl font-bold text-green-700">
+                  ${(receiptEvent.amountCents / 100).toFixed(2)}
+                </span>
+                <p className="text-sm text-steel-500 mt-1">Payment Received</p>
+              </div>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-steel-500">Date</span>
+                  <span className="font-medium">
+                    {new Date(receiptEvent.createdAt).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-steel-500">Plan</span>
+                  <span className="font-medium">{planName || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-steel-500">Payment Method</span>
+                  <span className="font-medium">{receiptEvent.paymentMethod || 'PayPal'}</span>
+                </div>
+                {receiptEvent.note && (
+                  <div className="flex justify-between">
+                    <span className="text-steel-500">Transaction ID</span>
+                    <span className="font-medium text-xs break-all max-w-[200px] text-right">
+                      {receiptEvent.note.replace('PayPal txn: ', '')}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-steel-500">Description</span>
+                  <span className="font-medium text-right max-w-[250px]">{receiptEvent.description}</span>
+                </div>
+              </div>
+
+              <div className="border-t border-steel-200 pt-3 text-center text-xs text-steel-400">
+                TruckFlowUS &middot; Dump Truck Dispatch Software<br />
+                truckflowus.com &middot; support@truckflowus.com
+              </div>
+            </div>
+
+            {/* Receipt actions */}
+            <div className="border-t border-steel-200 p-4 flex items-center justify-between print:hidden">
+              <button
+                onClick={() => setReceiptEvent(null)}
+                className="text-sm text-steel-500 hover:text-steel-700"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-diesel text-white text-sm font-semibold hover:bg-diesel/90 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print Receipt
+              </button>
+            </div>
           </div>
         </div>
       )}

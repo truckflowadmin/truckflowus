@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { sendSms, composeAssignmentSms } from '@/lib/sms';
 import { notifyDriverJobAssignment } from '@/lib/sms-notify';
+import { enforceTicketLimit } from '@/lib/features';
 import type { TicketStatus, QuantityType } from '@prisma/client';
 
 function appUrl() {
@@ -86,6 +87,9 @@ export async function createTicketAction(formData: FormData) {
     const assignedDriver = await prisma.driver.findUnique({ where: { id: driverId }, select: { assignedTruck: { select: { truckNumber: true } } } });
     if (assignedDriver?.assignedTruck?.truckNumber) resolvedTruckNumber = assignedDriver.assignedTruck.truckNumber;
   }
+
+  // Enforce plan ticket limit
+  await enforceTicketLimit(session.companyId);
 
   const ticketNumber = await nextTicketNumber(session.companyId);
   const ticket = await prisma.ticket.create({
@@ -245,6 +249,9 @@ export async function duplicateTicketAction(formData: FormData) {
     where: { id: ticketId, companyId: session.companyId },
   });
   if (!source) throw new Error('Ticket not found');
+
+  // Enforce plan ticket limit
+  await enforceTicketLimit(session.companyId);
 
   const last = await prisma.ticket.findFirst({
     where: { companyId: session.companyId },

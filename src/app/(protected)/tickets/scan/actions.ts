@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import type { QuantityType } from '@prisma/client';
+import { enforceTicketLimit } from '@/lib/features';
 
 interface ScannedTicketInput {
   photoUrl: string;
@@ -30,6 +31,8 @@ export async function bulkCreateTicketsAction(ticketsJson: string) {
   const tickets: ScannedTicketInput[] = JSON.parse(ticketsJson);
 
   if (!tickets.length) throw new Error('No tickets to create');
+
+  await enforceTicketLimit(session.companyId, tickets.length);
 
   const created: number[] = [];
 

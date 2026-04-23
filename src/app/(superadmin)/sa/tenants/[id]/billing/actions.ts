@@ -588,3 +588,128 @@ export async function cancelPaypalSubscriptionAction(
     }),
   ]);
 }
+
+// ── Change tenant plan (superadmin) ─────────────────────────────────
+
+export async function changePlanAction(
+  companyId: string,
+  newPlanId: string,
+  actor: string,
+  blockFree = false,
+) {
+  await requireSuperadmin();
+
+  const newPlan = await prisma.plan.findUnique({ where: { id: newPlanId } });
+  if (!newPlan) throw new Error('Plan not found');
+
+  // Block downgrade to Free if requested
+  if (blockFree && newPlan.priceMonthlyCents === 0) {
+    throw new Error('Downgrading to the Free plan is not permitted.');
+  }
+
+  const oldCompany = await prisma.company.findUnique({
+    where: { id: companyId },
+    include: { plan: { select: { name: true, id: true } } },
+  });
+  if (!oldCompany) throw new Error('Tenant not found');
+
+  const oldPlanName = oldCompany.plan?.name ?? 'None';
+
+  await prisma.$transaction([
+    prisma.company.update({
+      where: { id: companyId },
+      data: { planId: newPlanId },
+    }),
+    prisma.billingEvent.create({
+      data: {
+        companyId,
+        type: 'PLAN_CHANGE',
+        description: `Plan changed from ${oldPlanName} to ${newPlan.name} by superadmin`,
+        subscriptionStatus: 'ACTIVE',
+        actor,
+      },
+    }),
+    prisma.auditLog.create({
+      data: {
+        companyId,
+        entityType: 'billing',
+        action: 'plan_change',
+        actor,
+        actorRole: 'SUPERADMIN',
+        summary: `Changed plan from ${oldPlanName} to ${newPlan.name}`,
+        details: JSON.stringify({
+          fromPlanId: oldCompany.plan?.id,
+          fromPlanName: oldPlanName,
+          toPlanId: newPlanId,
+          toPlanName: newPlan.name,
+        }),
+      },
+    }),
+  ]);
+}
+
+// ── Set max drivers override ────────────────────────────────────────
+
+export async function setMaxDriversOverrideAction(
+  companyId: string,
+  maxDrivers: number | null,
+  actor: string,
+) {
+  await requireSuperadmin();
+
+  if (maxDrivers !== null && (maxDrivers < 0 || maxDrivers > 10000)) {
+    throw new Error('Max drivers must be between 0 and 10,000');
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "Company"
+    SET "maxDriversOverride" = ${maxDrivers}
+    WHERE "id" = ${companyId}
+  `;
+
+  await prisma.auditLog.create({
+    data: {
+      companyId,
+      entityType: 'billing',
+      action: 'max_drivers_override',
+      actor,
+      actorRole: 'SUPERADMIN',
+      summary: maxDrivers !== null
+        ? `Set max drivers override to ${maxDrivers}`
+        : 'Removed max drivers override (using plan default)',
+    },
+  });
+}
+
+// ── Set max tickets/month override ──────────────────────────────────
+
+export async function setMaxTicketsOverrideAction(
+  companyId: string,
+  maxTickets: number | null,
+  actor: string,
+) {
+  await requireSuperadmin();
+
+  if (maxTickets !== null && (maxTickets < 0 || maxTickets > 1000000)) {
+    throw new Error('Max tickets must be between 0 and 1,000,000');
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "Company"
+    SET "maxTicketsPerMonthOverride" = ${maxTickets}
+    WHERE "id" = ${companyId}
+  `;
+
+  await prisma.auditLog.create({
+    data: {
+      companyId,
+      entityType: 'billing',
+      action: 'max_tickets_override',
+      actor,
+      actorRole: 'SUPERADMIN',
+      summary: maxTickets !== null
+        ? `Set max tickets/month override to ${maxTickets}`
+        : 'Removed max tickets/month override (using plan default)',
+    },
+  });
+}

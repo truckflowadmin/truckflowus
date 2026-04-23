@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { FEATURES, loadCompanyFeatures } from '@/lib/features';
+import { FEATURES, loadCompanyFeatures, enforceTicketLimit } from '@/lib/features';
 import { extractTicketDataLite } from '@/lib/ai-extract';
 import { Prisma } from '@prisma/client';
 import type { TicketStatus } from '@prisma/client';
@@ -674,6 +674,8 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
     select: { ticketNumber: true },
   });
   let nextNum = (lastTicket?.ticketNumber ?? 1000) + 1;
+
+  await enforceTicketLimit(driver.companyId, items.length);
 
   const results: { ticketId: string; ticketNumber: number; photoUrl: string }[] = [];
 

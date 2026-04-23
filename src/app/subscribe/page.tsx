@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
-import { formatPrice, FEATURE_CATALOG } from '@/lib/features';
+import { formatPrice, FEATURE_CATALOG, getLimitStatus } from '@/lib/features';
 import DismissibleBanner from '@/components/DismissibleBanner';
 import SubscribeButton from '@/components/SubscribeButton';
 
@@ -59,6 +59,17 @@ export default async function SubscribePage({
 
   const hasPlan = !!company.planId;
   const isActive = subscriptionStatus === 'ACTIVE';
+
+  // Get current usage for downgrade warnings
+  let currentDrivers = 0;
+  let currentMonthTickets = 0;
+  try {
+    const limitInfo = await getLimitStatus(companyId);
+    currentDrivers = limitInfo.currentDrivers;
+    currentMonthTickets = limitInfo.currentMonthTickets;
+  } catch { /* columns may not exist yet */ }
+
+  const currentPlanPrice = company.plan?.priceMonthlyCents ?? 0;
 
   // Dispatcher feature highlights per plan
   const dispatcherFeatures = FEATURE_CATALOG.filter((f) => f.side === 'dispatcher');
@@ -125,6 +136,10 @@ export default async function SubscribePage({
             const hasPaypal = !!paypalPlanMap[plan.id];
             const planFeatures = plan.features as string[];
             const highlights = dispatcherFeatures.filter((f) => planFeatures.includes(f.key));
+
+            const isDowngrade = isActive && hasPlan && plan.priceMonthlyCents < currentPlanPrice;
+            const isUpgrade = isActive && hasPlan && plan.priceMonthlyCents > currentPlanPrice;
+            const isFree = plan.priceMonthlyCents === 0;
 
             return (
               <div
@@ -196,8 +211,22 @@ export default async function SubscribePage({
                     <div className="text-center text-sm text-green-700 font-medium py-2">
                       ✓ Active Subscription
                     </div>
+                  ) : isFree && isActive ? (
+                    <div className="text-center text-sm text-steel-400 py-2">
+                      Free plan not available for downgrade
+                    </div>
                   ) : hasPaypal ? (
-                    <SubscribeButton planId={plan.id} planName={plan.name} isCurrent={isCurrent} />
+                    <SubscribeButton
+                      planId={plan.id}
+                      planName={plan.name}
+                      isCurrent={isCurrent}
+                      isChangePlan={isActive && hasPlan}
+                      isDowngrade={isDowngrade}
+                      targetMaxDrivers={plan.maxDrivers}
+                      targetMaxTickets={plan.maxTicketsPerMonth}
+                      currentDrivers={currentDrivers}
+                      currentMonthTickets={currentMonthTickets}
+                    />
                   ) : plan.priceMonthlyCents === 0 ? (
                     <div className="text-center text-sm text-steel-400 py-2">
                       Free plan — contact support

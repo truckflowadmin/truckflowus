@@ -29,6 +29,30 @@ export default async function BillingPage({
 
   if (!company) notFound();
 
+  // Fetch all active plans for the plan change dropdown
+  const allPlansRaw = await prisma.plan.findMany({
+    where: { active: true },
+    orderBy: { sortOrder: 'asc' },
+    select: { id: true, name: true, priceMonthlyCents: true, maxDrivers: true, maxTicketsPerMonth: true },
+  });
+
+  // Fetch limit overrides and usage counts
+  let limitInfo = { maxDriversOverride: null as number | null, maxTicketsPerMonthOverride: null as number | null };
+  try {
+    const limitRows = await prisma.$queryRaw<typeof limitInfo[]>`
+      SELECT "maxDriversOverride", "maxTicketsPerMonthOverride"
+      FROM "Company" WHERE "id" = ${id} LIMIT 1
+    `;
+    if (limitRows[0]) limitInfo = limitRows[0];
+  } catch { /* fields may not exist yet */ }
+
+  const currentDriverCount = await prisma.driver.count({ where: { companyId: id } });
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+  const currentMonthTicketCount = await prisma.ticket.count({
+    where: { companyId: id, createdAt: { gte: monthStart, lt: monthEnd } },
+  });
+
   // Cast to include new billing fields not yet in generated Prisma types
   const c = company as typeof company & {
     nextPaymentDue: Date | null;
@@ -278,6 +302,14 @@ export default async function BillingPage({
         subscriptionPausedAt={c.subscriptionPausedAt?.toISOString() ?? null}
         lastPaymentDate={lastPayment?.createdAt.toISOString() ?? null}
         currentStatus={currentStatus}
+        planMaxDrivers={company.plan?.maxDrivers ?? null}
+        planMaxTicketsPerMonth={company.plan?.maxTicketsPerMonth ?? null}
+        maxDriversOverride={limitInfo.maxDriversOverride}
+        maxTicketsPerMonthOverride={limitInfo.maxTicketsPerMonthOverride}
+        currentDriverCount={currentDriverCount}
+        currentMonthTicketCount={currentMonthTicketCount}
+        currentPlanId={company.planId}
+        allPlans={allPlansRaw}
       />
 
       {/* ── Actions ── */}

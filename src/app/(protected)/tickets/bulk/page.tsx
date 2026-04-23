@@ -4,6 +4,7 @@ import { requireSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { notifyDriverJobAssignment } from '@/lib/sms-notify';
+import { enforceTicketLimit } from '@/lib/features';
 
 async function bulkCreateAction(formData: FormData) {
   'use server';
@@ -56,6 +57,7 @@ async function bulkCreateAction(formData: FormData) {
     });
   }
 
+  await enforceTicketLimit(session.companyId, tickets.length);
   await prisma.ticket.createMany({ data: tickets });
 
   // If assigned to a driver, send notification (respects preferences)

@@ -75,6 +75,9 @@ model Company {
   paypalPayerEmail      String?   // PayPal payer email for reference
   subscriptionStatus    String?   // ACTIVE, PAUSED, SUSPENDED, CANCELLED, EXPIRED
   pendingPlanId         String?   // Plan ID awaiting PayPal payment confirmation
+  // Limit overrides (superadmin per-tenant; null = use plan default)
+  maxDriversOverride       Int?   // override plan maxDrivers for this tenant
+  maxTicketsPerMonthOverride Int?  // override plan maxTicketsPerMonth for this tenant
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

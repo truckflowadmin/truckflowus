@@ -388,6 +388,20 @@ const translations: Record<string, Record<Lang, string>> = {
   'driver.loadsComplete': { en: 'loads complete', es: 'cargas completas' },
   'driver.reviewSubmit': { en: 'Review & Submit', es: 'Revisar y Enviar' },
   'driver.addTicket': { en: 'Add Ticket', es: 'Agregar Boleta' },
+
+  // Limit warning banners
+  'limits.overDriversTitle': { en: 'Driver Limit Exceeded', es: 'Límite de Conductores Excedido' },
+  'limits.overDriversBody': {
+    en: 'Your {plan} plan allows {max} driver(s), but you currently have {current}. You will not be able to add new drivers. Existing drivers can still operate, but new dispatches may be restricted in the future.',
+    es: 'Tu plan {plan} permite {max} conductor(es), pero actualmente tienes {current}. No podrás agregar nuevos conductores. Los conductores existentes pueden seguir operando, pero los nuevos despachos podrían restringirse en el futuro.',
+  },
+  'limits.overTicketsTitle': { en: 'Monthly Ticket Limit Exceeded', es: 'Límite Mensual de Boletas Excedido' },
+  'limits.overTicketsBody': {
+    en: 'Your {plan} plan allows {max} tickets per month, but you have used {current} this month. You will not be able to create new tickets until next month or until you upgrade.',
+    es: 'Tu plan {plan} permite {max} boletas por mes, pero has usado {current} este mes. No podrás crear nuevas boletas hasta el próximo mes o hasta que actualices tu plan.',
+  },
+  'limits.upgradeNow': { en: 'Upgrade Now', es: 'Actualizar Ahora' },
+  'limits.contactSupport': { en: 'Contact Support', es: 'Contactar Soporte' },
 };
 
 // Merge public page translations

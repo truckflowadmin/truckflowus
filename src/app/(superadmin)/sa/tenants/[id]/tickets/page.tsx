@@ -7,6 +7,7 @@ import TenantNav from '@/components/TenantNav';
 import AutoSubmitSelect from '@/components/AutoSubmitSelect';
 import ConfirmButton from '@/components/ConfirmButton';
 import { format } from 'date-fns';
+import { enforceTicketLimit } from '@/lib/features';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +49,7 @@ async function createTicket(formData: FormData) {
   });
   const ticketNumber2 = (last?.ticketNumber ?? 1000) + 1;
 
+  await enforceTicketLimit(companyId);
   const ticket = await prisma.ticket.create({
     data: {
       companyId,

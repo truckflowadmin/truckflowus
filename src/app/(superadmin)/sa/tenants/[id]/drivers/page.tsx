@@ -7,6 +7,7 @@ import TenantNav from '@/components/TenantNav';
 import ConfirmButton from '@/components/ConfirmButton';
 import { format } from 'date-fns';
 import { randomBytes } from 'crypto';
+import { enforceDriverLimit } from '@/lib/features';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,9 @@ async function createDriver(formData: FormData) {
   const truckNumber = String(formData.get('truckNumber') || '').trim() || null;
 
   if (!companyId || !name || !phone) throw new Error('Name and phone are required');
+
+  // Enforce plan driver limit
+  await enforceDriverLimit(companyId);
 
   const driver = await prisma.driver.create({
     data: {

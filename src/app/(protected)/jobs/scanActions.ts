@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import type { QuantityType } from '@prisma/client';
+import { enforceTicketLimit } from '@/lib/features';
 
 interface JobScannedTicketInput {
   jobId: string;
@@ -52,6 +53,8 @@ export async function bulkCreateJobTicketsAction(ticketsJson: string) {
   if (invoicedCount > 0) {
     throw new Error('This job has invoiced tickets and cannot be modified');
   }
+
+  await enforceTicketLimit(session.companyId, tickets.length);
 
   const created: number[] = [];
 

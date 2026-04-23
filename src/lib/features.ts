@@ -639,3 +639,143 @@ export async function getEffectiveFeatures(
     disabled: c.disabledFeatures,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Subscription Limits (max drivers, max tickets/month)
+// ---------------------------------------------------------------------------
+
+export interface EffectiveLimits {
+  maxDrivers: number | null;       // null = unlimited
+  maxTicketsPerMonth: number | null; // null = unlimited
+  /** Whether the limit is from an override vs. the plan */
+  maxDriversSource: 'override' | 'plan';
+  maxTicketsSource: 'override' | 'plan';
+}
+
+/**
+ * Returns the effective max driver and ticket-per-month limits for a company.
+ * Uses per-tenant overrides when set, otherwise falls back to the plan limits.
+ */
+export async function getEffectiveLimits(companyId: string): Promise<EffectiveLimits> {
+  const rows = await prisma.$queryRaw<{
+    maxDriversOverride: number | null;
+    maxTicketsPerMonthOverride: number | null;
+    planMaxDrivers: number | null;
+    planMaxTickets: number | null;
+  }[]>`
+    SELECT
+      c."maxDriversOverride",
+      c."maxTicketsPerMonthOverride",
+      p."maxDrivers" AS "planMaxDrivers",
+      p."maxTicketsPerMonth" AS "planMaxTickets"
+    FROM "Company" c
+    LEFT JOIN "Plan" p ON p."id" = c."planId"
+    WHERE c."id" = ${companyId}
+    LIMIT 1
+  `;
+
+  const r = rows[0];
+  if (!r) {
+    return { maxDrivers: null, maxTicketsPerMonth: null, maxDriversSource: 'plan', maxTicketsSource: 'plan' };
+  }
+
+  return {
+    maxDrivers: r.maxDriversOverride ?? r.planMaxDrivers,
+    maxTicketsPerMonth: r.maxTicketsPerMonthOverride ?? r.planMaxTickets,
+    maxDriversSource: r.maxDriversOverride != null ? 'override' : 'plan',
+    maxTicketsSource: r.maxTicketsPerMonthOverride != null ? 'override' : 'plan',
+  };
+}
+
+/**
+ * Check if adding `count` more drivers would exceed the limit.
+ * Throws an error with a user-friendly message if at capacity.
+ */
+export async function enforceDriverLimit(companyId: string, addCount = 1): Promise<void> {
+  const limits = await getEffectiveLimits(companyId);
+  if (limits.maxDrivers == null) return; // unlimited
+
+  const currentCount = await prisma.driver.count({ where: { companyId } });
+  if (currentCount + addCount > limits.maxDrivers) {
+    throw new Error(
+      `Driver limit reached. Your plan allows ${limits.maxDrivers} driver${limits.maxDrivers !== 1 ? 's' : ''}. ` +
+      `You currently have ${currentCount}. Please upgrade your plan or contact support.`
+    );
+  }
+}
+
+/**
+ * Check if adding `count` more tickets this month would exceed the limit.
+ * Throws an error with a user-friendly message if at capacity.
+ */
+export async function enforceTicketLimit(companyId: string, addCount = 1): Promise<void> {
+  const limits = await getEffectiveLimits(companyId);
+  if (limits.maxTicketsPerMonth == null) return; // unlimited
+
+  // Count tickets created this calendar month
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  const currentCount = await prisma.ticket.count({
+    where: {
+      companyId,
+      createdAt: { gte: monthStart, lt: monthEnd },
+    },
+  });
+
+  if (currentCount + addCount > limits.maxTicketsPerMonth) {
+    throw new Error(
+      `Monthly ticket limit reached. Your plan allows ${limits.maxTicketsPerMonth} ticket${limits.maxTicketsPerMonth !== 1 ? 's' : ''} per month. ` +
+      `You have used ${currentCount} this month. Please upgrade your plan or contact support.`
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Usage vs Limits snapshot (for warning banners)
+// ---------------------------------------------------------------------------
+
+export interface LimitStatus {
+  maxDrivers: number | null;
+  maxTicketsPerMonth: number | null;
+  currentDrivers: number;
+  currentMonthTickets: number;
+  driversOver: boolean;
+  ticketsOver: boolean;
+  planName: string | null;
+}
+
+/**
+ * Returns current usage counts alongside effective limits.
+ * Used by the dispatcher layout to decide whether to show a warning banner.
+ */
+export async function getLimitStatus(companyId: string): Promise<LimitStatus> {
+  const limits = await getEffectiveLimits(companyId);
+
+  const [currentDrivers, planRow] = await Promise.all([
+    prisma.driver.count({ where: { companyId } }),
+    prisma.$queryRaw<{ planName: string | null }[]>`
+      SELECT p."name" AS "planName"
+      FROM "Company" c LEFT JOIN "Plan" p ON p."id" = c."planId"
+      WHERE c."id" = ${companyId} LIMIT 1
+    `,
+  ]);
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const currentMonthTickets = await prisma.ticket.count({
+    where: { companyId, createdAt: { gte: monthStart, lt: monthEnd } },
+  });
+
+  return {
+    maxDrivers: limits.maxDrivers,
+    maxTicketsPerMonth: limits.maxTicketsPerMonth,
+    currentDrivers,
+    currentMonthTickets,
+    driversOver: limits.maxDrivers != null && currentDrivers > limits.maxDrivers,
+    ticketsOver: limits.maxTicketsPerMonth != null && currentMonthTickets > limits.maxTicketsPerMonth,
+    planName: planRow[0]?.planName ?? null,
+  };
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyWebhookSignature } from '@/lib/paypal';
+import { verifyWebhookSignature, getSubscription } from '@/lib/paypal';
+import { sendBillingEmail } from '@/lib/billing-emails';
 
 /**
  * POST /api/paypal/webhook
@@ -9,7 +10,8 @@ import { verifyWebhookSignature } from '@/lib/paypal';
  *   - BILLING.SUBSCRIPTION.SUSPENDED   → mark paused, start grace period
  *   - BILLING.SUBSCRIPTION.CANCELLED   → mark cancelled, suspend account
  *   - BILLING.SUBSCRIPTION.EXPIRED     → mark expired, suspend account
- *   - PAYMENT.SALE.COMPLETED           → payment received, clear overdue flags
+ *   - BILLING.SUBSCRIPTION.RENEWED     → update nextPaymentDue
+ *   - PAYMENT.SALE.COMPLETED           → payment received, update nextPaymentDue
  *   - BILLING.SUBSCRIPTION.PAYMENT.FAILED → payment failed, start grace period
  */
 export async function POST(req: Request) {
@@ -61,13 +63,25 @@ export async function POST(req: Request) {
   try {
     switch (eventType) {
       case 'BILLING.SUBSCRIPTION.ACTIVATED': {
+        // Fetch the subscription to get next billing date
+        let nextBilling: Date | null = null;
+        try {
+          if (subscriptionId) {
+            const sub = await getSubscription(subscriptionId);
+            if (sub.billing_info?.next_billing_time) {
+              nextBilling = new Date(sub.billing_info.next_billing_time);
+            }
+          }
+        } catch { /* non-critical */ }
+
         await prisma.$executeRaw`
           UPDATE "Company"
           SET "subscriptionStatus" = 'ACTIVE',
               "suspended" = false,
               "suspendedAt" = NULL,
               "subscriptionPausedAt" = NULL,
-              "subscriptionResumedAt" = ${now}
+              "subscriptionResumedAt" = ${now},
+              "nextPaymentDue" = ${nextBilling}
           WHERE "id" = ${companyId}
         `;
         await logEvent(companyId, 'ACTIVE', 'Subscription activated via PayPal');
@@ -83,9 +97,9 @@ export async function POST(req: Request) {
           WHERE "id" = ${companyId}
         `;
         await logEvent(companyId, 'SUSPENDED', 'Subscription suspended by PayPal (payment issue)');
-        // Grace period — don't suspend the account immediately
-        // The auto-suspend check will handle it after gracePeriodDays
         await scheduleGracePeriodSuspend(companyId);
+        // Notify tenant
+        await sendBillingEmail(companyId, 'payment_failed');
         break;
       }
 
@@ -95,10 +109,12 @@ export async function POST(req: Request) {
           SET "subscriptionStatus" = 'CANCELLED',
               "suspended" = true,
               "suspendedAt" = ${now},
-              "subscriptionPausedAt" = ${now}
+              "subscriptionPausedAt" = ${now},
+              "nextPaymentDue" = NULL
           WHERE "id" = ${companyId}
         `;
         await logEvent(companyId, 'CANCELLED', 'Subscription cancelled');
+        await sendBillingEmail(companyId, 'account_suspended');
         break;
       }
 
@@ -108,10 +124,34 @@ export async function POST(req: Request) {
           SET "subscriptionStatus" = 'EXPIRED',
               "suspended" = true,
               "suspendedAt" = ${now},
-              "subscriptionPausedAt" = ${now}
+              "subscriptionPausedAt" = ${now},
+              "nextPaymentDue" = NULL
           WHERE "id" = ${companyId}
         `;
         await logEvent(companyId, 'EXPIRED', 'Subscription expired');
+        await sendBillingEmail(companyId, 'account_suspended');
+        break;
+      }
+
+      case 'BILLING.SUBSCRIPTION.RENEWED': {
+        // Subscription renewed — fetch updated next billing date
+        let nextBilling: Date | null = null;
+        try {
+          if (subscriptionId) {
+            const sub = await getSubscription(subscriptionId);
+            if (sub.billing_info?.next_billing_time) {
+              nextBilling = new Date(sub.billing_info.next_billing_time);
+            }
+          }
+        } catch { /* non-critical */ }
+
+        if (nextBilling) {
+          await prisma.$executeRaw`
+            UPDATE "Company"
+            SET "nextPaymentDue" = ${nextBilling}
+            WHERE "id" = ${companyId}
+          `;
+        }
         break;
       }
 
@@ -119,6 +159,20 @@ export async function POST(req: Request) {
         // Successful payment — clear any suspension or pause
         const amountValue = resource?.amount?.total || resource?.amount?.value || '0';
         const amountCents = Math.round(parseFloat(amountValue) * 100);
+        const transactionId = resource?.id || null;
+        const payerEmail = resource?.payer?.email_address || null;
+
+        // Fetch updated next billing date from the subscription
+        let nextBilling: Date | null = null;
+        const billingSubId = resource?.billing_agreement_id || subscriptionId;
+        try {
+          if (billingSubId) {
+            const sub = await getSubscription(billingSubId);
+            if (sub.billing_info?.next_billing_time) {
+              nextBilling = new Date(sub.billing_info.next_billing_time);
+            }
+          }
+        } catch { /* non-critical */ }
 
         await prisma.$executeRaw`
           UPDATE "Company"
@@ -127,10 +181,24 @@ export async function POST(req: Request) {
               "suspendedAt" = NULL,
               "subscriptionPausedAt" = NULL,
               "subscriptionResumedAt" = ${now},
-              "nextPaymentDue" = NULL
+              "nextPaymentDue" = ${nextBilling}
           WHERE "id" = ${companyId}
         `;
-        await logEvent(companyId, 'ACTIVE', `Payment received: $${(amountCents / 100).toFixed(2)}`, amountCents);
+
+        await logEvent(
+          companyId,
+          'ACTIVE',
+          `Payment received: $${(amountCents / 100).toFixed(2)} (PayPal txn: ${transactionId || 'N/A'})`,
+          amountCents,
+          transactionId,
+        );
+
+        // Notify tenant of successful payment
+        await sendBillingEmail(companyId, 'payment_received', {
+          amountCents,
+          transactionId,
+          nextPaymentDue: nextBilling,
+        });
         break;
       }
 
@@ -144,6 +212,8 @@ export async function POST(req: Request) {
         `;
         await logEvent(companyId, 'SUSPENDED', 'Payment failed — grace period started');
         await scheduleGracePeriodSuspend(companyId);
+        // Notify tenant
+        await sendBillingEmail(companyId, 'payment_failed');
         break;
       }
 
@@ -161,15 +231,25 @@ export async function POST(req: Request) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function logEvent(companyId: string, status: string, description: string, amountCents = 0) {
+async function logEvent(
+  companyId: string,
+  status: string,
+  description: string,
+  amountCents = 0,
+  transactionId?: string | null,
+) {
   try {
+    const note = transactionId ? `PayPal txn: ${transactionId}` : undefined;
     await prisma.billingEvent.create({
       data: {
         companyId,
+        type: amountCents > 0 ? 'PAYMENT' : 'PLAN_CHANGE',
         subscriptionStatus: status as any,
         paymentMethod: 'PayPal',
         description,
         amountCents,
+        actor: 'PayPal Webhook',
+        note,
       } as any,
     });
   } catch (err) {
@@ -179,7 +259,7 @@ async function logEvent(companyId: string, status: string, description: string, 
 
 /**
  * After a payment failure, check grace period and auto-suspend if overdue.
- * This runs inline for now — a cron job would be better for production.
+ * This runs inline for now — the layout also checks on every page load.
  */
 async function scheduleGracePeriodSuspend(companyId: string) {
   try {
@@ -208,8 +288,8 @@ async function scheduleGracePeriodSuspend(companyId: string) {
         WHERE "id" = ${companyId}
       `;
       await logEvent(companyId, 'SUSPENDED', `Auto-suspended: payment overdue past ${co.gracePeriodDays}-day grace period`);
+      await sendBillingEmail(companyId, 'account_suspended');
     }
-    // If grace period hasn't expired yet, the next webhook event or a cron check will handle it
   } catch (err) {
     console.error('[paypal/webhook] Grace period check error:', err);
   }

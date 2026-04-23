@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import type { QuantityType } from '@prisma/client';
 import { sendSms } from '@/lib/sms';
 import { notifyDriverJobAssignment, notifyDriverJobStatusChange, notifyDriversNewJobAvailable } from '@/lib/sms-notify';
+import { enforceTicketLimit } from '@/lib/features';
 
 /* ── Helper: check if a job has any invoiced tickets ── */
 async function jobHasInvoicedTickets(jobId: string): Promise<boolean> {
@@ -549,6 +550,7 @@ export async function recordLoadAction(jobId: string) {
   const truckNumber = driverTruck || null;
 
   // Create ticket for this load
+  await enforceTicketLimit(companyId);
   const ticket = await prisma.ticket.create({
     data: {
       companyId,

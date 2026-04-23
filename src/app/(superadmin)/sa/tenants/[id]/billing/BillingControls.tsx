@@ -12,6 +12,9 @@ import {
   logPaymentReminderAction,
   pauseSubscriptionAction,
   resumeSubscriptionAction,
+  setMaxDriversOverrideAction,
+  setMaxTicketsOverrideAction,
+  changePlanAction,
 } from './actions';
 
 interface BillingControlsProps {
@@ -26,6 +29,16 @@ interface BillingControlsProps {
   subscriptionPausedAt: string | null;
   lastPaymentDate: string | null;
   currentStatus: string;
+  // Limit overrides
+  planMaxDrivers: number | null;
+  planMaxTicketsPerMonth: number | null;
+  maxDriversOverride: number | null;
+  maxTicketsPerMonthOverride: number | null;
+  currentDriverCount: number;
+  currentMonthTicketCount: number;
+  // Plan change
+  currentPlanId: string | null;
+  allPlans: { id: string; name: string; priceMonthlyCents: number; maxDrivers: number | null; maxTicketsPerMonth: number | null }[];
 }
 
 export function BillingControls({
@@ -40,6 +53,14 @@ export function BillingControls({
   subscriptionPausedAt,
   lastPaymentDate,
   currentStatus,
+  planMaxDrivers,
+  planMaxTicketsPerMonth,
+  maxDriversOverride,
+  maxTicketsPerMonthOverride,
+  currentDriverCount,
+  currentMonthTicketCount,
+  currentPlanId,
+  allPlans,
 }: BillingControlsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -63,6 +84,12 @@ export function BillingControls({
   const [suspendNote, setSuspendNote] = useState('');
   const [showReactivateConfirm, setShowReactivateConfirm] = useState(false);
   const [reactivateNote, setReactivateNote] = useState('');
+  // Limit overrides
+  const [driverLimit, setDriverLimit] = useState(maxDriversOverride !== null ? String(maxDriversOverride) : '');
+  const [ticketLimit, setTicketLimit] = useState(maxTicketsPerMonthOverride !== null ? String(maxTicketsPerMonthOverride) : '');
+  // Plan change
+  const [selectedPlanId, setSelectedPlanId] = useState(currentPlanId || '');
+  const [showPlanConfirm, setShowPlanConfirm] = useState(false);
 
   function flash(msg: string, type: 'success' | 'error' = 'success') {
     setMessage(msg);
@@ -218,6 +245,75 @@ export function BillingControls({
     });
   }
 
+  async function handleSetDriverLimit() {
+    const val = driverLimit.trim() === '' ? null : parseInt(driverLimit, 10);
+    if (val !== null && (isNaN(val) || val < 0)) {
+      flash('Enter a valid number or leave blank for plan default', 'error');
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await setMaxDriversOverrideAction(companyId, val, actorEmail);
+        flash(val !== null ? `Max drivers override set to ${val}` : 'Max drivers override removed');
+        router.refresh();
+      } catch {
+        flash('Failed to update driver limit', 'error');
+      }
+    });
+  }
+
+  async function handleSetTicketLimit() {
+    const val = ticketLimit.trim() === '' ? null : parseInt(ticketLimit, 10);
+    if (val !== null && (isNaN(val) || val < 0)) {
+      flash('Enter a valid number or leave blank for plan default', 'error');
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await setMaxTicketsOverrideAction(companyId, val, actorEmail);
+        flash(val !== null ? `Max tickets/month override set to ${val}` : 'Max tickets/month override removed');
+        router.refresh();
+      } catch {
+        flash('Failed to update ticket limit', 'error');
+      }
+    });
+  }
+
+  async function handleChangePlan() {
+    if (!selectedPlanId || selectedPlanId === currentPlanId) {
+      flash('Select a different plan', 'error');
+      return;
+    }
+    const target = allPlans.find(p => p.id === selectedPlanId);
+    if (!target) return;
+    // Block Free plan
+    if (target.priceMonthlyCents === 0) {
+      flash('Downgrading to the Free plan is not permitted', 'error');
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await changePlanAction(companyId, selectedPlanId, actorEmail, true);
+        flash(`Plan changed to ${target.name}`);
+        setShowPlanConfirm(false);
+        router.refresh();
+      } catch (err: any) {
+        flash(err.message || 'Failed to change plan', 'error');
+      }
+    });
+  }
+
+  const selectedPlan = allPlans.find(p => p.id === selectedPlanId);
+  const isDowngrade = selectedPlan && currentPlanId
+    ? selectedPlan.priceMonthlyCents < (allPlans.find(p => p.id === currentPlanId)?.priceMonthlyCents ?? 0)
+    : false;
+  const isFreeSelected = selectedPlan?.priceMonthlyCents === 0;
+  const downgradeDriverImpact = isDowngrade && selectedPlan?.maxDrivers != null && currentDriverCount > selectedPlan.maxDrivers;
+  const downgradeTicketImpact = isDowngrade && selectedPlan?.maxTicketsPerMonth != null && currentMonthTicketCount > selectedPlan.maxTicketsPerMonth;
+
+  const effectiveDriverLimit = maxDriversOverride ?? planMaxDrivers;
+  const effectiveTicketLimit = maxTicketsPerMonthOverride ?? planMaxTicketsPerMonth;
+
   return (
     <div className="panel-sa space-y-5">
       <h2 className="font-semibold text-white">Tenant Controls</h2>
@@ -367,6 +463,177 @@ export function BillingControls({
         <p className="text-xs text-purple-500">
           When enabled, the account will be automatically suspended if payment is not received within {gracePeriodDays} day{gracePeriodDays !== 1 ? 's' : ''} of the due date.
         </p>
+      </div>
+
+      {/* ── Plan Change ── */}
+      <div className="border border-purple-800/60 rounded-lg p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-purple-300">Change Plan</h3>
+        <p className="text-xs text-purple-500">
+          Change this tenant&apos;s subscription plan. Free plan is not available as a downgrade target.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs text-purple-400 mb-1">Target Plan</label>
+            <select
+              value={selectedPlanId}
+              onChange={(e) => { setSelectedPlanId(e.target.value); setShowPlanConfirm(false); }}
+              className="input-sa"
+            >
+              <option value="">Select a plan...</option>
+              {allPlans.filter(p => p.id !== currentPlanId).map(p => (
+                <option key={p.id} value={p.id} disabled={p.priceMonthlyCents === 0}>
+                  {p.name} — ${(p.priceMonthlyCents / 100).toFixed(2)}/mo
+                  {p.priceMonthlyCents === 0 ? ' (not available)' : ''}
+                  {p.maxDrivers != null ? ` · ${p.maxDrivers} drivers` : ' · Unlimited'}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedPlanId && selectedPlanId !== currentPlanId && !isFreeSelected && (
+            <button
+              onClick={() => setShowPlanConfirm(true)}
+              disabled={isPending}
+              className={`text-sm ${isDowngrade ? 'btn-sa-secondary text-amber-400' : 'btn-sa-primary'}`}
+            >
+              {isDowngrade ? 'Downgrade Plan' : 'Upgrade Plan'}
+            </button>
+          )}
+          {isFreeSelected && (
+            <span className="text-xs text-red-400">Free plan cannot be selected for downgrade</span>
+          )}
+        </div>
+
+        {/* Downgrade impact warning */}
+        {showPlanConfirm && isDowngrade && selectedPlan && (
+          <div className="border border-amber-700 rounded p-3 space-y-2 bg-amber-900/20">
+            <p className="text-sm text-amber-200 font-medium">Downgrade Impact Warning</p>
+            {downgradeDriverImpact && selectedPlan.maxDrivers != null && (
+              <p className="text-xs text-amber-300">
+                This tenant has <strong>{currentDriverCount}</strong> drivers but the {selectedPlan.name} plan only allows <strong>{selectedPlan.maxDrivers}</strong>. They won&apos;t be able to add new drivers.
+              </p>
+            )}
+            {downgradeTicketImpact && selectedPlan.maxTicketsPerMonth != null && (
+              <p className="text-xs text-amber-300">
+                This tenant has used <strong>{currentMonthTicketCount}</strong> tickets this month but the {selectedPlan.name} plan only allows <strong>{selectedPlan.maxTicketsPerMonth}</strong>/month. They won&apos;t be able to create new tickets until next month.
+              </p>
+            )}
+            <p className="text-xs text-purple-400">
+              Existing drivers and data will not be deleted. Features not included in the new plan will become unavailable.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={handleChangePlan} disabled={isPending} className="btn-sa-primary bg-amber-700 hover:bg-amber-600 text-sm">
+                {isPending ? 'Changing...' : 'Confirm Downgrade'}
+              </button>
+              <button onClick={() => setShowPlanConfirm(false)} className="btn-sa-secondary text-sm">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Upgrade confirmation */}
+        {showPlanConfirm && !isDowngrade && selectedPlan && (
+          <div className="border border-green-700 rounded p-3 space-y-2 bg-green-900/20">
+            <p className="text-sm text-green-200">
+              Upgrade <strong>{companyName}</strong> to <strong>{selectedPlan.name}</strong> (${(selectedPlan.priceMonthlyCents / 100).toFixed(2)}/mo)?
+            </p>
+            <p className="text-xs text-purple-400">
+              New plan features will be available immediately. Limits: {selectedPlan.maxDrivers ?? 'Unlimited'} drivers, {selectedPlan.maxTicketsPerMonth ?? 'Unlimited'} tickets/mo.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={handleChangePlan} disabled={isPending} className="btn-sa-primary text-sm">
+                {isPending ? 'Changing...' : 'Confirm Upgrade'}
+              </button>
+              <button onClick={() => setShowPlanConfirm(false)} className="btn-sa-secondary text-sm">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Plan Limit Overrides ── */}
+      <div className="border border-purple-800/60 rounded-lg p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-purple-300">Plan Limit Overrides</h3>
+        <p className="text-xs text-purple-500">
+          Override the plan&apos;s default limits for this tenant. Leave blank to use the plan default.
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Max Drivers */}
+          <div className="space-y-2">
+            <label className="block text-xs text-purple-400">Max Drivers</label>
+            <div className="flex items-end gap-2">
+              <input
+                type="number"
+                min="0"
+                value={driverLimit}
+                onChange={(e) => setDriverLimit(e.target.value)}
+                placeholder={planMaxDrivers !== null ? `Plan: ${planMaxDrivers}` : 'Unlimited'}
+                className="input-sa w-28"
+              />
+              <button onClick={handleSetDriverLimit} disabled={isPending} className="btn-sa-primary text-sm">
+                Set
+              </button>
+              {maxDriversOverride !== null && (
+                <button
+                  onClick={() => { setDriverLimit(''); startTransition(async () => {
+                    try { await setMaxDriversOverrideAction(companyId, null, actorEmail); flash('Driver override removed'); router.refresh(); }
+                    catch { flash('Failed', 'error'); }
+                  }); }}
+                  className="btn-sa-secondary text-sm text-red-400"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-purple-400">
+              Plan default: <strong>{planMaxDrivers ?? 'Unlimited'}</strong>
+              {maxDriversOverride !== null && <> · Override: <strong className="text-yellow-400">{maxDriversOverride}</strong></>}
+              {' · '}Current: <strong className={
+                effectiveDriverLimit !== null && currentDriverCount >= effectiveDriverLimit ? 'text-red-400' : 'text-green-400'
+              }>{currentDriverCount}</strong>
+              {effectiveDriverLimit !== null && <> / {effectiveDriverLimit}</>}
+            </p>
+          </div>
+
+          {/* Max Tickets/Month */}
+          <div className="space-y-2">
+            <label className="block text-xs text-purple-400">Max Tickets / Month</label>
+            <div className="flex items-end gap-2">
+              <input
+                type="number"
+                min="0"
+                value={ticketLimit}
+                onChange={(e) => setTicketLimit(e.target.value)}
+                placeholder={planMaxTicketsPerMonth !== null ? `Plan: ${planMaxTicketsPerMonth}` : 'Unlimited'}
+                className="input-sa w-28"
+              />
+              <button onClick={handleSetTicketLimit} disabled={isPending} className="btn-sa-primary text-sm">
+                Set
+              </button>
+              {maxTicketsPerMonthOverride !== null && (
+                <button
+                  onClick={() => { setTicketLimit(''); startTransition(async () => {
+                    try { await setMaxTicketsOverrideAction(companyId, null, actorEmail); flash('Ticket override removed'); router.refresh(); }
+                    catch { flash('Failed', 'error'); }
+                  }); }}
+                  className="btn-sa-secondary text-sm text-red-400"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-purple-400">
+              Plan default: <strong>{planMaxTicketsPerMonth ?? 'Unlimited'}</strong>
+              {maxTicketsPerMonthOverride !== null && <> · Override: <strong className="text-yellow-400">{maxTicketsPerMonthOverride}</strong></>}
+              {' · '}This month: <strong className={
+                effectiveTicketLimit !== null && currentMonthTicketCount >= effectiveTicketLimit ? 'text-red-400' : 'text-green-400'
+              }>{currentMonthTicketCount}</strong>
+              {effectiveTicketLimit !== null && <> / {effectiveTicketLimit}</>}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* ── Pause / Resume Subscription ── */}

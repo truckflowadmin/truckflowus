@@ -4,6 +4,7 @@ import { requireSession } from '@/lib/auth';
 import { getServerLang, t } from '@/lib/i18n';
 import { revalidatePath } from 'next/cache';
 import { randomBytes } from 'crypto';
+import { enforceDriverLimit } from '@/lib/features';
 import DriversPageTabs from './DriversPageTabs';
 import TimeOffSection from './TimeOffSection';
 import PayrollSection from './PayrollSection';
@@ -34,6 +35,9 @@ async function createDriverAction(formData: FormData) {
     if (!truck) throw new Error('Selected truck not found');
     truckNumber = truck.truckNumber;
   }
+
+  // Enforce plan driver limit
+  await enforceDriverLimit(session.companyId);
 
   const workerType = String(formData.get('workerType') || 'EMPLOYEE') as 'EMPLOYEE' | 'CONTRACTOR';
   const payType = String(formData.get('payType') || 'HOURLY') as 'HOURLY' | 'SALARY' | 'PERCENTAGE';
