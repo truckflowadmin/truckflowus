@@ -36,7 +36,21 @@ export default async function BillingPage({
     autoSuspendOnOverdue: boolean;
     subscriptionPausedAt: Date | null;
     subscriptionResumedAt: Date | null;
+    paypalSubscriptionId: string | null;
+    paypalPlanId: string | null;
+    paypalPayerEmail: string | null;
+    subscriptionStatus: string | null;
   };
+
+  // Fetch PayPal fields via raw query (may not be in generated types)
+  let paypalInfo = { paypalSubscriptionId: null as string | null, paypalPlanId: null as string | null, paypalPayerEmail: null as string | null, subscriptionStatus: null as string | null };
+  try {
+    const ppRows = await prisma.$queryRaw<typeof paypalInfo[]>`
+      SELECT "paypalSubscriptionId", "paypalPlanId", "paypalPayerEmail", "subscriptionStatus"
+      FROM "Company" WHERE "id" = ${id} LIMIT 1
+    `;
+    if (ppRows[0]) paypalInfo = ppRows[0];
+  } catch { /* fields may not exist yet */ }
 
   const now = new Date();
 
@@ -209,6 +223,48 @@ export default async function BillingPage({
         </div>
       </div>
 
+      {/* ── PayPal Subscription ── */}
+      <div className="panel-sa">
+        <h2 className="font-semibold text-white mb-4">PayPal Subscription</h2>
+        <div className="grid md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-purple-400">PayPal Status:</span>{' '}
+            <span className={`font-medium ${
+              paypalInfo.subscriptionStatus === 'ACTIVE' ? 'text-green-400'
+                : paypalInfo.subscriptionStatus === 'SUSPENDED' || paypalInfo.subscriptionStatus === 'PAYMENT_FAILED' ? 'text-red-400'
+                : paypalInfo.subscriptionStatus === 'CANCELLED' || paypalInfo.subscriptionStatus === 'EXPIRED' ? 'text-steel-400'
+                : paypalInfo.subscriptionStatus === 'APPROVAL_PENDING' ? 'text-yellow-400'
+                : 'text-steel-500'
+            }`}>
+              {paypalInfo.subscriptionStatus?.replace('_', ' ') || 'Not Connected'}
+            </span>
+          </div>
+          <div>
+            <span className="text-purple-400">Subscription ID:</span>{' '}
+            <span className="text-white font-mono text-xs">
+              {paypalInfo.paypalSubscriptionId || '—'}
+            </span>
+          </div>
+          <div>
+            <span className="text-purple-400">PayPal Plan ID:</span>{' '}
+            <span className="text-white font-mono text-xs">
+              {paypalInfo.paypalPlanId || '—'}
+            </span>
+          </div>
+          <div>
+            <span className="text-purple-400">Payer Email:</span>{' '}
+            <span className="text-white">
+              {paypalInfo.paypalPayerEmail || '—'}
+            </span>
+          </div>
+        </div>
+        {!paypalInfo.paypalSubscriptionId && (
+          <p className="text-purple-500 text-xs mt-3">
+            This tenant has not set up PayPal payments. The dispatcher can subscribe from their Settings page.
+          </p>
+        )}
+      </div>
+
       {/* ── Tenant Controls ── */}
       <BillingControls
         companyId={company.id}
@@ -345,6 +401,10 @@ function StatusBadge({ status }: { status: string }) {
     PAST_DUE: 'text-red-400',
     CANCELLED: 'text-red-400',
     PAUSED: 'text-yellow-400',
+    SUSPENDED: 'text-orange-400',
+    PAYMENT_FAILED: 'text-red-400',
+    EXPIRED: 'text-steel-400',
+    APPROVAL_PENDING: 'text-yellow-400',
   };
   return (
     <span className={`text-sm font-medium ${colors[status] ?? 'text-steel-400'}`}>

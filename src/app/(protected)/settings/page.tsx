@@ -7,6 +7,7 @@ import { FEATURE_CATALOG, featuresBySide, getEffectiveFeatures, formatPrice } fr
 import { SECURITY_QUESTIONS, hashAnswer } from '@/lib/driver-auth';
 import { audit } from '@/lib/audit';
 import CompanyLogoUpload from '@/components/CompanyLogoUpload';
+import BillingSection from '@/components/BillingSection';
 
 async function saveCompanyAction(formData: FormData) {
   'use server';
@@ -211,7 +212,7 @@ export default async function SettingsPage({
 }) {
   const session = await requireSession();
   const lang = getServerLang();
-  const [company, users, plan, currentUser] = await Promise.all([
+  const [company, users, plan, currentUser, billingRows] = await Promise.all([
     prisma.company.findUnique({ where: { id: session.companyId } }),
     prisma.user.findMany({ where: { companyId: session.companyId }, orderBy: { createdAt: 'asc' } }),
     prisma.company.findUnique({
@@ -225,8 +226,18 @@ export default async function SettingsPage({
         smsEnabled: true, smsDriverIssue: true, smsDriverCompleted: true, smsNewBrokerJob: true, phone: true,
       },
     }),
+    prisma.$queryRaw<{
+      subscriptionStatus: string | null;
+      paypalPayerEmail: string | null;
+      paypalSubscriptionId: string | null;
+      nextPaymentDue: Date | null;
+    }[]>`
+      SELECT "subscriptionStatus", "paypalPayerEmail", "paypalSubscriptionId", "nextPaymentDue"
+      FROM "Company" WHERE "id" = ${session.companyId} LIMIT 1
+    `.catch(() => []),
   ]);
   if (!company) return null;
+  const billing = billingRows[0] ?? { subscriptionStatus: null, paypalPayerEmail: null, paypalSubscriptionId: null, nextPaymentDue: null };
   const hasSecurityQuestions = !!(currentUser?.securityQ1 && currentUser?.securityQ2 && currentUser?.securityQ3);
 
   const { features: effectiveFeatures } = await getEffectiveFeatures(session.companyId);
@@ -308,6 +319,17 @@ export default async function SettingsPage({
           </p>
         )}
       </section>
+
+      {/* Billing & Subscription */}
+      <BillingSection
+        planName={plan?.name ?? null}
+        planPrice={plan ? formatPrice(plan.priceMonthlyCents) : null}
+        subscriptionStatus={billing.subscriptionStatus}
+        paypalPayerEmail={billing.paypalPayerEmail}
+        paypalSubscriptionId={billing.paypalSubscriptionId}
+        planId={plan?.id ?? null}
+        nextPaymentDue={billing.nextPaymentDue ? billing.nextPaymentDue.toISOString() : null}
+      />
 
       {/* Company Info */}
       <form action={saveCompanyAction} className="panel p-6 space-y-4 mb-6">

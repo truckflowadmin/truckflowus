@@ -69,6 +69,11 @@ model Company {
   autoSuspendOnOverdue Boolean   @default(false) // auto-suspend if payment overdue past grace
   subscriptionPausedAt DateTime? // when subscription was paused (null = not paused)
   subscriptionResumedAt DateTime? // when subscription was last resumed
+  // PayPal integration
+  paypalSubscriptionId  String?   // PayPal subscription ID (e.g. I-XXXXX)
+  paypalPlanId          String?   // PayPal plan ID linked to this subscription
+  paypalPayerEmail      String?   // PayPal payer email for reference
+  subscriptionStatus    String?   // ACTIVE, PAUSED, SUSPENDED, CANCELLED, EXPIRED
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -103,6 +108,7 @@ model Plan {
   maxDrivers         Int?     // null = unlimited
   maxTicketsPerMonth Int?     // null = unlimited
   features           String[] // e.g. ["bulk_tickets", "reports"]
+  paypalPlanId       String?  // PayPal plan ID for this tier (set by superadmin)
   sortOrder          Int      @default(0)
   active             Boolean  @default(true)
   createdAt          DateTime @default(now())
