@@ -74,6 +74,7 @@ model Company {
   paypalPlanId          String?   // PayPal plan ID linked to this subscription
   paypalPayerEmail      String?   // PayPal payer email for reference
   subscriptionStatus    String?   // ACTIVE, PAUSED, SUSPENDED, CANCELLED, EXPIRED
+  pendingPlanId         String?   // Plan ID awaiting PayPal payment confirmation
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

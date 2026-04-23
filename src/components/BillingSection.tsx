@@ -139,22 +139,17 @@ export default function BillingSection({
 
       {/* Actions */}
       <div className="border-t border-steel-200 pt-4 flex items-center gap-3">
-        {/* Show Subscribe button when no active subscription */}
+        {/* Show link to subscribe page when no active subscription */}
         {(!subscriptionStatus || isCancelled || isExpired) && (
-          <button
-            onClick={handleSubscribe}
-            disabled={loading}
+          <a
+            href="/subscribe"
             className="btn-accent flex items-center gap-2"
           >
-            {loading ? (
-              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797H9.667c-.535 0-.988.393-1.07.927l-.96 6.079z" />
-              </svg>
-            )}
-            Subscribe with PayPal
-          </button>
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797H9.667c-.535 0-.988.393-1.07.927l-.96 6.079z" />
+            </svg>
+            Choose a Plan
+          </a>
         )}
 
         {/* Show Cancel button when subscription is active */}

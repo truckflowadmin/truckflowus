@@ -51,12 +51,13 @@ export async function POST(req: Request) {
       email: company?.email || session.email,
     });
 
-    // Store the pending subscription ID
+    // Store the pending subscription ID and the target plan for auto-assign on callback
     await prisma.$executeRaw`
       UPDATE "Company"
       SET "paypalSubscriptionId" = ${subscriptionId},
           "paypalPlanId" = ${paypalPlanId},
-          "subscriptionStatus" = 'APPROVAL_PENDING'
+          "subscriptionStatus" = 'APPROVAL_PENDING',
+          "pendingPlanId" = ${planId}
       WHERE "id" = ${session.companyId}
     `;
 

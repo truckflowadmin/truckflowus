@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { getSession, requireSession } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
 import { formatPrice, FEATURE_CATALOG } from '@/lib/features';
 import DismissibleBanner from '@/components/DismissibleBanner';
+import SubscribeButton from '@/components/SubscribeButton';
 
 export const metadata: Metadata = {
   title: 'Plans & Pricing — Dump Truck Software',
@@ -15,50 +15,16 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-async function submitRequest(formData: FormData) {
-  'use server';
-  const session = await requireSession();
-  const planId = String(formData.get('planId') || '');
-  const message = String(formData.get('message') || '').trim() || null;
-
-  if (!planId) throw new Error('Plan required');
-
-  // Check company doesn't already have this plan
-  const company = await prisma.company.findUnique({ where: { id: session.companyId }, select: { planId: true } });
-  if (company?.planId === planId) {
-    redirect('/subscribe?error=already_subscribed');
-  }
-
-  // Check no pending request already exists
-  const existing = await prisma.subscriptionRequest.findFirst({
-    where: { companyId: session.companyId, status: 'PENDING' },
-  });
-  if (existing) {
-    redirect('/subscribe?error=pending');
-  }
-
-  await prisma.subscriptionRequest.create({
-    data: {
-      companyId: session.companyId,
-      planId,
-      message,
-    },
-  });
-
-  revalidatePath('/subscribe');
-  redirect('/subscribe?submitted=1');
-}
-
 export default async function SubscribePage({
   searchParams,
 }: {
-  searchParams: { submitted?: string; error?: string };
+  searchParams: { billing?: string };
 }) {
   const session = await getSession();
   if (!session || !session.companyId) redirect('/login');
   const companyId = session.companyId;
 
-  const [company, plans, pendingRequest] = await Promise.all([
+  const [company, plans] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
       include: { plan: true },
@@ -67,24 +33,34 @@ export default async function SubscribePage({
       where: { active: true },
       orderBy: { sortOrder: 'asc' },
     }),
-    prisma.subscriptionRequest.findFirst({
-      where: { companyId: session.companyId, status: 'PENDING' },
-      include: { plan: true },
-    }),
   ]);
 
   if (!company) redirect('/login');
 
-  // Check for most recent rejected request
-  const lastRejected = await prisma.subscriptionRequest.findFirst({
-    where: { companyId: companyId, status: 'REJECTED' },
-    orderBy: { updatedAt: 'desc' },
-    include: { plan: true },
-  });
+  // Check which plans have PayPal configured
+  let paypalPlanMap: Record<string, string> = {};
+  try {
+    const rows = await prisma.$queryRaw<{ id: string; paypalPlanId: string | null }[]>`
+      SELECT "id", "paypalPlanId" FROM "Plan" WHERE "active" = true
+    `;
+    for (const r of rows) {
+      if (r.paypalPlanId) paypalPlanMap[r.id] = r.paypalPlanId;
+    }
+  } catch { /* fields may not exist yet */ }
+
+  // Check subscription status
+  let subscriptionStatus: string | null = null;
+  try {
+    const rows = await prisma.$queryRaw<{ subscriptionStatus: string | null }[]>`
+      SELECT "subscriptionStatus" FROM "Company" WHERE "id" = ${companyId} LIMIT 1
+    `;
+    subscriptionStatus = rows[0]?.subscriptionStatus ?? null;
+  } catch { }
 
   const hasPlan = !!company.planId;
+  const isActive = subscriptionStatus === 'ACTIVE';
 
-  // Dispatcher feature highlights per plan (non-view, non-driver features)
+  // Dispatcher feature highlights per plan
   const dispatcherFeatures = FEATURE_CATALOG.filter((f) => f.side === 'dispatcher');
 
   return (
@@ -101,60 +77,44 @@ export default async function SubscribePage({
               <p className="text-steel-400 text-sm">{company.name}</p>
             </div>
           </div>
-          {!hasPlan && (
+          {!hasPlan ? (
             <p className="text-steel-300 text-sm max-w-xl">
-              Select a subscription plan to get started. Your request will be reviewed
-              by our team and activated shortly.
+              Select a subscription plan and pay with PayPal to get started immediately.
             </p>
-          )}
-          {hasPlan && (
+          ) : (
             <p className="text-steel-300 text-sm max-w-xl">
               You're currently on the <span className="text-safety font-semibold">{company.plan?.name}</span> plan.
-              Want to upgrade? Select a new plan below.
+              {isActive ? ' Your subscription is active.' : ' Select a plan below to subscribe.'}
             </p>
           )}
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-        {/* Pending request banner */}
-        {(pendingRequest || searchParams.submitted) && (
-          <DismissibleBanner type="info" title="Request Pending" clearHref="/subscribe">
+        {/* Success banner */}
+        {searchParams.billing === 'success' && (
+          <DismissibleBanner type="info" title="Payment Successful!" clearHref="/subscribe">
             <p className="text-sm text-blue-700 mt-1">
-              Your request for the <span className="font-semibold">{pendingRequest?.plan?.name ?? 'selected'}</span> plan
-              has been submitted and is awaiting review. We'll activate your subscription as soon as it's approved.
+              Your subscription is now active. You have full access to your plan features.
             </p>
           </DismissibleBanner>
         )}
 
-        {/* Already subscribed error */}
-        {searchParams.error === 'already_subscribed' && (
-          <DismissibleBanner type="warning" title="Already Subscribed" clearHref="/subscribe">
+        {/* Cancelled banner */}
+        {searchParams.billing === 'cancelled' && (
+          <DismissibleBanner type="warning" title="Payment Cancelled" clearHref="/subscribe">
             <p className="text-sm text-amber-700 mt-1">
-              You are already subscribed to this plan. Choose a different plan to upgrade or downgrade.
+              You cancelled the PayPal checkout. No charges were made. You can try again below.
             </p>
           </DismissibleBanner>
         )}
 
-        {/* Already pending error */}
-        {searchParams.error === 'pending' && (
-          <DismissibleBanner type="warning" title="Request Already Pending" clearHref="/subscribe">
-            <p className="text-sm text-amber-700 mt-1">
-              You already have a pending subscription request. Please wait for it to be reviewed before submitting a new one.
-            </p>
-          </DismissibleBanner>
-        )}
-
-        {/* Last rejected banner */}
-        {lastRejected && !pendingRequest && (
-          <DismissibleBanner type="error" title="Previous Request Declined">
+        {/* Error banner */}
+        {searchParams.billing === 'error' && (
+          <DismissibleBanner type="error" title="Payment Failed" clearHref="/subscribe">
             <p className="text-sm text-red-700 mt-1">
-              Your request for the <span className="font-semibold">{lastRejected.plan.name}</span> plan was declined.
-              {lastRejected.reviewNote && (
-                <> Reason: <span className="italic">"{lastRejected.reviewNote}"</span></>
-              )}
+              Something went wrong processing your payment. Please try again or contact support.
             </p>
-            <p className="text-sm text-red-600 mt-1">You can submit a new request below.</p>
           </DismissibleBanner>
         )}
 
@@ -162,7 +122,7 @@ export default async function SubscribePage({
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
           {plans.map((plan) => {
             const isCurrent = company.planId === plan.id;
-            const isPending = pendingRequest?.planId === plan.id;
+            const hasPaypal = !!paypalPlanMap[plan.id];
             const planFeatures = plan.features as string[];
             const highlights = dispatcherFeatures.filter((f) => planFeatures.includes(f.key));
 
@@ -170,25 +130,25 @@ export default async function SubscribePage({
               <div
                 key={plan.id}
                 className={`rounded-xl border-2 bg-white overflow-hidden flex flex-col ${
-                  isCurrent
+                  isCurrent && isActive
                     ? 'border-safety shadow-lg'
-                    : isPending
+                    : isCurrent
                       ? 'border-blue-300 shadow-md'
                       : 'border-steel-200 hover:border-steel-300'
                 }`}
               >
                 {/* Header */}
-                <div className={`p-5 ${isCurrent ? 'bg-safety/10' : ''}`}>
+                <div className={`p-5 ${isCurrent && isActive ? 'bg-safety/10' : ''}`}>
                   <div className="flex items-center justify-between mb-1">
                     <h3 className="font-bold text-lg text-steel-900">{plan.name}</h3>
-                    {isCurrent && (
+                    {isCurrent && isActive && (
                       <span className="text-[10px] uppercase tracking-wider font-bold bg-safety text-diesel px-2 py-0.5 rounded-full">
-                        Current
+                        Active
                       </span>
                     )}
-                    {isPending && (
+                    {isCurrent && !isActive && (
                       <span className="text-[10px] uppercase tracking-wider font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                        Pending
+                        Current
                       </span>
                     )}
                   </div>
@@ -232,44 +192,20 @@ export default async function SubscribePage({
 
                 {/* Action */}
                 <div className="p-5 border-t border-steel-100">
-                  {isCurrent ? (
-                    <div className="text-center text-sm text-steel-500 font-medium py-2">
-                      Your current plan
+                  {isCurrent && isActive ? (
+                    <div className="text-center text-sm text-green-700 font-medium py-2">
+                      ✓ Active Subscription
                     </div>
-                  ) : isPending ? (
-                    <div className="text-center text-sm text-blue-600 font-medium py-2">
-                      Awaiting approval
+                  ) : hasPaypal ? (
+                    <SubscribeButton planId={plan.id} planName={plan.name} isCurrent={isCurrent} />
+                  ) : plan.priceMonthlyCents === 0 ? (
+                    <div className="text-center text-sm text-steel-400 py-2">
+                      Free plan — contact support
                     </div>
-                  ) : pendingRequest ? (
-                    <button
-                      disabled
-                      className="w-full py-2.5 rounded-lg text-sm font-semibold bg-steel-100 text-steel-400 cursor-not-allowed"
-                    >
-                      Request pending
-                    </button>
                   ) : (
-                    <form action={submitRequest}>
-                      <input type="hidden" name="planId" value={plan.id} />
-                      <details>
-                        <summary className="w-full py-2.5 rounded-lg text-sm font-semibold bg-diesel text-white hover:bg-steel-800 transition-colors cursor-pointer text-center list-none">
-                          {hasPlan ? 'Request Upgrade' : 'Select Plan'}
-                        </summary>
-                        <div className="mt-3 space-y-2">
-                          <textarea
-                            name="message"
-                            placeholder="Add a note (optional)..."
-                            rows={2}
-                            className="input text-xs w-full"
-                          />
-                          <button
-                            type="submit"
-                            className="btn-accent w-full text-sm"
-                          >
-                            Submit Request
-                          </button>
-                        </div>
-                      </details>
-                    </form>
+                    <div className="text-center text-sm text-steel-400 py-2">
+                      Coming soon
+                    </div>
                   )}
                 </div>
               </div>
@@ -277,7 +213,7 @@ export default async function SubscribePage({
           })}
         </div>
 
-        {/* Skip to dashboard if they already have a plan */}
+        {/* Back to dashboard */}
         {hasPlan && (
           <div className="text-center mt-8">
             <a href="/dashboard" className="text-sm text-steel-500 hover:text-steel-700 underline">
