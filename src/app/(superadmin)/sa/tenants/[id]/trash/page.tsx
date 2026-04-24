@@ -33,7 +33,7 @@ async function restoreCustomerAction(formData: FormData) {
     entityId: id,
     action: 'RESTORE',
     actor: sa.email,
-    actorRole: 'superadmin',
+    actorRole: 'SUPERADMIN',
     summary: `Restored customer "${customer.name}"`,
   });
 
@@ -68,7 +68,7 @@ async function restoreJobAction(formData: FormData) {
     entityId: id,
     action: 'RESTORE',
     actor: sa.email,
-    actorRole: 'superadmin',
+    actorRole: 'SUPERADMIN',
     summary: `Restored job #${job.jobNumber}`,
   });
 
@@ -96,7 +96,7 @@ async function restoreTicketAction(formData: FormData) {
     entityId: id,
     action: 'RESTORE',
     actor: sa.email,
-    actorRole: 'superadmin',
+    actorRole: 'SUPERADMIN',
     summary: `Restored ticket #${ticket.ticketNumber}`,
   });
 
