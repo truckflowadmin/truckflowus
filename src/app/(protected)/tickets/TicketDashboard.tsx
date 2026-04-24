@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
 interface TicketRow {
@@ -146,9 +146,11 @@ export default function TicketDashboard({
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
 
-  // Inline quantity editing — local state for optimistic updates
+  // Inline editing — local state for optimistic updates
   const [localQty, setLocalQty] = useState<Record<string, { quantity: number; quantityType: string }>>({});
   const [savingQtyId, setSavingQtyId] = useState<string | null>(null);
+  const [localRef, setLocalRef] = useState<Record<string, string>>({});
+  const [savingRefId, setSavingRefId] = useState<string | null>(null);
 
   // Bulk edit panel
   const [showBulkEdit, setShowBulkEdit] = useState(false);
@@ -299,8 +301,45 @@ export default function TicketDashboard({
     }
   }
 
+  // Inline ticket ref auto-save
+  async function handleInlineRefSave(ticketId: string, value: string) {
+    setLocalRef(prev => ({ ...prev, [ticketId]: value }));
+    setSavingRefId(ticketId);
+    setActionError(null);
+    try {
+      const res = await fetch('/api/tickets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: ticketId, ticketRef: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(data.error || 'Failed to update ticket #');
+        setLocalRef(prev => { const next = { ...prev }; delete next[ticketId]; return next; });
+      }
+    } catch {
+      setActionError('Network error');
+      setLocalRef(prev => { const next = { ...prev }; delete next[ticketId]; return next; });
+    } finally {
+      setSavingRefId(null);
+    }
+  }
+
+  // Debounce ref changes — save on blur, not on every keystroke
+  const refTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  function handleRefChange(ticketId: string, value: string) {
+    setLocalRef(prev => ({ ...prev, [ticketId]: value }));
+    if (refTimers.current[ticketId]) clearTimeout(refTimers.current[ticketId]);
+    refTimers.current[ticketId] = setTimeout(() => handleInlineRefSave(ticketId, value), 800);
+  }
+
   // Bulk actions
   async function bulkStatusChange(status: string) {
+    const reviewedSelected = filtered.filter(t => activeSelected.has(t.id) && t.reviewed);
+    if (reviewedSelected.length > 0) {
+      setActionError(`${reviewedSelected.length} selected ticket(s) are reviewed and cannot be modified. Unmark them first.`);
+      return;
+    }
     const invoicedSelected = filtered.filter(t => activeSelected.has(t.id) && t.invoiced);
     if (invoicedSelected.length > 0) {
       setActionError(`${invoicedSelected.length} selected ticket(s) are on an invoice and cannot be modified`);
@@ -371,6 +410,11 @@ export default function TicketDashboard({
     }
     if (Object.keys(fields).length === 0) {
       setActionError('Select at least one field to update');
+      return;
+    }
+    const reviewedSelected = filtered.filter(t => activeSelected.has(t.id) && t.reviewed);
+    if (reviewedSelected.length > 0) {
+      setActionError(`${reviewedSelected.length} selected ticket(s) are reviewed and cannot be edited. Unmark them first.`);
       return;
     }
     const invoicedSelected = filtered.filter(t => activeSelected.has(t.id) && t.invoiced);
@@ -767,6 +811,7 @@ export default function TicketDashboard({
                 />
               </th>
               <th className="text-left px-3 py-2">#</th>
+              <th className="text-left px-3 py-2">Ticket #</th>
               <th className="text-left px-3 py-2">Date</th>
               <th className="text-left px-3 py-2">Customer</th>
               <th className="text-left px-3 py-2">Driver</th>
@@ -801,6 +846,25 @@ export default function TicketDashboard({
                       #{String(t.ticketNumber).padStart(4, '0')}
                     </Link>
                   </td>
+                  <td className="px-3 py-3">
+                    {(t.invoiced || t.reviewed) ? (
+                      <span className="text-xs text-steel-600">{t.ticketRef || '—'}</span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={localRef[t.id] ?? t.ticketRef ?? ''}
+                          disabled={savingRefId === t.id}
+                          onChange={(e) => handleRefChange(t.id, e.target.value)}
+                          placeholder="—"
+                          className="w-20 text-xs border border-steel-200 rounded px-1.5 py-1 bg-white focus:border-safety focus:ring-1 focus:ring-safety/30"
+                        />
+                        {savingRefId === t.id && (
+                          <span className="text-[10px] text-steel-400 animate-pulse">…</span>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-3 py-3 text-steel-600 text-xs">{t.date ?? '—'}</td>
                   <td className="px-3 py-3">{t.customerName ?? '—'}</td>
                   <td className="px-3 py-3">
@@ -809,7 +873,7 @@ export default function TicketDashboard({
                   <td className="px-3 py-3 text-steel-600">{t.truckNumber ?? '—'}</td>
                   <td className="px-3 py-3">{t.material ?? '—'}</td>
                   <td className="px-3 py-3 text-right">
-                    {t.invoiced ? (
+                    {(t.invoiced || t.reviewed) ? (
                       <span className="tabular-nums">{fmtQty(t.quantity, t.quantityType)} {qtyUnit(t.quantityType)}</span>
                     ) : (
                       <div className="flex items-center justify-end gap-1">
