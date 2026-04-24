@@ -23,6 +23,8 @@ interface JobRow {
   ticketCount: number;
   ratePerUnit: number | null;
   openForDrivers: boolean;
+  requiredTruckCount: number;
+  assignmentCount: number;
   invoiced: boolean;
 }
 
@@ -283,8 +285,34 @@ export default function JobDashboard({
     { value: 'custom', label: 'Custom' },
   ];
 
+  const jobsWithOpenSlots = useMemo(() =>
+    jobs.filter(j =>
+      j.assignmentCount < j.requiredTruckCount &&
+      !['COMPLETED', 'CANCELLED'].includes(j.status)
+    ), [jobs]);
+
   return (
     <div className="panel overflow-hidden">
+      {/* Open slots reminder */}
+      {jobsWithOpenSlots.length > 0 && (
+        <div className="mx-5 mt-4 mb-0 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <span className="text-amber-500 text-base leading-none mt-0.5">&#9888;</span>
+          <div className="text-sm text-amber-800">
+            <span className="font-semibold">{jobsWithOpenSlots.length} job{jobsWithOpenSlots.length !== 1 ? 's' : ''} with open driver slots</span>
+            <span className="text-amber-600"> &mdash; </span>
+            {jobsWithOpenSlots.slice(0, 5).map((j, i) => (
+              <span key={j.id}>
+                {i > 0 && ', '}
+                <Link href={`/jobs/${j.id}`} className="text-amber-700 underline hover:text-amber-900 font-medium">
+                  #{j.jobNumber}
+                </Link>
+                <span className="text-amber-600 text-xs ml-0.5">({j.assignmentCount}/{j.requiredTruckCount})</span>
+              </span>
+            ))}
+            {jobsWithOpenSlots.length > 5 && <span className="text-amber-600"> and {jobsWithOpenSlots.length - 5} more</span>}
+          </div>
+        </div>
+      )}
       {/* Filter bar */}
       <div className="px-5 py-4 border-b border-steel-200 space-y-3">
         {/* Status pills */}
@@ -560,6 +588,11 @@ export default function JobDashboard({
                   <td className="px-3 py-3 text-steel-600">
                     {j.driverName ?? (
                       <span className="text-steel-400 italic">{j.openForDrivers ? 'Open' : 'Unassigned'}</span>
+                    )}
+                    {j.assignmentCount > 0 && j.assignmentCount < j.requiredTruckCount && !['COMPLETED', 'CANCELLED'].includes(j.status) && (
+                      <span className="ml-1 text-xs text-amber-600 font-medium" title={`${j.requiredTruckCount - j.assignmentCount} driver slot(s) open`}>
+                        ({j.assignmentCount}/{j.requiredTruckCount})
+                      </span>
                     )}
                   </td>
                   <td className="px-3 py-3 text-steel-600">

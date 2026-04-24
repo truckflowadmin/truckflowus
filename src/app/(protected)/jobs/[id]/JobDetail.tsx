@@ -674,8 +674,16 @@ export default function JobDetail({ job: initialJob, invoiced = false }: { job: 
                     );
                   })}
                   {(job.requiredTruckCount ?? 1) > job.assignments.length && (
-                    <div className="text-xs text-amber-600 mt-1">
-                      {(job.requiredTruckCount ?? 1) - job.assignments.length} slot{(job.requiredTruckCount ?? 1) - job.assignments.length !== 1 ? 's' : ''} remaining
+                    <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      <span className="text-amber-500 text-base leading-none mt-0.5">⚠</span>
+                      <div className="text-xs text-amber-800">
+                        <span className="font-semibold">
+                          {(job.requiredTruckCount ?? 1) - job.assignments.length} driver slot{(job.requiredTruckCount ?? 1) - job.assignments.length !== 1 ? 's' : ''} still open
+                        </span>
+                        <span className="block text-amber-600 mt-0.5">
+                          Assign {(job.requiredTruckCount ?? 1) - job.assignments.length === 1 ? 'a driver' : 'drivers'} or enable &quot;Open for Drivers&quot; so they can self-assign.
+                        </span>
+                      </div>
                     </div>
                   )}
                 </dd>

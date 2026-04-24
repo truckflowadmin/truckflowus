@@ -23,6 +23,7 @@ export default async function JobsPage() {
         customer: { select: { id: true, name: true } },
         broker: { select: { id: true, name: true } },
         driver: { select: { id: true, name: true } },
+        assignments: { select: { id: true } },
         _count: { select: { tickets: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'desc' },
@@ -67,6 +68,8 @@ export default async function JobsPage() {
     ticketCount: j._count.tickets,
     ratePerUnit: j.ratePerUnit ? Number(j.ratePerUnit) : null,
     openForDrivers: j.openForDrivers,
+    requiredTruckCount: j.requiredTruckCount ?? 1,
+    assignmentCount: j.assignments?.length ?? (j.driverId ? 1 : 0),
     invoiced: invoicedJobIds.has(j.id),
   }));
 
