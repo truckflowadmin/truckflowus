@@ -78,7 +78,6 @@ export async function driverUpdateStatus(formData: FormData) {
     });
   }
 
-  revalidatePath(`/d/${token}`);
   revalidatePath('/d/portal');
   revalidatePath(`/tickets/${ticketId}`);
 
@@ -177,7 +176,6 @@ export async function claimJob(formData: FormData) {
     link: `/jobs/${jobId}`,
   });
 
-  revalidatePath(`/d/${token}`);
   revalidatePath('/d/portal');
   revalidatePath('/jobs');
   revalidatePath(`/jobs/${jobId}`);
@@ -373,7 +371,6 @@ export async function driverUpdateJobStatus(formData: FormData) {
     });
   }
 
-  revalidatePath(`/d/${token}`);
   revalidatePath('/d/portal');
   revalidatePath('/jobs');
   revalidatePath(`/jobs/${jobId}`);
@@ -436,7 +433,6 @@ export async function requestTimeOff(formData: FormData) {
     link: '/drivers?tab=timeoff',
   });
 
-  revalidatePath(`/d/${token}`);
   revalidatePath('/d/portal');
   return { id: req.id };
 }
@@ -471,7 +467,6 @@ export async function cancelTimeOff(formData: FormData) {
     link: '/drivers?tab=timeoff',
   });
 
-  revalidatePath(`/d/${token}`);
   revalidatePath('/d/portal');
   revalidatePath('/drivers');
 }
@@ -592,7 +587,6 @@ export async function uploadTicketPhoto(formData: FormData) {
     link: `/tickets/${ticketId}`,
   }).catch(() => {});
 
-  revalidatePath(`/d/${token}`);
   revalidatePath('/d/portal');
   revalidatePath(`/tickets/${ticketId}`);
 
@@ -783,7 +777,6 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
     link: `/jobs/${job.id}`,
   });
 
-  revalidatePath(`/d/${token}`);
   revalidatePath('/d/portal');
   revalidatePath('/tickets');
   revalidatePath(`/jobs/${job.id}`);
@@ -856,7 +849,6 @@ export async function driverEditTicket(formData: FormData) {
     link: `/tickets/${ticketId}`,
   });
 
-  revalidatePath(`/d/${token}`);
   revalidatePath('/d/portal');
   revalidatePath(`/tickets/${ticketId}`);
 
