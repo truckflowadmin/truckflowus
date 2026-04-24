@@ -90,16 +90,18 @@ export default async function ReportsPage({
   // ═══════════════════════════════════════════════════════════════════
 
   // All completed tickets in range with full details
+  // Use ticket `date` (the job/work date) for filtering — NOT `completedAt` or `createdAt`,
+  // because tickets are often entered days after the actual work date.
   const completedTickets = await prisma.ticket.findMany({
     where: {
       companyId: session.companyId,
       status: 'COMPLETED',
-      completedAt: { gte: rangeStart, lte: rangeEnd },
+      date: { gte: rangeStart, lte: rangeEnd },
       deletedAt: null,
     },
     select: {
       id: true,
-      completedAt: true,
+      date: true,
       quantity: true,
       ratePerUnit: true,
       customerId: true,
@@ -171,8 +173,8 @@ export default async function ReportsPage({
   const dailyRevenueMap = new Map<string, number>();
   for (const d of dayLabels) dailyRevenueMap.set(format(d, 'yyyy-MM-dd'), 0);
   for (const tk of completedTickets) {
-    if (!tk.completedAt) continue;
-    const key = format(tk.completedAt, 'yyyy-MM-dd');
+    if (!tk.date) continue;
+    const key = format(tk.date, 'yyyy-MM-dd');
     const rate = tk.ratePerUnit ? Number(tk.ratePerUnit) : 0;
     dailyRevenueMap.set(key, (dailyRevenueMap.get(key) ?? 0) + rate * Number(tk.quantity));
   }
@@ -382,17 +384,17 @@ export default async function ReportsPage({
 
   const [invoiceStats, paidInvoices, overdueInvoices] = await Promise.all([
     prisma.invoice.aggregate({
-      where: { companyId: session.companyId, createdAt: { gte: rangeStart, lte: rangeEnd } },
+      where: { companyId: session.companyId, issueDate: { gte: rangeStart, lte: rangeEnd } },
       _sum: { total: true },
       _count: true,
     }),
     prisma.invoice.aggregate({
-      where: { companyId: session.companyId, status: 'PAID', createdAt: { gte: rangeStart, lte: rangeEnd } },
+      where: { companyId: session.companyId, status: 'PAID', issueDate: { gte: rangeStart, lte: rangeEnd } },
       _sum: { total: true },
       _count: true,
     }),
     prisma.invoice.aggregate({
-      where: { companyId: session.companyId, status: 'OVERDUE', createdAt: { gte: rangeStart, lte: rangeEnd } },
+      where: { companyId: session.companyId, status: 'OVERDUE', issueDate: { gte: rangeStart, lte: rangeEnd } },
       _sum: { total: true },
       _count: true,
     }),
@@ -404,15 +406,15 @@ export default async function ReportsPage({
 
   const statusCounts = await prisma.ticket.groupBy({
     by: ['status'],
-    where: { companyId: session.companyId, createdAt: { gte: rangeStart, lte: rangeEnd }, deletedAt: null },
+    where: { companyId: session.companyId, date: { gte: rangeStart, lte: rangeEnd }, deletedAt: null },
     _count: true,
   });
 
   const totalTickets = statusCounts.reduce((sum, s) => sum + s._count, 0);
 
   const [totalJobs, completedJobsCount, activeJobsCount] = await Promise.all([
-    prisma.job.count({ where: { companyId: session.companyId, createdAt: { gte: rangeStart, lte: rangeEnd }, deletedAt: null } }),
-    prisma.job.count({ where: { companyId: session.companyId, status: 'COMPLETED', completedAt: { gte: rangeStart, lte: rangeEnd }, deletedAt: null } }),
+    prisma.job.count({ where: { companyId: session.companyId, date: { gte: rangeStart, lte: rangeEnd }, deletedAt: null } }),
+    prisma.job.count({ where: { companyId: session.companyId, status: 'COMPLETED', date: { gte: rangeStart, lte: rangeEnd }, deletedAt: null } }),
     prisma.job.count({ where: { companyId: session.companyId, status: { in: ['ASSIGNED', 'IN_PROGRESS'] }, deletedAt: null } }),
   ]);
 
