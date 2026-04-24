@@ -2,10 +2,10 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { requirePlan } from '@/lib/plan-gate';
 import { fmtQty, qtyUnit } from '@/lib/format';
-import { startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import InspectionAlerts from '../fleet/InspectionAlerts';
 import { getServerLang, t, statusLabel } from '@/lib/i18n';
 import { safePage } from '@/lib/server-error';
+import DashboardStats from '@/components/DashboardStats';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -15,57 +15,26 @@ export default async function DashboardPage() {
   const session = await requireSession();
   await requirePlan(session.companyId);
   const lang = getServerLang();
-  const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-  const todayStart = startOfDay(now);
-  const todayEnd = endOfDay(now);
 
-  const { pending, inProgress, completedToday, completedWeek, driversActive, openInvoiceAgg, recent } =
-    await safePage(async () => {
-      const [pending, inProgress, completedToday, completedWeek, driversActive, openInvoiceAgg] =
-        await Promise.all([
-          prisma.ticket.count({ where: { companyId: session.companyId, status: 'PENDING', deletedAt: null } }),
-          prisma.ticket.count({ where: { companyId: session.companyId, status: { in: ['DISPATCHED', 'IN_PROGRESS'] }, deletedAt: null } }),
-          // Done Today
-          prisma.ticket.count({
-            where: {
-              companyId: session.companyId,
-              status: 'COMPLETED',
-              deletedAt: null,
-              completedAt: { gte: todayStart, lte: todayEnd },
-            },
-          }),
-          // Done This Week
-          prisma.ticket.count({
-            where: {
-              companyId: session.companyId,
-              status: 'COMPLETED',
-              deletedAt: null,
-              completedAt: { gte: weekStart, lte: weekEnd },
-            },
-          }),
-          prisma.driver.count({ where: { companyId: session.companyId, active: true } }),
-          prisma.invoice.aggregate({
-            where: { companyId: session.companyId, status: { in: ['SENT', 'OVERDUE'] } },
-            _sum: { total: true },
-            _count: true,
-          }),
-        ]);
+  const recent = await safePage(async () => {
+    return prisma.ticket.findMany({
+      where: { companyId: session.companyId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+      include: { driver: true, customer: true },
+    });
+  }, 'Unable to load the dashboard. Please try again.');
 
-      const recent = await prisma.ticket.findMany({
-        where: { companyId: session.companyId },
-        orderBy: { createdAt: 'desc' },
-        take: 8,
-        include: { driver: true, customer: true },
-      });
-
-      return { pending, inProgress, completedToday, completedWeek, driversActive, openInvoiceAgg, recent };
-    }, 'Unable to load the dashboard. Please try again.');
-
-  const invoiceWord = lang === 'es'
-    ? (openInvoiceAgg._count === 1 ? t('dashboard.invoice', lang) : t('dashboard.invoices', lang))
-    : `invoice${openInvoiceAgg._count === 1 ? '' : 's'}`;
+  const statsLabels = {
+    pending: t('dashboard.pending', lang),
+    inProgress: t('dashboard.inProgress', lang),
+    doneToday: t('dashboard.doneToday', lang),
+    doneThisWeek: t('dashboard.doneThisWeek', lang),
+    activeDrivers: t('dashboard.activeDrivers', lang),
+    openAR: t('dashboard.openAR', lang),
+    invoice: lang === 'es' ? t('dashboard.invoice', lang) : 'invoice',
+    invoices: lang === 'es' ? t('dashboard.invoices', lang) : 'invoices',
+  };
 
   return (
     <div className="p-4 md:p-8 max-w-7xl">
@@ -79,18 +48,7 @@ export default async function DashboardPage() {
 
       <InspectionAlerts />
 
-      <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <StatCard label={t('dashboard.pending', lang)} value={pending} accent />
-        <StatCard label={t('dashboard.inProgress', lang)} value={inProgress} />
-        <StatCard label={t('dashboard.doneToday', lang)} value={completedToday} />
-        <StatCard label={t('dashboard.doneThisWeek', lang)} value={completedWeek} />
-        <StatCard label={t('dashboard.activeDrivers', lang)} value={driversActive} />
-        <StatCard
-          label={t('dashboard.openAR', lang)}
-          value={`$${Number(openInvoiceAgg._sum.total ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          subtle={`${openInvoiceAgg._count} ${invoiceWord}`}
-        />
-      </section>
+      <DashboardStats labels={statsLabels} />
 
       <section className="panel">
         <div className="flex items-center justify-between px-5 py-4 border-b border-steel-200">
@@ -134,16 +92,6 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function StatCard({ label, value, subtle, accent }: { label: string; value: string | number; subtle?: string; accent?: boolean }) {
-  return (
-    <div className={`panel p-4 ${accent ? 'ring-2 ring-safety' : ''}`}>
-      <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">{label}</div>
-      <div className="text-2xl font-bold mt-1 tabular-nums">{value}</div>
-      {subtle && <div className="text-xs text-steel-500 mt-0.5">{subtle}</div>}
     </div>
   );
 }
