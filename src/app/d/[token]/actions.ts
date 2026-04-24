@@ -79,6 +79,7 @@ export async function driverUpdateStatus(formData: FormData) {
   }
 
   revalidatePath(`/d/${token}`);
+  revalidatePath('/d/portal');
   revalidatePath(`/tickets/${ticketId}`);
 
   return { success: true, ticketId, status };
@@ -177,6 +178,7 @@ export async function claimJob(formData: FormData) {
   });
 
   revalidatePath(`/d/${token}`);
+  revalidatePath('/d/portal');
   revalidatePath('/jobs');
   revalidatePath(`/jobs/${jobId}`);
 
@@ -372,6 +374,7 @@ export async function driverUpdateJobStatus(formData: FormData) {
   }
 
   revalidatePath(`/d/${token}`);
+  revalidatePath('/d/portal');
   revalidatePath('/jobs');
   revalidatePath(`/jobs/${jobId}`);
 
@@ -434,6 +437,7 @@ export async function requestTimeOff(formData: FormData) {
   });
 
   revalidatePath(`/d/${token}`);
+  revalidatePath('/d/portal');
   return { id: req.id };
 }
 
@@ -468,6 +472,7 @@ export async function cancelTimeOff(formData: FormData) {
   });
 
   revalidatePath(`/d/${token}`);
+  revalidatePath('/d/portal');
   revalidatePath('/drivers');
 }
 
@@ -576,7 +581,8 @@ export async function uploadTicketPhoto(formData: FormData) {
   });
 
   const num = String(ticket.ticketNumber).padStart(4, '0');
-  await createNotification({
+  // Fire-and-forget — don't block the response on notification
+  createNotification({
     companyId: driver.companyId,
     type: NOTIFICATION_TYPES.TICKET_PHOTO_UPLOADED,
     title: `${driver.name} uploaded photo for ticket #${num}`,
@@ -584,9 +590,10 @@ export async function uploadTicketPhoto(formData: FormData) {
       ? `Photo uploaded and scanned for ticket #${num}`
       : `Photo uploaded for ticket #${num}`,
     link: `/tickets/${ticketId}`,
-  });
+  }).catch(() => {});
 
   revalidatePath(`/d/${token}`);
+  revalidatePath('/d/portal');
   revalidatePath(`/tickets/${ticketId}`);
 
   return {
@@ -736,6 +743,7 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
   });
 
   revalidatePath(`/d/${token}`);
+  revalidatePath('/d/portal');
   revalidatePath('/tickets');
   revalidatePath(`/jobs/${job.id}`);
 
@@ -808,6 +816,7 @@ export async function driverEditTicket(formData: FormData) {
   });
 
   revalidatePath(`/d/${token}`);
+  revalidatePath('/d/portal');
   revalidatePath(`/tickets/${ticketId}`);
 
   return { success: true };
