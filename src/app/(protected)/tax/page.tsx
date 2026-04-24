@@ -215,6 +215,7 @@ export default async function TaxPage({
       expenseByCategory,
       expenses: expenses.map(e => ({
         ...e,
+        date: e.date.toISOString(),
         amount: Number(e.amount),
       })),
       trucks,
