@@ -99,7 +99,8 @@ export default async function TaxPage({
       },
       select: {
         date: true,
-        totalPrice: true,
+        ratePerUnit: true,
+        quantity: true,
       },
     });
 
@@ -166,7 +167,7 @@ export default async function TaxPage({
     for (const tk of completedTickets) {
       if (tk.date) {
         const q = Math.floor(tk.date.getMonth() / 3);
-        quarterlyRevenue[q] += Number(tk.totalPrice || 0);
+        quarterlyRevenue[q] += Number(tk.ratePerUnit || 0) * Number(tk.quantity || 0);
       }
     }
 
@@ -217,7 +218,7 @@ export default async function TaxPage({
         amount: Number(e.amount),
       })),
       trucks,
-      totalRevenue: completedTickets.reduce((s, tk) => s + Number(tk.totalPrice || 0), 0),
+      totalRevenue: completedTickets.reduce((s, tk) => s + Number(tk.ratePerUnit || 0) * Number(tk.quantity || 0), 0),
       totalExpenses: expenses.reduce((s, e) => s + Number(e.amount), 0),
       totalPayroll: allPayments.reduce((s, p) => s + Number(p.finalAmount), 0),
       totalInvoiced: invoices.reduce((s, inv) => s + Number(inv.total || 0), 0),
