@@ -41,14 +41,9 @@ export default async function SmsPage({
     prisma.smsLog.count({ where: smsFilter }),
   ]);
 
-  // Contacts for send form
-  const [drivers, brokers, customers] = await Promise.all([
+  // Contacts for send form (drivers and customers only — brokers cannot receive SMS from dispatchers)
+  const [drivers, customers] = await Promise.all([
     prisma.driver.findMany({
-      where: { companyId: session.companyId },
-      select: { id: true, name: true, phone: true },
-      orderBy: { name: 'asc' },
-    }),
-    prisma.broker.findMany({
       where: { companyId: session.companyId },
       select: { id: true, name: true, phone: true },
       orderBy: { name: 'asc' },
@@ -88,7 +83,6 @@ export default async function SmsPage({
         createdAt: l.createdAt.toISOString(),
       }))}
       drivers={drivers}
-      brokers={brokers}
       customers={customers}
       stats={{ incoming: smsInCount, outgoing: smsOutCount }}
     />

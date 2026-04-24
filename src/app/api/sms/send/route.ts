@@ -5,21 +5,22 @@ import { prisma } from '@/lib/prisma';
 
 /**
  * POST /api/sms/send
- * Send a manual SMS message from the SMS & Fax hub.
- * Body: { phone: string, message: string, driverId?: string, brokerId?: string }
+ * Send a manual SMS message from the SMS hub.
+ * Body: { phone: string, message: string, driverId?: string, customerId?: string }
+ * Note: Sending SMS to brokers is not permitted from the dispatcher side.
  */
 export async function POST(req: NextRequest) {
   const session = await requireSession();
   const body = await req.json();
-  const { phone, message, driverId, brokerId, customerId } = body;
+  const { phone, message, driverId, customerId } = body;
 
   if (!phone || !message) {
     return NextResponse.json({ error: 'Phone and message are required' }, { status: 400 });
   }
 
-  // Require at least one contact ID — no arbitrary phone numbers
-  if (!driverId && !brokerId && !customerId) {
-    return NextResponse.json({ error: 'You must select a driver, broker, or customer to send SMS to' }, { status: 400 });
+  // Require a contact ID — only drivers and customers are allowed
+  if (!driverId && !customerId) {
+    return NextResponse.json({ error: 'You must select a driver or customer to send SMS to' }, { status: 400 });
   }
 
   // Normalize phone to E.164
@@ -34,11 +35,6 @@ export async function POST(req: NextRequest) {
     if (!driver) return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
   }
 
-  if (brokerId) {
-    const broker = await prisma.broker.findFirst({ where: { id: brokerId, companyId: session.companyId } });
-    if (!broker) return NextResponse.json({ error: 'Broker not found' }, { status: 404 });
-  }
-
   if (customerId) {
     const customer = await prisma.customer.findFirst({ where: { id: customerId, companyId: session.companyId } });
     if (!customer) return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
@@ -49,7 +45,6 @@ export async function POST(req: NextRequest) {
     message,
     companyId: session.companyId,
     driverId: driverId || undefined,
-    brokerId: brokerId || undefined,
     customerId: customerId || undefined,
   });
 

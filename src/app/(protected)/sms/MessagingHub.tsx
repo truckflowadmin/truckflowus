@@ -14,7 +14,7 @@ interface Contact { id: string; name: string; phone: string | null; }
 interface Props {
   tab: string; page: number; totalPages: number; dir: string; search: string;
   smsLogs: SmsEntry[];
-  drivers: Contact[]; brokers: Contact[]; customers: Contact[];
+  drivers: Contact[]; customers: Contact[];
   stats: { incoming: number; outgoing: number };
 }
 
@@ -31,14 +31,14 @@ function formatDate(iso: string) {
     ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
-export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, drivers, brokers, customers, stats }: Props) {
+export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, drivers, customers, stats }: Props) {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState(search);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Send SMS form state
-  const [smsRecipientType, setSmsRecipientType] = useState<'driver' | 'broker' | 'customer'>('driver');
+  const [smsRecipientType, setSmsRecipientType] = useState<'driver' | 'customer'>('driver');
   const [smsRecipientId, setSmsRecipientId] = useState('');
   const [smsMessage, setSmsMessage] = useState('');
 
@@ -62,17 +62,12 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
     setSendResult(null);
     let phone = '';
     let driverId: string | undefined;
-    let brokerId: string | undefined;
     let customerId: string | undefined;
 
     if (smsRecipientType === 'driver' && smsRecipientId) {
       const d = drivers.find(x => x.id === smsRecipientId);
       phone = d?.phone || '';
       driverId = smsRecipientId;
-    } else if (smsRecipientType === 'broker' && smsRecipientId) {
-      const b = brokers.find(x => x.id === smsRecipientId);
-      phone = b?.phone || '';
-      brokerId = smsRecipientId;
     } else if (smsRecipientType === 'customer' && smsRecipientId) {
       const c = customers.find(x => x.id === smsRecipientId);
       phone = c?.phone || '';
@@ -89,7 +84,7 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
       const res = await fetch('/api/sms/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, message: smsMessage, driverId, brokerId, customerId }),
+        body: JSON.stringify({ phone, message: smsMessage, driverId, customerId }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -258,7 +253,7 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
             <div>
               <label className="block text-sm font-medium text-steel-700 mb-1">Recipient</label>
               <div className="flex gap-2 mb-2">
-                {(['driver', 'broker', 'customer'] as const).map((t) => (
+                {(['driver', 'customer'] as const).map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -269,7 +264,7 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
                         : 'bg-white text-steel-600 border-steel-300 hover:bg-steel-50'
                     }`}
                   >
-                    {t === 'driver' ? 'Driver' : t === 'broker' ? 'Broker' : 'Customer'}
+                    {t === 'driver' ? 'Driver' : 'Customer'}
                   </button>
                 ))}
               </div>
@@ -283,19 +278,6 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
                   <option value="">Select a driver...</option>
                   {drivers.map((d) => (
                     <option key={d.id} value={d.id}>{d.name} — {d.phone || 'No phone'}</option>
-                  ))}
-                </select>
-              )}
-
-              {smsRecipientType === 'broker' && (
-                <select
-                  value={smsRecipientId}
-                  onChange={(e) => setSmsRecipientId(e.target.value)}
-                  className="w-full px-3 py-2 border border-steel-300 rounded text-sm"
-                >
-                  <option value="">Select a broker...</option>
-                  {brokers.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name} — {b.phone || 'No phone'}</option>
                   ))}
                 </select>
               )}
