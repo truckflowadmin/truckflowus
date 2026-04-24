@@ -400,7 +400,7 @@ export default async function ReportsPage({
 
   // Active driver/truck counts
   const activeDriverCount = await prisma.driver.count({ where: { companyId: session.companyId, active: true } });
-  const activeTruckCount = await prisma.truck.count({ where: { companyId: session.companyId, active: true } });
+  const activeTruckCount = await prisma.truck.count({ where: { companyId: session.companyId, status: 'ACTIVE' } });
 
   // Profit/loss over time
   const profitOverTime = dayLabels.map((d) => {
