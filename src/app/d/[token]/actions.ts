@@ -94,13 +94,20 @@ export async function claimJob(formData: FormData) {
 
   const driver = await prisma.driver.findUnique({
     where: { accessToken: token },
-    select: { id: true, active: true, companyId: true, name: true, truckNumber: true, assignedTruckId: true, assignedTruck: { select: { truckNumber: true, truckType: true } } },
+    select: { id: true, active: true, companyId: true, name: true, truckNumber: true, assignedTruckId: true, assignedTruck: { select: { truckNumber: true, truckType: true, status: true } } },
   });
   if (!driver || !driver.active) throw new Error('Invalid driver link');
 
   // Must have a truck assigned to claim jobs
   if (!driver.assignedTruckId) {
     throw new Error('You must have a truck assigned before claiming jobs. Contact your dispatcher to assign a truck to your profile.');
+  }
+  const truckStatus = (driver.assignedTruck as any)?.status;
+  if (truckStatus === 'OUT_OF_SERVICE') {
+    throw new Error('Your truck is currently out of service and cannot be used for jobs. Contact your dispatcher.');
+  }
+  if (truckStatus === 'SOLD') {
+    throw new Error('Your assigned truck has been marked as sold. Contact your dispatcher to assign you a different truck.');
   }
 
   // Find the job — must be in the same company, open for drivers, with available slots

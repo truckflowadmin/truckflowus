@@ -29,7 +29,7 @@ async function validateDriverForJob(
     select: {
       name: true,
       assignedTruckId: true,
-      assignedTruck: { select: { truckNumber: true, truckType: true } },
+      assignedTruck: { select: { truckNumber: true, truckType: true, status: true } },
     },
   });
   if (!driver) {
@@ -38,6 +38,17 @@ async function validateDriverForJob(
   if (!driver.assignedTruckId) {
     throw new Error(
       `Cannot assign ${driver?.name || 'driver'} — no truck assigned to their profile. Assign a truck in the driver's profile first.`,
+    );
+  }
+  const truckStatus = (driver.assignedTruck as any)?.status;
+  if (truckStatus === 'OUT_OF_SERVICE') {
+    throw new Error(
+      `Cannot assign ${driver?.name || 'driver'} — their truck (${driver.assignedTruck?.truckNumber || 'unknown'}) is currently out of service.`,
+    );
+  }
+  if (truckStatus === 'SOLD') {
+    throw new Error(
+      `Cannot assign ${driver?.name || 'driver'} — their truck (${driver.assignedTruck?.truckNumber || 'unknown'}) has been marked as sold. Assign a different truck first.`,
     );
   }
   if (requiredTruckType && driver.assignedTruck?.truckType !== requiredTruckType) {
