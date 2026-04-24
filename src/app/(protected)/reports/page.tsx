@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { getServerLang, t } from '@/lib/i18n';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns';
+import { safePage } from '@/lib/server-error';
 import { ReportsCharts } from './charts';
 
 export default async function ReportsPage({
@@ -16,6 +17,9 @@ export default async function ReportsPage({
   const now = new Date();
   const rangeStart = startOfDay(subDays(now, days));
   const rangeEnd = endOfDay(now);
+
+  // All report queries wrapped for user-friendly error handling
+  const reportData = await safePage(async () => {
 
   // 1) Tickets by status (pie)
   const statusCounts = await prisma.ticket.groupBy({
@@ -217,6 +221,21 @@ export default async function ReportsPage({
       AND (SELECT COUNT(DISTINCT dd."docType") FROM "DriverDocument" dd WHERE dd."driverId" = d."id" AND dd."docType" IN ('LICENSE_FRONT','LICENSE_BACK','MEDICAL_CERT','VOID_CHECK')) = 4
   `;
   const compliantDrivers = Number(driversWithAllDocs[0]?.cnt ?? 0);
+
+  return {
+    statusCounts, dailyData, customerData, driverData, totalTickets, totalCompleted,
+    totalLoads, totalRevenue, invoiceStats, paidInvoices, totalJobs, completedJobsCount,
+    activeJobsCount, cancelledJobsCount, driverTimeData, totalDriverHours,
+    employeeCount, contractorCount, issueCount, allDrivers, compliantDrivers,
+  };
+  }, 'Unable to load reports. Please try again.');
+
+  const {
+    statusCounts, dailyData, customerData, driverData, totalTickets, totalCompleted,
+    totalLoads, totalRevenue, invoiceStats, paidInvoices, totalJobs, completedJobsCount,
+    activeJobsCount, cancelledJobsCount, driverTimeData, totalDriverHours,
+    employeeCount, contractorCount, issueCount, allDrivers, compliantDrivers,
+  } = reportData;
 
   return (
     <div className="p-4 md:p-8 max-w-7xl">

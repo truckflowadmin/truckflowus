@@ -7,21 +7,51 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const isGeneric =
+    !error.message ||
+    error.message.includes('An error occurred in the Server Components render') ||
+    error.message.includes('digest');
+
+  const friendlyMessage = isGeneric
+    ? 'Something went wrong while loading TruckFlowUS. This is usually temporary — please try again.'
+    : error.message;
+
   return (
     <html>
-      <body className="min-h-screen grid place-items-center p-6 bg-[#14171a]">
-        <div className="text-center">
-          <div className="text-[#FFB500] text-6xl font-black mb-4">!</div>
-          <h1 className="text-white text-2xl font-bold mb-2">Something went wrong</h1>
-          <p className="text-[#7c8691] mb-6 max-w-md">
-            {error.message || 'An unexpected error occurred.'}
+      <body style={{ margin: 0, padding: 0, minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#14171a', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+        <div style={{ textAlign: 'center', padding: '24px', maxWidth: '500px' }}>
+          <div style={{ color: '#FFB500', fontSize: '64px', fontWeight: 900, marginBottom: '16px' }}>!</div>
+          <h1 style={{ color: '#fff', fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Something went wrong</h1>
+          <p style={{ color: '#7c8691', marginBottom: '24px', lineHeight: 1.5 }}>
+            {friendlyMessage}
           </p>
-          <button
-            onClick={reset}
-            className="inline-flex items-center justify-center px-5 py-2.5 bg-[#FFB500] text-[#1b1e22] font-bold rounded-md hover:bg-[#CC8F00] transition-colors"
-          >
-            Try again
-          </button>
+
+          {error.digest && (
+            <p style={{ color: '#4a5568', fontSize: '12px', fontFamily: 'monospace', marginBottom: '16px' }}>
+              Error reference: {error.digest}
+            </p>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              onClick={reset}
+              style={{ padding: '10px 20px', background: '#FFB500', color: '#1b1e22', fontWeight: 700, borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '14px' }}
+            >
+              Try again
+            </button>
+            <a
+              href="/"
+              style={{ padding: '10px 20px', background: 'transparent', color: '#7c8691', fontWeight: 600, borderRadius: '6px', border: '1px solid #333', textDecoration: 'none', fontSize: '14px' }}
+            >
+              Go to homepage
+            </a>
+          </div>
+
+          <p style={{ color: '#4a5568', fontSize: '11px', marginTop: '32px' }}>
+            If this keeps happening, contact{' '}
+            <a href="mailto:support@truckflowus.com" style={{ color: '#7c8691', textDecoration: 'underline' }}>support@truckflowus.com</a>
+            {error.digest ? ` with reference: ${error.digest}` : ''}.
+          </p>
         </div>
       </body>
     </html>

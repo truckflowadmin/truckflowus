@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-export default function ProtectedError({
+export default function SuperadminError({
   error,
   reset,
 }: {
@@ -28,20 +28,16 @@ export default function ProtectedError({
     );
   }
 
-  // In production, error.message is stripped to a generic string — detect and replace
-  const isGeneric =
-    !error.message ||
-    error.message.includes('An error occurred in the Server Components render') ||
-    error.message.includes('digest');
-
-  const friendlyMessage = isGeneric
-    ? 'Something went wrong while loading this page. This is usually temporary — please try again.'
-    : error.message;
+  // In production, error.message is stripped — provide helpful context
+  const hasMessage = error.message && !error.message.includes('An error occurred in the Server Components render');
+  const friendlyMessage = hasMessage
+    ? error.message
+    : 'A server error occurred while loading this page. This is usually temporary — try refreshing.';
 
   return (
     <div className="flex-1 grid place-items-center p-8">
       <div className="text-center max-w-lg">
-        <div className="text-safety text-5xl font-black mb-3">!</div>
+        <div className="text-red-500 text-5xl font-black mb-3">!</div>
         <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
         <p className="text-steel-500 mb-4">{friendlyMessage}</p>
 
@@ -53,7 +49,7 @@ export default function ProtectedError({
 
         <div className="flex items-center justify-center gap-3">
           <button onClick={reset} className="btn-accent">Try again</button>
-          <Link href="/dashboard" className="btn-ghost">Dashboard</Link>
+          <Link href="/sa/overview" className="btn-ghost">Back to Overview</Link>
         </div>
 
         <p className="text-xs text-steel-400 mt-6">

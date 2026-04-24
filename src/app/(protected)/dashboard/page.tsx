@@ -5,6 +5,7 @@ import { fmtQty, qtyUnit } from '@/lib/format';
 import { startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import InspectionAlerts from '../fleet/InspectionAlerts';
 import { getServerLang, t, statusLabel } from '@/lib/i18n';
+import { safePage } from '@/lib/server-error';
 
 export default async function DashboardPage() {
   const session = await requireSession();
@@ -16,30 +17,35 @@ export default async function DashboardPage() {
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
 
-  const [pending, inProgress, completedToday, completedWeek, driversActive, openInvoiceAgg] =
-    await Promise.all([
-      prisma.ticket.count({ where: { companyId: session.companyId, status: 'PENDING' } }),
-      prisma.ticket.count({ where: { companyId: session.companyId, status: { in: ['DISPATCHED', 'IN_PROGRESS'] } } }),
-      prisma.ticket.count({
-        where: { companyId: session.companyId, status: 'COMPLETED', completedAt: { gte: todayStart, lte: todayEnd } },
-      }),
-      prisma.ticket.count({
-        where: { companyId: session.companyId, status: 'COMPLETED', completedAt: { gte: weekStart, lte: weekEnd } },
-      }),
-      prisma.driver.count({ where: { companyId: session.companyId, active: true } }),
-      prisma.invoice.aggregate({
-        where: { companyId: session.companyId, status: { in: ['SENT', 'OVERDUE'] } },
-        _sum: { total: true },
-        _count: true,
-      }),
-    ]);
+  const { pending, inProgress, completedToday, completedWeek, driversActive, openInvoiceAgg, recent } =
+    await safePage(async () => {
+      const [pending, inProgress, completedToday, completedWeek, driversActive, openInvoiceAgg] =
+        await Promise.all([
+          prisma.ticket.count({ where: { companyId: session.companyId, status: 'PENDING' } }),
+          prisma.ticket.count({ where: { companyId: session.companyId, status: { in: ['DISPATCHED', 'IN_PROGRESS'] } } }),
+          prisma.ticket.count({
+            where: { companyId: session.companyId, status: 'COMPLETED', completedAt: { gte: todayStart, lte: todayEnd } },
+          }),
+          prisma.ticket.count({
+            where: { companyId: session.companyId, status: 'COMPLETED', completedAt: { gte: weekStart, lte: weekEnd } },
+          }),
+          prisma.driver.count({ where: { companyId: session.companyId, active: true } }),
+          prisma.invoice.aggregate({
+            where: { companyId: session.companyId, status: { in: ['SENT', 'OVERDUE'] } },
+            _sum: { total: true },
+            _count: true,
+          }),
+        ]);
 
-  const recent = await prisma.ticket.findMany({
-    where: { companyId: session.companyId },
-    orderBy: { createdAt: 'desc' },
-    take: 8,
-    include: { driver: true, customer: true },
-  });
+      const recent = await prisma.ticket.findMany({
+        where: { companyId: session.companyId },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        include: { driver: true, customer: true },
+      });
+
+      return { pending, inProgress, completedToday, completedWeek, driversActive, openInvoiceAgg, recent };
+    }, 'Unable to load the dashboard. Please try again.');
 
   const invoiceWord = lang === 'es'
     ? (openInvoiceAgg._count === 1 ? t('dashboard.invoice', lang) : t('dashboard.invoices', lang))

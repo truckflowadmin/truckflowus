@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { getServerLang, t } from '@/lib/i18n';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
+import { safePage } from '@/lib/server-error';
 import TicketDashboard from './TicketDashboard';
 import BillableTicketsTable from './BillableTicketsTable';
 

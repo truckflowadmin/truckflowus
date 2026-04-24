@@ -5,6 +5,7 @@ import { getServerLang, t } from '@/lib/i18n';
 import { revalidatePath } from 'next/cache';
 import { randomBytes } from 'crypto';
 import { enforceDriverLimit } from '@/lib/features';
+import { safePage } from '@/lib/server-error';
 import DriversPageTabs from './DriversPageTabs';
 import TimeOffSection from './TimeOffSection';
 import PayrollSection from './PayrollSection';
