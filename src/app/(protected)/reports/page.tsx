@@ -5,6 +5,8 @@ import { format, subDays, subMonths, subQuarters, subYears, startOfDay, endOfDay
 import { safePage } from '@/lib/server-error';
 import { FinancialReports } from './FinancialReports';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ReportsPage({
   searchParams,
 }: {

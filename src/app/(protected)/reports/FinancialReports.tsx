@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 
 // ═══════════════════════════════════════════════════════════════════
 // TYPES
@@ -132,22 +131,11 @@ export function FinancialReports({
   truckList: FilterOption[];
   driverList: FilterOption[];
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const tab = (initialTab as Tab) || 'overview';
 
-  const setTab = useCallback((newTab: Tab) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('tab', newTab);
-    router.push(`/reports?${params.toString()}`);
-  }, [router, searchParams]);
-
-  const setRange = useCallback((range: string) => {
-    const params = new URLSearchParams();
-    params.set('range', range);
-    params.set('tab', tab);
-    router.push(`/reports?${params.toString()}`);
-  }, [router, tab]);
+  // Build URLs for navigation — uses <a> tags for full page reload to ensure fresh server data
+  const tabUrl = (newTab: Tab) => `/reports?range=${currentRange}&tab=${newTab}`;
+  const rangeUrl = (range: string) => `/reports?range=${range}&tab=${tab}`;
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -189,15 +177,15 @@ export function FinancialReports({
         </div>
         <div className="flex flex-wrap gap-1">
           {RANGE_OPTIONS.map((p) => (
-            <button
+            <a
               key={p.value}
-              onClick={() => setRange(p.value)}
+              href={rangeUrl(p.value)}
               className={`px-2.5 py-1 rounded border text-xs font-medium ${
                 currentRange === p.value ? 'bg-diesel text-white border-diesel' : 'border-steel-300 bg-white hover:bg-steel-50'
               }`}
             >
               {p.label}
-            </button>
+            </a>
           ))}
         </div>
       </header>
@@ -211,9 +199,9 @@ export function FinancialReports({
       {/* Tab navigation */}
       <div className="flex gap-1 mb-6 overflow-x-auto pb-1 print:hidden">
         {TABS.map((t) => (
-          <button
+          <a
             key={t.key}
-            onClick={() => setTab(t.key)}
+            href={tabUrl(t.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
               tab === t.key
                 ? 'bg-diesel text-white shadow-sm'
@@ -221,7 +209,7 @@ export function FinancialReports({
             }`}
           >
             {t.label}
-          </button>
+          </a>
         ))}
 
         {/* Export buttons */}
