@@ -146,7 +146,7 @@ export async function GET(req: NextRequest) {
   doc.end();
   const pdfBuffer = await pdfPromise;
 
-  return new NextResponse(pdfBuffer, {
+  return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `inline; filename="1099-NEC_${year}_${driver.name.replace(/\s+/g, '_')}.pdf"`,
