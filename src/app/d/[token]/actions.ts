@@ -662,7 +662,7 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
   const job = await prisma.job.findFirst({
     where: {
       id: jobId,
-      status: { in: ['COMPLETED', 'IN_PROGRESS', 'ASSIGNED', 'PARTIALLY_COMPLETED'] },
+      status: { in: ['CREATED', 'ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED', 'COMPLETED'] },
       OR: [
         { driverId: driver.id },
         { assignments: { some: { driverId: driver.id } } },

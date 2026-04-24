@@ -136,8 +136,7 @@ export async function createJobAction(formData: FormData) {
   const jobNumber = (last?.jobNumber ?? 0) + 1;
 
   const hasDrivers = driverIds.length > 0;
-  const allSlotsFilled = driverIds.length >= requiredTruckCount;
-  const status = allSlotsFilled ? 'ASSIGNED' : hasDrivers ? 'CREATED' : 'CREATED';
+  const status = hasDrivers ? 'ASSIGNED' : 'CREATED';
 
   const job = await prisma.job.create({
     data: {
@@ -299,9 +298,13 @@ export async function updateJobAction(jobId: string, formData: FormData) {
   const formStatus = (formData.get('status') as string) || '';
   const validStatuses = ['CREATED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
   let status: string = validStatuses.includes(formStatus) ? formStatus : job.status;
-  // Auto-promote to ASSIGNED if all slots filled and status wasn't manually changed
-  if (!formStatus && allSlotsFilled && status === 'CREATED') {
+  // Auto-promote to ASSIGNED when any driver is assigned (and status wasn't manually changed)
+  if (!formStatus && hasDrivers && status === 'CREATED') {
     status = 'ASSIGNED';
+  }
+  // Auto-demote back to CREATED if all drivers were removed
+  if (!formStatus && !hasDrivers && status === 'ASSIGNED') {
+    status = 'CREATED';
   }
 
   await prisma.job.update({
