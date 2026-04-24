@@ -7,7 +7,7 @@
 
 import { prisma } from './prisma';
 
-export type AuditEntityType = 'ticket' | 'driver' | 'customer' | 'company' | 'user';
+export type AuditEntityType = 'ticket' | 'driver' | 'customer' | 'company' | 'user' | 'job';
 export type AuditAction =
   | 'create'
   | 'update'
@@ -26,7 +26,8 @@ export type AuditAction =
   | 'reset_driver_setup'
   | 'impersonate'
   | 'force_logout'
-  | 'force_logout_all';
+  | 'force_logout_all'
+  | 'RESTORE';
 
 interface AuditEntry {
   companyId: string;
