@@ -1261,10 +1261,10 @@ function CompletedJobCard({
       fd.set('items', JSON.stringify(payload));
 
       const res = await driverSubmitReviewedTickets(fd);
-      if (res.success) {
+      if (res.success && res.count !== undefined && res.tickets) {
         setSubmitResult({ count: res.count, tickets: res.tickets });
         setItems([]);
-      } else if (res.error) {
+      } else if (!res.success && res.error) {
         // Duplicate ticketRef or other validation error from the action
         setError(res.error);
       }
