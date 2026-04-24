@@ -27,7 +27,7 @@ export default async function DashboardPage() {
         await Promise.all([
           prisma.ticket.count({ where: { companyId: session.companyId, status: 'PENDING', deletedAt: null } }),
           prisma.ticket.count({ where: { companyId: session.companyId, status: { in: ['DISPATCHED', 'IN_PROGRESS'] }, deletedAt: null } }),
-          // Done Today: use completedAt if set, fall back to date field for older tickets
+          // Done Today: use completedAt if set, fall back to updatedAt for older tickets
           prisma.ticket.count({
             where: {
               companyId: session.companyId,
@@ -35,11 +35,11 @@ export default async function DashboardPage() {
               deletedAt: null,
               OR: [
                 { completedAt: { gte: todayStart, lte: todayEnd } },
-                { completedAt: null, date: { gte: todayStart, lte: todayEnd } },
+                { completedAt: null, updatedAt: { gte: todayStart, lte: todayEnd } },
               ],
             },
           }),
-          // Done This Week: use completedAt if set, fall back to date field for older tickets
+          // Done This Week: use completedAt if set, fall back to updatedAt for older tickets
           prisma.ticket.count({
             where: {
               companyId: session.companyId,
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
               deletedAt: null,
               OR: [
                 { completedAt: { gte: weekStart, lte: weekEnd } },
-                { completedAt: null, date: { gte: weekStart, lte: weekEnd } },
+                { completedAt: null, updatedAt: { gte: weekStart, lte: weekEnd } },
               ],
             },
           }),
