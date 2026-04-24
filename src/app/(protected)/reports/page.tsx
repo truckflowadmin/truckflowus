@@ -65,6 +65,20 @@ export default async function ReportsPage({
     }
   }
 
+  // Fetch all trucks and drivers for filter dropdowns
+  const [allTrucks, allDriversList] = await Promise.all([
+    prisma.truck.findMany({
+      where: { companyId: session.companyId, status: 'ACTIVE' },
+      select: { id: true, truckNumber: true },
+      orderBy: { truckNumber: 'asc' },
+    }),
+    prisma.driver.findMany({
+      where: { companyId: session.companyId, active: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ]);
+
   const reportData = await safePage(async () => {
 
   // ═══════════════════════════════════════════════════════════════════
@@ -469,6 +483,18 @@ export default async function ReportsPage({
     driverPayouts,
     // Profit
     profitOverTime,
+    // Raw expenses for client-side filtering/comparison
+    rawExpenses: expenses.map(e => ({
+      amount: Math.round(Number(e.amount) * 100) / 100,
+      category: e.category,
+      date: format(e.date, 'yyyy-MM-dd'),
+      truckId: e.truckId,
+      driverId: e.driverId,
+      truck: e.truckId ? (truckNameMap.get(e.truckId) ?? '') : '',
+      driver: e.driverId ? (driverInfoMap.get(e.driverId)?.name ?? '') : '',
+      vendor: e.vendor ?? '',
+      description: e.description ?? '',
+    })),
   };
   }, 'Unable to load reports. Please try again.');
 
@@ -477,37 +503,14 @@ export default async function ReportsPage({
 
   return (
     <div className="p-4 md:p-8 max-w-7xl">
-      <header className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 mb-6">
-        <div>
-          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('reports.analytics', lang)}</div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('reports.title', lang)}</h1>
-          <p className="text-sm text-steel-500 mt-1">{periodLabel}</p>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {[
-            { label: '7d', value: '7' },
-            { label: '14d', value: '14' },
-            { label: '30d', value: '30' },
-            { label: '90d', value: '90' },
-            { label: 'Week', value: 'week' },
-            { label: 'Month', value: 'month' },
-            { label: 'Quarter', value: 'quarter' },
-            { label: 'Year', value: 'year' },
-          ].map((p) => (
-            <a
-              key={p.value}
-              href={`/reports?range=${p.value}&tab=${activeTab}`}
-              className={`px-2.5 py-1 rounded border text-xs font-medium ${
-                (!searchParams.from && range === p.value) ? 'bg-diesel text-white border-diesel' : 'border-steel-300 bg-white hover:bg-steel-50'
-              }`}
-            >
-              {p.label}
-            </a>
-          ))}
-        </div>
-      </header>
-
-      <FinancialReports data={data} activeTab={activeTab} currentRange={range} />
+      <FinancialReports
+        data={data}
+        activeTab={activeTab}
+        currentRange={range}
+        periodLabel={periodLabel}
+        truckList={allTrucks.map(t => ({ id: t.id, label: t.truckNumber }))}
+        driverList={allDriversList.map(d => ({ id: d.id, label: d.name }))}
+      />
     </div>
   );
 }

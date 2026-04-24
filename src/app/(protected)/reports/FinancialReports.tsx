@@ -1,10 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // ═══════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════
+
+interface RawExpense {
+  amount: number;
+  category: string;
+  date: string;
+  truckId: string | null;
+  driverId: string | null;
+  truck: string;
+  driver: string;
+  vendor: string;
+  description: string;
+}
 
 interface ReportData {
   totalRevenue: number;
@@ -38,6 +51,12 @@ interface ReportData {
   totalPendingPayroll: number;
   driverPayouts: { name: string; truck: string; workerType: string; payType: string; totalPaid: number; totalPending: number; payments: number }[];
   profitOverTime: { date: string; revenue: number; expenses: number; profit: number }[];
+  rawExpenses: RawExpense[];
+}
+
+interface FilterOption {
+  id: string;
+  label: string;
 }
 
 type Tab = 'overview' | 'revenue' | 'expenses' | 'payroll' | 'profit';
@@ -48,6 +67,17 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'expenses', label: 'Expenses' },
   { key: 'payroll', label: 'Payroll' },
   { key: 'profit', label: 'Profit & Loss' },
+];
+
+const RANGE_OPTIONS = [
+  { label: '7d', value: '7' },
+  { label: '14d', value: '14' },
+  { label: '30d', value: '30' },
+  { label: '90d', value: '90' },
+  { label: 'Week', value: 'week' },
+  { label: 'Month', value: 'month' },
+  { label: 'Quarter', value: 'quarter' },
+  { label: 'Year', value: 'year' },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -64,16 +94,122 @@ const EXPENSE_COLORS = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '
 const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // ═══════════════════════════════════════════════════════════════════
+// CSV EXPORT UTILITY
+// ═══════════════════════════════════════════════════════════════════
+
+function downloadCSV(filename: string, headers: string[], rows: (string | number)[][]) {
+  const escape = (v: string | number) => {
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  const csv = [headers.map(escape).join(','), ...rows.map(r => r.map(escape).join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 
-export function FinancialReports({ data, activeTab: initialTab, currentRange }: { data: ReportData; activeTab: string; currentRange: string }) {
-  const [tab, setTab] = useState<Tab>((initialTab as Tab) || 'overview');
+export function FinancialReports({
+  data,
+  activeTab: initialTab,
+  currentRange,
+  periodLabel,
+  truckList,
+  driverList,
+}: {
+  data: ReportData;
+  activeTab: string;
+  currentRange: string;
+  periodLabel: string;
+  truckList: FilterOption[];
+  driverList: FilterOption[];
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = (initialTab as Tab) || 'overview';
+
+  const setTab = useCallback((newTab: Tab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', newTab);
+    router.push(`/reports?${params.toString()}`);
+  }, [router, searchParams]);
+
+  const setRange = useCallback((range: string) => {
+    const params = new URLSearchParams();
+    params.set('range', range);
+    params.set('tab', tab);
+    router.push(`/reports?${params.toString()}`);
+  }, [router, tab]);
+
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
+  const handleExportOverview = useCallback(() => {
+    const headers = ['Metric', 'Value'];
+    const rows: (string | number)[][] = [
+      ['Total Revenue', data.totalRevenue],
+      ['Total Expenses', data.totalExpenses],
+      ['Net Profit', data.netProfit],
+      ['Total Payroll (Paid)', data.totalPayroll],
+      ['Payroll Pending', data.totalPendingPayroll],
+      ['Completed Tickets', data.completedTickets],
+      ['Total Tickets', data.totalTickets],
+      ['Total Jobs', data.totalJobs],
+      ['Completed Jobs', data.completedJobsCount],
+      ['Active Jobs', data.activeJobsCount],
+      ['Active Drivers', data.activeDriverCount],
+      ['Active Trucks', data.activeTruckCount],
+      ['Invoices', data.invoiceCount],
+      ['Invoice Total', data.invoiceTotal],
+      ['Paid Invoices', data.paidCount],
+      ['Paid Total', data.paidTotal],
+      ['Overdue Invoices', data.overdueCount],
+      ['Overdue Total', data.overdueTotal],
+    ];
+    downloadCSV(`report-overview-${currentRange}.csv`, headers, rows);
+  }, [data, currentRange]);
 
   return (
     <div>
+      {/* Header with period selector */}
+      <header className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 mb-6 print:hidden">
+        <div>
+          <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Analytics</div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Financial Reports</h1>
+          <p className="text-sm text-steel-500 mt-1">{periodLabel}</p>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {RANGE_OPTIONS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setRange(p.value)}
+              className={`px-2.5 py-1 rounded border text-xs font-medium ${
+                currentRange === p.value ? 'bg-diesel text-white border-diesel' : 'border-steel-300 bg-white hover:bg-steel-50'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* Print header (only visible when printing) */}
+      <div className="hidden print:block mb-4">
+        <h1 className="text-2xl font-bold">Financial Reports</h1>
+        <p className="text-sm text-gray-500">{periodLabel} &middot; Printed {new Date().toLocaleDateString()}</p>
+      </div>
+
       {/* Tab navigation */}
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-1">
+      <div className="flex gap-1 mb-6 overflow-x-auto pb-1 print:hidden">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -87,13 +223,42 @@ export function FinancialReports({ data, activeTab: initialTab, currentRange }: 
             {t.label}
           </button>
         ))}
+
+        {/* Export buttons */}
+        <div className="ml-auto flex gap-1">
+          <button
+            onClick={handleExportOverview}
+            className="px-3 py-2 rounded-lg text-sm font-medium border border-green-300 text-green-700 hover:bg-green-50 flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            Excel
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-3 py-2 rounded-lg text-sm font-medium border border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            Print / PDF
+          </button>
+        </div>
       </div>
 
       {tab === 'overview' && <OverviewTab data={data} />}
-      {tab === 'revenue' && <RevenueTab data={data} />}
-      {tab === 'expenses' && <ExpensesTab data={data} />}
-      {tab === 'payroll' && <PayrollTab data={data} />}
-      {tab === 'profit' && <ProfitTab data={data} />}
+      {tab === 'revenue' && <RevenueTab data={data} currentRange={currentRange} />}
+      {tab === 'expenses' && <ExpensesTab data={data} truckList={truckList} driverList={driverList} currentRange={currentRange} />}
+      {tab === 'payroll' && <PayrollTab data={data} currentRange={currentRange} />}
+      {tab === 'profit' && <ProfitTab data={data} currentRange={currentRange} />}
+
+      {/* Print styles */}
+      <style jsx global>{`
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          nav, aside, .print\\:hidden { display: none !important; }
+          .print\\:block { display: block !important; }
+          .panel { break-inside: avoid; box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+          table { font-size: 11px; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -107,7 +272,6 @@ function OverviewTab({ data }: { data: ReportData }) {
 
   return (
     <div className="space-y-6">
-      {/* Top-level KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <KPICard label="Total Revenue" value={`$${fmt(data.totalRevenue)}`} accent="green" />
         <KPICard label="Total Expenses" value={`$${fmt(data.totalExpenses)}`} accent="red" />
@@ -116,7 +280,6 @@ function OverviewTab({ data }: { data: ReportData }) {
         <KPICard label="Payroll Paid" value={`$${fmt(data.totalPayroll)}`} accent="blue" />
       </div>
 
-      {/* Secondary metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         <MiniCard label="Tickets" value={data.totalTickets} sub={`${data.completedTickets} completed`} />
         <MiniCard label="Jobs" value={data.totalJobs} sub={`${data.completedJobsCount} completed`} />
@@ -126,7 +289,6 @@ function OverviewTab({ data }: { data: ReportData }) {
         <MiniCard label="Overdue" value={data.overdueCount} sub={data.overdueCount > 0 ? `$${fmt(data.overdueTotal)}` : '—'} warn={data.overdueCount > 0} />
       </div>
 
-      {/* Profit trend chart */}
       <div className="panel p-5">
         <h2 className="font-semibold mb-4">Revenue vs Expenses</h2>
         <BarChart
@@ -139,19 +301,15 @@ function OverviewTab({ data }: { data: ReportData }) {
         />
       </div>
 
-      {/* Quick views */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Top customers */}
         <div className="panel p-5">
           <h2 className="font-semibold mb-3">Top Customers</h2>
           <RankList items={data.customerRevenue.slice(0, 5).map(c => ({ label: c.name, value: `$${fmt(c.revenue)}` }))} />
         </div>
-        {/* Top expenses */}
         <div className="panel p-5">
           <h2 className="font-semibold mb-3">Expenses by Category</h2>
           <RankList items={data.expensesByCategory.slice(0, 5).map(e => ({ label: formatCategory(e.category), value: `$${fmt(e.amount)}` }))} />
         </div>
-        {/* Status breakdown */}
         <div className="panel p-5">
           <h2 className="font-semibold mb-3">Ticket Status</h2>
           <StatusBars items={data.statusCounts} />
@@ -165,8 +323,32 @@ function OverviewTab({ data }: { data: ReportData }) {
 // REVENUE TAB
 // ═══════════════════════════════════════════════════════════════════
 
-function RevenueTab({ data }: { data: ReportData }) {
+function RevenueTab({ data, currentRange }: { data: ReportData; currentRange: string }) {
   const [view, setView] = useState<'customer' | 'broker' | 'driver' | 'job' | 'material'>('customer');
+
+  const handleExport = useCallback(() => {
+    if (view === 'customer') {
+      downloadCSV(`revenue-by-customer-${currentRange}.csv`,
+        ['Customer', 'Revenue', 'Loads', 'Tons', 'Yards'],
+        data.customerRevenue.map(c => [c.name, c.revenue, c.loads, c.tons, c.yards]));
+    } else if (view === 'broker') {
+      downloadCSV(`revenue-by-broker-${currentRange}.csv`,
+        ['Broker', 'Revenue', 'Loads', 'Tons', 'Yards'],
+        data.brokerRevenue.map(b => [b.name, b.revenue, b.loads, b.tons, b.yards]));
+    } else if (view === 'driver') {
+      downloadCSV(`revenue-by-driver-${currentRange}.csv`,
+        ['Driver', 'Truck', 'Revenue', 'Tickets', 'Loads'],
+        data.driverRevenue.map(d => [d.name, d.truck, d.revenue, d.tickets, d.loads]));
+    } else if (view === 'job') {
+      downloadCSV(`revenue-by-job-${currentRange}.csv`,
+        ['Job #', 'Name', 'Revenue', 'Tickets'],
+        data.jobRevenue.map(j => [j.jobNumber, j.name, j.revenue, j.tickets]));
+    } else if (view === 'material') {
+      downloadCSV(`revenue-by-material-${currentRange}.csv`,
+        ['Material', 'Revenue', 'Quantity'],
+        data.materialBreakdown.map(m => [m.material, m.revenue, m.qty]));
+    }
+  }, [view, data, currentRange]);
 
   return (
     <div className="space-y-6">
@@ -177,7 +359,6 @@ function RevenueTab({ data }: { data: ReportData }) {
         <KPICard label="Outstanding" value={`$${fmt(data.overdueTotal)}`} accent={data.overdueTotal > 0 ? 'red' : 'green'} />
       </div>
 
-      {/* Revenue trend */}
       <div className="panel p-5">
         <h2 className="font-semibold mb-4">Revenue Over Time</h2>
         <BarChart
@@ -187,213 +368,322 @@ function RevenueTab({ data }: { data: ReportData }) {
         />
       </div>
 
-      {/* View selector */}
-      <div className="flex gap-1 flex-wrap">
-        {([
-          { key: 'customer', label: 'By Customer' },
-          { key: 'broker', label: 'By Broker' },
-          { key: 'driver', label: 'By Driver' },
-          { key: 'job', label: 'By Job' },
-          { key: 'material', label: 'By Material' },
-        ] as const).map((v) => (
-          <button
-            key={v.key}
-            onClick={() => setView(v.key)}
-            className={`px-3 py-1.5 rounded border text-xs font-medium ${
-              view === v.key ? 'bg-diesel text-white border-diesel' : 'border-steel-300 hover:bg-steel-50'
-            }`}
-          >
-            {v.label}
-          </button>
-        ))}
+      <div className="flex items-center gap-2 flex-wrap print:hidden">
+        <div className="flex gap-1">
+          {([
+            { key: 'customer', label: 'By Customer' },
+            { key: 'broker', label: 'By Broker' },
+            { key: 'driver', label: 'By Driver' },
+            { key: 'job', label: 'By Job' },
+            { key: 'material', label: 'By Material' },
+          ] as const).map((v) => (
+            <button
+              key={v.key}
+              onClick={() => setView(v.key)}
+              className={`px-3 py-1.5 rounded border text-xs font-medium ${
+                view === v.key ? 'bg-diesel text-white border-diesel' : 'border-steel-300 hover:bg-steel-50'
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={handleExport} className="ml-auto px-3 py-1.5 rounded border border-green-300 text-green-700 text-xs font-medium hover:bg-green-50">
+          Export {view}
+        </button>
       </div>
 
-      {view === 'customer' && (
-        <div className="panel overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
-              <tr>
-                <th className="text-left px-4 py-3">Customer</th>
-                <th className="text-right px-4 py-3">Revenue</th>
-                <th className="text-right px-4 py-3">Loads</th>
-                <th className="text-right px-4 py-3">Tons</th>
-                <th className="text-right px-4 py-3">Yards</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.customerRevenue.map((c, i) => (
-                <tr key={i} className="border-b border-steel-100 hover:bg-steel-50">
-                  <td className="px-4 py-3 font-medium">{c.name}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-700 font-semibold">${fmt(c.revenue)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{c.loads || '—'}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{c.tons ? c.tons.toFixed(1) : '—'}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{c.yards ? c.yards.toFixed(1) : '—'}</td>
-                </tr>
-              ))}
-              {data.customerRevenue.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-steel-500">No revenue data for this period.</td></tr>
-              )}
-            </tbody>
-            {data.customerRevenue.length > 0 && (
-              <tfoot className="bg-steel-50 font-semibold">
-                <tr>
-                  <td className="px-4 py-3">Total</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-700">${fmt(data.customerRevenue.reduce((s, c) => s + c.revenue, 0))}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{data.customerRevenue.reduce((s, c) => s + c.loads, 0)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{data.customerRevenue.reduce((s, c) => s + c.tons, 0).toFixed(1)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{data.customerRevenue.reduce((s, c) => s + c.yards, 0).toFixed(1)}</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      )}
+      {view === 'customer' && <RevenueTable headers={['Customer', 'Revenue', 'Loads', 'Tons', 'Yards']} rows={data.customerRevenue.map(c => [c.name, `$${fmt(c.revenue)}`, c.loads || '—', c.tons ? c.tons.toFixed(1) : '—', c.yards ? c.yards.toFixed(1) : '—'])} totals={data.customerRevenue.length > 0 ? ['Total', `$${fmt(data.customerRevenue.reduce((s, c) => s + c.revenue, 0))}`, String(data.customerRevenue.reduce((s, c) => s + c.loads, 0)), data.customerRevenue.reduce((s, c) => s + c.tons, 0).toFixed(1), data.customerRevenue.reduce((s, c) => s + c.yards, 0).toFixed(1)] : undefined} />}
+      {view === 'broker' && <RevenueTable headers={['Broker', 'Revenue', 'Loads', 'Tons', 'Yards']} rows={data.brokerRevenue.map(b => [b.name, `$${fmt(b.revenue)}`, b.loads || '—', b.tons ? b.tons.toFixed(1) : '—', b.yards ? b.yards.toFixed(1) : '—'])} />}
+      {view === 'driver' && <RevenueTable headers={['Driver', 'Truck', 'Revenue', 'Tickets', 'Loads']} rows={data.driverRevenue.map(d => [d.name, d.truck || '—', `$${fmt(d.revenue)}`, d.tickets, d.loads])} />}
+      {view === 'job' && <RevenueTable headers={['Job #', 'Name', 'Revenue', 'Tickets']} rows={data.jobRevenue.map(j => [String(j.jobNumber).padStart(4, '0'), j.name, `$${fmt(j.revenue)}`, j.tickets])} />}
+      {view === 'material' && <RevenueTable headers={['Material', 'Revenue', 'Quantity']} rows={data.materialBreakdown.map(m => [m.material, `$${fmt(m.revenue)}`, m.qty])} />}
+    </div>
+  );
+}
 
-      {view === 'broker' && (
-        <div className="panel overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
-              <tr>
-                <th className="text-left px-4 py-3">Broker</th>
-                <th className="text-right px-4 py-3">Revenue</th>
-                <th className="text-right px-4 py-3">Loads</th>
-                <th className="text-right px-4 py-3">Tons</th>
-                <th className="text-right px-4 py-3">Yards</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.brokerRevenue.map((b, i) => (
-                <tr key={i} className="border-b border-steel-100 hover:bg-steel-50">
-                  <td className="px-4 py-3 font-medium">{b.name}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-700 font-semibold">${fmt(b.revenue)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{b.loads || '—'}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{b.tons ? b.tons.toFixed(1) : '—'}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{b.yards ? b.yards.toFixed(1) : '—'}</td>
-                </tr>
+function RevenueTable({ headers, rows, totals }: { headers: string[]; rows: (string | number)[][]; totals?: string[] }) {
+  return (
+    <div className="panel overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
+          <tr>
+            {headers.map((h, i) => (
+              <th key={h} className={`px-4 py-3 ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} className="border-b border-steel-100 hover:bg-steel-50">
+              {row.map((cell, j) => (
+                <td key={j} className={`px-4 py-3 ${j === 0 ? 'font-medium' : 'text-right tabular-nums'} ${typeof cell === 'string' && cell.startsWith('$') ? 'text-green-700 font-semibold' : ''}`}>
+                  {cell}
+                </td>
               ))}
-              {data.brokerRevenue.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-steel-500">No broker revenue for this period.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {view === 'driver' && (
-        <div className="panel overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
-              <tr>
-                <th className="text-left px-4 py-3">Driver</th>
-                <th className="text-left px-4 py-3">Truck</th>
-                <th className="text-right px-4 py-3">Revenue Generated</th>
-                <th className="text-right px-4 py-3">Tickets</th>
-                <th className="text-right px-4 py-3">Loads</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.driverRevenue.map((d, i) => (
-                <tr key={i} className="border-b border-steel-100 hover:bg-steel-50">
-                  <td className="px-4 py-3 font-medium">{d.name}</td>
-                  <td className="px-4 py-3 text-steel-500">{d.truck || '—'}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-700 font-semibold">${fmt(d.revenue)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{d.tickets}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{d.loads}</td>
-                </tr>
+            </tr>
+          ))}
+          {rows.length === 0 && (
+            <tr><td colSpan={headers.length} className="px-4 py-8 text-center text-steel-500">No data for this period.</td></tr>
+          )}
+        </tbody>
+        {totals && (
+          <tfoot className="bg-steel-50 font-semibold">
+            <tr>
+              {totals.map((cell, j) => (
+                <td key={j} className={`px-4 py-3 ${j === 0 ? '' : 'text-right tabular-nums'}`}>{cell}</td>
               ))}
-              {data.driverRevenue.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-steel-500">No driver revenue for this period.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {view === 'job' && (
-        <div className="panel overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
-              <tr>
-                <th className="text-left px-4 py-3">Job #</th>
-                <th className="text-left px-4 py-3">Name</th>
-                <th className="text-right px-4 py-3">Revenue</th>
-                <th className="text-right px-4 py-3">Tickets</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.jobRevenue.map((j, i) => (
-                <tr key={i} className="border-b border-steel-100 hover:bg-steel-50">
-                  <td className="px-4 py-3 font-mono text-sm">{String(j.jobNumber).padStart(4, '0')}</td>
-                  <td className="px-4 py-3 font-medium">{j.name}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-700 font-semibold">${fmt(j.revenue)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{j.tickets}</td>
-                </tr>
-              ))}
-              {data.jobRevenue.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-steel-500">No job revenue for this period.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {view === 'material' && (
-        <div className="panel overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
-              <tr>
-                <th className="text-left px-4 py-3">Material</th>
-                <th className="text-right px-4 py-3">Revenue</th>
-                <th className="text-right px-4 py-3">Quantity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.materialBreakdown.map((m, i) => (
-                <tr key={i} className="border-b border-steel-100 hover:bg-steel-50">
-                  <td className="px-4 py-3 font-medium">{m.material}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-700 font-semibold">${fmt(m.revenue)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{m.qty}</td>
-                </tr>
-              ))}
-              {data.materialBreakdown.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-steel-500">No material data for this period.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </tr>
+          </tfoot>
+        )}
+      </table>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// EXPENSES TAB
+// EXPENSES TAB (with comparison & filters)
 // ═══════════════════════════════════════════════════════════════════
 
-function ExpensesTab({ data }: { data: ReportData }) {
+function ExpensesTab({ data, truckList, driverList, currentRange }: { data: ReportData; truckList: FilterOption[]; driverList: FilterOption[]; currentRange: string }) {
   const [view, setView] = useState<'category' | 'truck' | 'driver'>('category');
+  const [groupBy, setGroupBy] = useState<'week' | 'month' | 'year'>('week');
+  const [filterTruck, setFilterTruck] = useState('');
+  const [filterDriver, setFilterDriver] = useState('');
+  const [showComparison, setShowComparison] = useState(false);
+
+  // Filter raw expenses
+  const filteredExpenses = useMemo(() => {
+    let exps = data.rawExpenses;
+    if (filterTruck) exps = exps.filter(e => e.truckId === filterTruck);
+    if (filterDriver) exps = exps.filter(e => e.driverId === filterDriver);
+    return exps;
+  }, [data.rawExpenses, filterTruck, filterDriver]);
+
+  const filteredTotal = useMemo(() => filteredExpenses.reduce((s, e) => s + e.amount, 0), [filteredExpenses]);
+
+  // Group expenses by period for comparison
+  const comparisonData = useMemo(() => {
+    const groups = new Map<string, { label: string; amount: number; count: number }>();
+
+    for (const exp of filteredExpenses) {
+      const d = new Date(exp.date);
+      let key: string;
+      let label: string;
+
+      if (groupBy === 'week') {
+        // ISO week: find Monday of the week
+        const day = d.getDay();
+        const monday = new Date(d);
+        monday.setDate(d.getDate() - ((day + 6) % 7));
+        key = monday.toISOString().slice(0, 10);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        label = `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      } else if (groupBy === 'month') {
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        label = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      } else {
+        key = String(d.getFullYear());
+        label = String(d.getFullYear());
+      }
+
+      const entry = groups.get(key) ?? { label, amount: 0, count: 0 };
+      entry.amount += exp.amount;
+      entry.count++;
+      groups.set(key, entry);
+    }
+
+    return Array.from(groups.values()).sort((a, b) => {
+      // Sort chronologically by label comparison (keys are already chronological)
+      return 0; // preserve map insertion order which is by date
+    });
+  }, [filteredExpenses, groupBy]);
+
+  // Category breakdown of filtered expenses
+  const filteredByCategory = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of filteredExpenses) {
+      map.set(e.category, (map.get(e.category) ?? 0) + e.amount);
+    }
+    return Array.from(map.entries())
+      .map(([category, amount]) => ({ category, amount: Math.round(amount * 100) / 100 }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [filteredExpenses]);
+
+  const handleExport = useCallback(() => {
+    if (showComparison) {
+      downloadCSV(`expense-comparison-${groupBy}-${currentRange}.csv`,
+        ['Period', 'Total Expenses', 'Transactions'],
+        comparisonData.map(d => [d.label, d.amount, d.count]));
+    } else if (view === 'category') {
+      downloadCSV(`expenses-by-category-${currentRange}.csv`,
+        ['Category', 'Amount', '% of Total'],
+        (filterTruck || filterDriver ? filteredByCategory : data.expensesByCategory).map(e => [
+          formatCategory(e.category), e.amount, filteredTotal > 0 ? ((e.amount / filteredTotal) * 100).toFixed(1) + '%' : '0%'
+        ]));
+    } else if (view === 'truck') {
+      downloadCSV(`expenses-by-truck-${currentRange}.csv`,
+        ['Truck', 'Total Expenses', 'Transactions', 'Avg per Transaction'],
+        data.expensesByTruck.map(t => [t.truck, t.amount, t.count, t.count > 0 ? (t.amount / t.count).toFixed(2) : '0']));
+    } else if (view === 'driver') {
+      downloadCSV(`expenses-by-driver-${currentRange}.csv`,
+        ['Driver', 'Total Expenses', 'Transactions'],
+        data.expensesByDriver.map(d => [d.name, d.amount, d.count]));
+    }
+  }, [showComparison, view, data, currentRange, groupBy, comparisonData, filteredByCategory, filteredTotal, filterTruck, filterDriver]);
+
+  const isFiltered = filterTruck || filterDriver;
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPICard label="Total Expenses" value={`$${fmt(data.totalExpenses)}`} accent="red" />
-        <KPICard label="Categories" value={data.expensesByCategory.length} />
+        <KPICard label={isFiltered ? 'Filtered Expenses' : 'Total Expenses'} value={`$${fmt(isFiltered ? filteredTotal : data.totalExpenses)}`} accent="red" />
+        <KPICard label="Categories" value={isFiltered ? filteredByCategory.length : data.expensesByCategory.length} />
         <KPICard label="Trucks with Expenses" value={data.expensesByTruck.length} />
         <KPICard label="Active Trucks" value={data.activeTruckCount} />
       </div>
 
-      {/* Expenses trend */}
-      <div className="panel p-5">
-        <h2 className="font-semibold mb-4">Expenses Over Time</h2>
-        <BarChart
-          data={data.expensesOverTime}
-          bars={[{ key: 'amount', color: '#ef4444', label: 'Expenses' }]}
-          xKey="date"
-        />
+      {/* Filters */}
+      <div className="panel p-4 print:hidden">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-semibold text-steel-700">Filters:</span>
+          <select
+            value={filterTruck}
+            onChange={(e) => setFilterTruck(e.target.value)}
+            className="px-3 py-1.5 rounded border border-steel-300 text-sm bg-white"
+          >
+            <option value="">All Trucks</option>
+            {truckList.map(t => (
+              <option key={t.id} value={t.id}>{t.label}</option>
+            ))}
+          </select>
+          <select
+            value={filterDriver}
+            onChange={(e) => setFilterDriver(e.target.value)}
+            className="px-3 py-1.5 rounded border border-steel-300 text-sm bg-white"
+          >
+            <option value="">All Drivers</option>
+            {driverList.map(d => (
+              <option key={d.id} value={d.id}>{d.label}</option>
+            ))}
+          </select>
+          {isFiltered && (
+            <button
+              onClick={() => { setFilterTruck(''); setFilterDriver(''); }}
+              className="px-2 py-1 text-xs text-red-600 hover:text-red-800 font-medium"
+            >
+              Clear filters
+            </button>
+          )}
+
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => setShowComparison(!showComparison)}
+              className={`px-3 py-1.5 rounded border text-xs font-medium ${
+                showComparison ? 'bg-diesel text-white border-diesel' : 'border-steel-300 hover:bg-steel-50'
+              }`}
+            >
+              {showComparison ? 'Hide' : 'Show'} Comparison
+            </button>
+            <button onClick={handleExport} className="px-3 py-1.5 rounded border border-green-300 text-green-700 text-xs font-medium hover:bg-green-50">
+              Export
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* Comparison view */}
+      {showComparison && (
+        <div className="panel p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">Expense Comparison</h2>
+            <div className="flex gap-1">
+              {(['week', 'month', 'year'] as const).map(g => (
+                <button
+                  key={g}
+                  onClick={() => setGroupBy(g)}
+                  className={`px-3 py-1 rounded border text-xs font-medium capitalize ${
+                    groupBy === g ? 'bg-diesel text-white border-diesel' : 'border-steel-300 hover:bg-steel-50'
+                  }`}
+                >
+                  {g === 'week' ? 'Weekly' : g === 'month' ? 'Monthly' : 'Yearly'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {comparisonData.length === 0 ? (
+            <p className="text-sm text-steel-500">No expense data for this period{isFiltered ? ' with the selected filters' : ''}.</p>
+          ) : (
+            <>
+              <BarChart
+                data={comparisonData.map(d => ({ date: d.label, amount: Math.round(d.amount * 100) / 100 }))}
+                bars={[{ key: 'amount', color: '#ef4444', label: 'Expenses' }]}
+                xKey="date"
+              />
+              <div className="mt-4">
+                <table className="w-full text-sm">
+                  <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200">
+                    <tr>
+                      <th className="text-left px-4 py-2">Period</th>
+                      <th className="text-right px-4 py-2">Total</th>
+                      <th className="text-right px-4 py-2">Transactions</th>
+                      <th className="text-right px-4 py-2">Avg / Transaction</th>
+                      <th className="text-right px-4 py-2">Change</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparisonData.map((d, i) => {
+                      const prev = i > 0 ? comparisonData[i - 1].amount : null;
+                      const change = prev !== null && prev > 0 ? ((d.amount - prev) / prev) * 100 : null;
+                      return (
+                        <tr key={i} className="border-b border-steel-100">
+                          <td className="px-4 py-2.5 font-medium">{d.label}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-red-600">${fmt(d.amount)}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums">{d.count}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-steel-500">${fmt(d.count > 0 ? d.amount / d.count : 0)}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums">
+                            {change !== null ? (
+                              <span className={change > 0 ? 'text-red-600' : change < 0 ? 'text-green-600' : 'text-steel-500'}>
+                                {change > 0 ? '+' : ''}{change.toFixed(1)}%
+                              </span>
+                            ) : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="bg-steel-50 font-semibold">
+                    <tr>
+                      <td className="px-4 py-2.5">Total</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-red-600">${fmt(comparisonData.reduce((s, d) => s + d.amount, 0))}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums">{comparisonData.reduce((s, d) => s + d.count, 0)}</td>
+                      <td className="px-4 py-2.5"></td>
+                      <td className="px-4 py-2.5"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Expenses trend */}
+      {!showComparison && (
+        <div className="panel p-5">
+          <h2 className="font-semibold mb-4">Expenses Over Time</h2>
+          <BarChart
+            data={data.expensesOverTime}
+            bars={[{ key: 'amount', color: '#ef4444', label: 'Expenses' }]}
+            xKey="date"
+          />
+        </div>
+      )}
+
       {/* View selector */}
-      <div className="flex gap-1">
+      <div className="flex gap-1 print:hidden">
         {([
           { key: 'category', label: 'By Category' },
           { key: 'truck', label: 'By Truck' },
@@ -413,36 +703,37 @@ function ExpensesTab({ data }: { data: ReportData }) {
 
       {view === 'category' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Visual breakdown */}
           <div className="panel p-5">
-            <h2 className="font-semibold mb-4">Category Breakdown</h2>
-            {data.expensesByCategory.length === 0 ? (
-              <p className="text-sm text-steel-500">No expenses for this period.</p>
-            ) : (
-              <div className="space-y-3">
-                {data.expensesByCategory.map((e, i) => {
-                  const maxCat = data.expensesByCategory[0]?.amount || 1;
-                  const pct = (e.amount / maxCat) * 100;
-                  return (
-                    <div key={i}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium">{formatCategory(e.category)}</span>
-                        <span className="tabular-nums text-steel-600">${fmt(e.amount)}</span>
+            <h2 className="font-semibold mb-4">Category Breakdown{isFiltered ? ' (Filtered)' : ''}</h2>
+            {(() => {
+              const cats = isFiltered ? filteredByCategory : data.expensesByCategory;
+              const total = isFiltered ? filteredTotal : data.totalExpenses;
+              if (cats.length === 0) return <p className="text-sm text-steel-500">No expenses for this period.</p>;
+              return (
+                <div className="space-y-3">
+                  {cats.map((e, i) => {
+                    const maxCat = cats[0]?.amount || 1;
+                    const pct = (e.amount / maxCat) * 100;
+                    return (
+                      <div key={i}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="font-medium">{formatCategory(e.category)}</span>
+                          <span className="tabular-nums text-steel-600">${fmt(e.amount)}</span>
+                        </div>
+                        <div className="h-3 bg-steel-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pct}%`, backgroundColor: EXPENSE_COLORS[i % EXPENSE_COLORS.length] }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-3 bg-steel-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{ width: `${pct}%`, backgroundColor: EXPENSE_COLORS[i % EXPENSE_COLORS.length] }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
-          {/* Table */}
           <div className="panel overflow-hidden">
             <table className="w-full text-sm">
               <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
@@ -453,26 +744,29 @@ function ExpensesTab({ data }: { data: ReportData }) {
                 </tr>
               </thead>
               <tbody>
-                {data.expensesByCategory.map((e, i) => (
-                  <tr key={i} className="border-b border-steel-100">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: EXPENSE_COLORS[i % EXPENSE_COLORS.length] }} />
-                        <span className="font-medium">{formatCategory(e.category)}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums font-semibold">${fmt(e.amount)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-steel-500">
-                      {data.totalExpenses > 0 ? ((e.amount / data.totalExpenses) * 100).toFixed(1) : 0}%
-                    </td>
-                  </tr>
-                ))}
+                {(isFiltered ? filteredByCategory : data.expensesByCategory).map((e, i) => {
+                  const total = isFiltered ? filteredTotal : data.totalExpenses;
+                  return (
+                    <tr key={i} className="border-b border-steel-100">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: EXPENSE_COLORS[i % EXPENSE_COLORS.length] }} />
+                          <span className="font-medium">{formatCategory(e.category)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-semibold">${fmt(e.amount)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-steel-500">
+                        {total > 0 ? ((e.amount / total) * 100).toFixed(1) : 0}%
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
-              {data.expensesByCategory.length > 0 && (
+              {(isFiltered ? filteredByCategory : data.expensesByCategory).length > 0 && (
                 <tfoot className="bg-steel-50 font-semibold">
                   <tr>
                     <td className="px-4 py-3">Total</td>
-                    <td className="px-4 py-3 text-right tabular-nums">${fmt(data.totalExpenses)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">${fmt(isFiltered ? filteredTotal : data.totalExpenses)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">100%</td>
                   </tr>
                 </tfoot>
@@ -553,7 +847,13 @@ function ExpensesTab({ data }: { data: ReportData }) {
 // PAYROLL TAB
 // ═══════════════════════════════════════════════════════════════════
 
-function PayrollTab({ data }: { data: ReportData }) {
+function PayrollTab({ data, currentRange }: { data: ReportData; currentRange: string }) {
+  const handleExport = useCallback(() => {
+    downloadCSV(`payroll-${currentRange}.csv`,
+      ['Driver', 'Truck', 'Worker Type', 'Pay Type', 'Total Paid', 'Pending', 'Payments'],
+      data.driverPayouts.map(d => [d.name, d.truck, d.workerType, d.payType, d.totalPaid, d.totalPending, d.payments]));
+  }, [data, currentRange]);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -563,7 +863,12 @@ function PayrollTab({ data }: { data: ReportData }) {
         <KPICard label="Revenue per Driver" value={data.driverRevenue.length > 0 ? `$${fmt(data.totalRevenue / data.driverRevenue.length)}` : '—'} />
       </div>
 
-      {/* Driver payouts table */}
+      <div className="flex justify-end print:hidden">
+        <button onClick={handleExport} className="px-3 py-1.5 rounded border border-green-300 text-green-700 text-xs font-medium hover:bg-green-50">
+          Export Payroll
+        </button>
+      </div>
+
       <div className="panel overflow-hidden">
         <div className="px-4 py-3 border-b border-steel-200 bg-steel-50">
           <h2 className="font-semibold">Driver Payouts</h2>
@@ -616,7 +921,6 @@ function PayrollTab({ data }: { data: ReportData }) {
         </table>
       </div>
 
-      {/* Revenue generated per driver */}
       <div className="panel overflow-hidden">
         <div className="px-4 py-3 border-b border-steel-200 bg-steel-50">
           <h2 className="font-semibold">Revenue Generated per Driver</h2>
@@ -658,10 +962,29 @@ function PayrollTab({ data }: { data: ReportData }) {
 // PROFIT & LOSS TAB
 // ═══════════════════════════════════════════════════════════════════
 
-function ProfitTab({ data }: { data: ReportData }) {
+function ProfitTab({ data, currentRange }: { data: ReportData; currentRange: string }) {
   const margin = data.totalRevenue > 0 ? (data.netProfit / data.totalRevenue) * 100 : 0;
   const operatingProfit = data.totalRevenue - data.totalExpenses - data.totalPayroll;
   const operatingMargin = data.totalRevenue > 0 ? (operatingProfit / data.totalRevenue) * 100 : 0;
+
+  const handleExport = useCallback(() => {
+    downloadCSV(`profit-loss-${currentRange}.csv`,
+      ['Line Item', 'Amount'],
+      [
+        ['Gross Revenue', data.totalRevenue],
+        ['Invoiced', data.invoiceTotal],
+        ['Collected (Paid)', data.paidTotal],
+        ['Outstanding', data.overdueTotal],
+        ['Operating Expenses', data.totalExpenses],
+        ...data.expensesByCategory.slice(0, 8).map(e => [`  ${formatCategory(e.category)}`, e.amount] as [string, number]),
+        ['Gross Profit', data.netProfit],
+        [`Margin`, margin.toFixed(1) + '%'],
+        ['Payroll (Paid)', data.totalPayroll],
+        ['Payroll (Pending)', data.totalPendingPayroll],
+        ['Operating Profit', operatingProfit],
+        ['Operating Margin', operatingMargin.toFixed(1) + '%'],
+      ]);
+  }, [data, currentRange, margin, operatingProfit, operatingMargin]);
 
   return (
     <div className="space-y-6">
@@ -672,7 +995,12 @@ function ProfitTab({ data }: { data: ReportData }) {
         <KPICard label="Operating Margin" value={`${operatingMargin.toFixed(1)}%`} accent={operatingMargin >= 0 ? 'green' : 'red'} />
       </div>
 
-      {/* P&L trend */}
+      <div className="flex justify-end print:hidden">
+        <button onClick={handleExport} className="px-3 py-1.5 rounded border border-green-300 text-green-700 text-xs font-medium hover:bg-green-50">
+          Export P&L
+        </button>
+      </div>
+
       <div className="panel p-5">
         <h2 className="font-semibold mb-4">Profit Trend</h2>
         <BarChart
@@ -683,7 +1011,6 @@ function ProfitTab({ data }: { data: ReportData }) {
         />
       </div>
 
-      {/* P&L Statement */}
       <div className="panel overflow-hidden">
         <div className="px-4 py-3 border-b border-steel-200 bg-steel-50">
           <h2 className="font-semibold">Profit & Loss Statement</h2>
@@ -784,7 +1111,6 @@ function BarChart({ data, bars, xKey, allowNegative }: {
 
   return (
     <div>
-      {/* Legend */}
       <div className="flex gap-4 mb-2">
         {bars.map((b) => (
           <div key={b.key} className="flex items-center gap-1.5">
