@@ -1109,9 +1109,9 @@ function BarChart({ data, bars, xKey, allowNegative }: {
         ))}
       </div>
       <div className="overflow-x-auto">
-        <div className="flex items-end gap-px" style={{ minWidth: Math.max(data.length * 18, 300), height: 180 }}>
+        <div className="flex gap-px" style={{ minWidth: Math.max(data.length * 18, 300), height: 180 }}>
           {data.map((d, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center group relative" style={{ minWidth: 10 }}>
+            <div key={i} className="flex-1 flex flex-col justify-end items-center group relative" style={{ minWidth: 10, height: '100%' }}>
               {bars.map((b) => {
                 const val = d[b.key] as number;
                 const pct = range > 0 ? (Math.abs(val) / range) * 100 : 0;
@@ -1119,9 +1119,9 @@ function BarChart({ data, bars, xKey, allowNegative }: {
                 return (
                   <div
                     key={b.key}
-                    className="w-full rounded-t transition-colors cursor-default"
+                    className="w-full rounded-t transition-colors cursor-default flex-shrink-0"
                     style={{
-                      height: `${Math.max(pct, 1)}%`,
+                      height: `${Math.max(pct, val > 0 ? 2 : 0)}%`,
                       backgroundColor: val < 0 ? '#ef4444' : b.color,
                       opacity: 0.85,
                     }}
