@@ -141,12 +141,13 @@ async function handleDriverSms(
     orderBy: { dispatchedAt: 'desc' },
   });
 
-  // Always log the inbound
+  // Always log the inbound — tag with companyId for tenant isolation
   await prisma.smsLog.create({
     data: {
       direction: 'INBOUND',
       phone: fromNumber,
       message: text,
+      companyId: driver.companyId,
       driverId: driver.id,
       ticketId: ticket?.id,
       textbeltId: messageSid,
@@ -235,12 +236,13 @@ async function handleBrokerJobSms(
 
   console.log(`[sms-webhook] Broker "${broker.name}" SMS parsed (${parsed.parseMethod}):`, JSON.stringify(parsed));
 
-  // Log inbound
+  // Log inbound — tag with companyId for tenant isolation
   await prisma.smsLog.create({
     data: {
       direction: 'INBOUND',
       phone: fromNumber,
       message: text,
+      companyId,
       brokerId: broker.id,
       textbeltId: messageSid,
       success: true,

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 interface SmsEntry {
   id: string; direction: string; phone: string; message: string;
-  driverName: string | null; brokerName: string | null;
+  driverName: string | null; brokerName: string | null; customerName: string | null;
   success: boolean; error: string | null; createdAt: string;
 }
 interface Contact { id: string; name: string; phone: string | null; }
@@ -14,7 +14,7 @@ interface Contact { id: string; name: string; phone: string | null; }
 interface Props {
   tab: string; page: number; totalPages: number; dir: string; search: string;
   smsLogs: SmsEntry[];
-  drivers: Contact[]; brokers: Contact[];
+  drivers: Contact[]; brokers: Contact[]; customers: Contact[];
   stats: { incoming: number; outgoing: number };
 }
 
@@ -31,16 +31,15 @@ function formatDate(iso: string) {
     ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
-export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, drivers, brokers, stats }: Props) {
+export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, drivers, brokers, customers, stats }: Props) {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState(search);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Send SMS form state
-  const [smsRecipientType, setSmsRecipientType] = useState<'driver' | 'broker' | 'custom'>('driver');
+  const [smsRecipientType, setSmsRecipientType] = useState<'driver' | 'broker' | 'customer'>('driver');
   const [smsRecipientId, setSmsRecipientId] = useState('');
-  const [smsCustomPhone, setSmsCustomPhone] = useState('');
   const [smsMessage, setSmsMessage] = useState('');
 
   const buildUrl = (overrides: Record<string, string>) => {
@@ -61,9 +60,10 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
     e.preventDefault();
     setSending(true);
     setSendResult(null);
-    let phone = smsCustomPhone;
+    let phone = '';
     let driverId: string | undefined;
     let brokerId: string | undefined;
+    let customerId: string | undefined;
 
     if (smsRecipientType === 'driver' && smsRecipientId) {
       const d = drivers.find(x => x.id === smsRecipientId);
@@ -73,10 +73,14 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
       const b = brokers.find(x => x.id === smsRecipientId);
       phone = b?.phone || '';
       brokerId = smsRecipientId;
+    } else if (smsRecipientType === 'customer' && smsRecipientId) {
+      const c = customers.find(x => x.id === smsRecipientId);
+      phone = c?.phone || '';
+      customerId = smsRecipientId;
     }
 
     if (!phone || !smsMessage) {
-      setSendResult({ ok: false, msg: 'Phone number and message are required' });
+      setSendResult({ ok: false, msg: 'Please select a contact with a phone number and enter a message' });
       setSending(false);
       return;
     }
@@ -85,13 +89,12 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
       const res = await fetch('/api/sms/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, message: smsMessage, driverId, brokerId }),
+        body: JSON.stringify({ phone, message: smsMessage, driverId, brokerId, customerId }),
       });
       const data = await res.json();
       if (res.ok) {
         setSendResult({ ok: true, msg: 'SMS sent successfully!' });
         setSmsMessage('');
-        setSmsCustomPhone('');
       } else {
         setSendResult({ ok: false, msg: data.error || 'Failed to send' });
       }
@@ -199,7 +202,7 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {l.driverName || l.brokerName || <span className="text-steel-400">Unknown</span>}
+                        {l.driverName || l.brokerName || l.customerName || <span className="text-steel-400">Unknown</span>}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">{l.phone}</td>
                       <td className="px-4 py-3 max-w-sm">
@@ -255,18 +258,18 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
             <div>
               <label className="block text-sm font-medium text-steel-700 mb-1">Recipient</label>
               <div className="flex gap-2 mb-2">
-                {(['driver', 'broker', 'custom'] as const).map((t) => (
+                {(['driver', 'broker', 'customer'] as const).map((t) => (
                   <button
                     key={t}
                     type="button"
-                    onClick={() => { setSmsRecipientType(t); setSmsRecipientId(''); setSmsCustomPhone(''); }}
+                    onClick={() => { setSmsRecipientType(t); setSmsRecipientId(''); }}
                     className={`px-3 py-1.5 rounded text-sm border ${
                       smsRecipientType === t
                         ? 'bg-diesel text-white border-diesel'
                         : 'bg-white text-steel-600 border-steel-300 hover:bg-steel-50'
                     }`}
                   >
-                    {t === 'driver' ? 'Driver' : t === 'broker' ? 'Broker' : 'Custom Number'}
+                    {t === 'driver' ? 'Driver' : t === 'broker' ? 'Broker' : 'Customer'}
                   </button>
                 ))}
               </div>
@@ -297,14 +300,17 @@ export function MessagingHub({ tab, page, totalPages, dir, search, smsLogs, driv
                 </select>
               )}
 
-              {smsRecipientType === 'custom' && (
-                <input
-                  type="tel"
-                  value={smsCustomPhone}
-                  onChange={(e) => setSmsCustomPhone(e.target.value)}
-                  placeholder="Phone number (e.g. 2395551234)"
+              {smsRecipientType === 'customer' && (
+                <select
+                  value={smsRecipientId}
+                  onChange={(e) => setSmsRecipientId(e.target.value)}
                   className="w-full px-3 py-2 border border-steel-300 rounded text-sm"
-                />
+                >
+                  <option value="">Select a customer...</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name} — {c.phone || 'No phone'}</option>
+                  ))}
+                </select>
               )}
             </div>
 

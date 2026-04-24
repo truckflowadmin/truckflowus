@@ -20,6 +20,7 @@ export interface SendSmsOptions {
   companyId?: string;
   driverId?: string;
   brokerId?: string;
+  customerId?: string;
   ticketId?: string;
   jobId?: string;
   statusCallback?: string;    // URL Twilio calls with delivery status updates
@@ -94,6 +95,7 @@ async function logSms(opts: SendSmsOptions, result: SendSmsResult) {
       companyId: opts.companyId,
       driverId: opts.driverId,
       brokerId: opts.brokerId,
+      customerId: opts.customerId,
       ticketId: opts.ticketId,
       jobId: opts.jobId,
       textbeltId: result.twilioSid,  // reusing existing column for external message ID

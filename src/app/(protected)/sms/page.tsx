@@ -33,7 +33,7 @@ export default async function SmsPage({
   const [smsLogs, smsTotal] = await Promise.all([
     prisma.smsLog.findMany({
       where: smsFilter,
-      include: { driver: { select: { name: true } }, broker: { select: { name: true } } },
+      include: { driver: { select: { name: true } }, broker: { select: { name: true } }, customer: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -42,13 +42,18 @@ export default async function SmsPage({
   ]);
 
   // Contacts for send form
-  const [drivers, brokers] = await Promise.all([
+  const [drivers, brokers, customers] = await Promise.all([
     prisma.driver.findMany({
       where: { companyId: session.companyId },
       select: { id: true, name: true, phone: true },
       orderBy: { name: 'asc' },
     }),
     prisma.broker.findMany({
+      where: { companyId: session.companyId },
+      select: { id: true, name: true, phone: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.customer.findMany({
       where: { companyId: session.companyId },
       select: { id: true, name: true, phone: true },
       orderBy: { name: 'asc' },
@@ -77,12 +82,14 @@ export default async function SmsPage({
         message: l.message,
         driverName: l.driver?.name || null,
         brokerName: l.broker?.name || null,
+        customerName: l.customer?.name || null,
         success: l.success,
         error: l.error,
         createdAt: l.createdAt.toISOString(),
       }))}
       drivers={drivers}
       brokers={brokers}
+      customers={customers}
       stats={{ incoming: smsInCount, outgoing: smsOutCount }}
     />
   );

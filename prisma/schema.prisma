@@ -311,6 +311,7 @@ model Customer {
   tickets  Ticket[]
   jobs     Job[]
   invoices Invoice[]
+  smsLogs  SmsLog[]
 
   @@index([companyId])
 }
@@ -630,6 +631,7 @@ model SmsLog {
   message     String       @db.Text
   driverId    String?
   brokerId    String?
+  customerId  String?
   ticketId    String?
   jobId       String?
   textbeltId  String? // External message SID (Twilio MessageSid)
@@ -637,14 +639,16 @@ model SmsLog {
   error       String?
   createdAt   DateTime     @default(now())
 
-  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  driver  Driver?  @relation(fields: [driverId], references: [id], onDelete: SetNull)
-  broker  Broker?  @relation(fields: [brokerId], references: [id], onDelete: SetNull)
+  company  Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  driver   Driver?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  broker   Broker?   @relation(fields: [brokerId], references: [id], onDelete: SetNull)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([companyId, createdAt])
   @@index([phone])
   @@index([driverId])
   @@index([brokerId])
+  @@index([customerId])
   @@index([createdAt])
 }
 
