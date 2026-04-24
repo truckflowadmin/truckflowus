@@ -7,6 +7,10 @@ import InspectionAlerts from '../fleet/InspectionAlerts';
 import { getServerLang, t, statusLabel } from '@/lib/i18n';
 import { safePage } from '@/lib/server-error';
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
+
 export default async function DashboardPage() {
   const session = await requireSession();
   await requirePlan(session.companyId);
@@ -21,13 +25,31 @@ export default async function DashboardPage() {
     await safePage(async () => {
       const [pending, inProgress, completedToday, completedWeek, driversActive, openInvoiceAgg] =
         await Promise.all([
-          prisma.ticket.count({ where: { companyId: session.companyId, status: 'PENDING' } }),
-          prisma.ticket.count({ where: { companyId: session.companyId, status: { in: ['DISPATCHED', 'IN_PROGRESS'] } } }),
+          prisma.ticket.count({ where: { companyId: session.companyId, status: 'PENDING', deletedAt: null } }),
+          prisma.ticket.count({ where: { companyId: session.companyId, status: { in: ['DISPATCHED', 'IN_PROGRESS'] }, deletedAt: null } }),
+          // Done Today: use completedAt if set, fall back to date field for older tickets
           prisma.ticket.count({
-            where: { companyId: session.companyId, status: 'COMPLETED', completedAt: { gte: todayStart, lte: todayEnd } },
+            where: {
+              companyId: session.companyId,
+              status: 'COMPLETED',
+              deletedAt: null,
+              OR: [
+                { completedAt: { gte: todayStart, lte: todayEnd } },
+                { completedAt: null, date: { gte: todayStart, lte: todayEnd } },
+              ],
+            },
           }),
+          // Done This Week: use completedAt if set, fall back to date field for older tickets
           prisma.ticket.count({
-            where: { companyId: session.companyId, status: 'COMPLETED', completedAt: { gte: weekStart, lte: weekEnd } },
+            where: {
+              companyId: session.companyId,
+              status: 'COMPLETED',
+              deletedAt: null,
+              OR: [
+                { completedAt: { gte: weekStart, lte: weekEnd } },
+                { completedAt: null, date: { gte: weekStart, lte: weekEnd } },
+              ],
+            },
           }),
           prisma.driver.count({ where: { companyId: session.companyId, active: true } }),
           prisma.invoice.aggregate({
