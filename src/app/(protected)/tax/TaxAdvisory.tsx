@@ -129,10 +129,10 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
 
   const getStatusColor = (status: FilingStatus) => {
     switch (status) {
-      case 'FILED': return 'bg-green-500/20 text-green-400';
-      case 'SENT': return 'bg-blue-500/20 text-blue-400';
-      case 'GENERATED': return 'bg-yellow-500/20 text-yellow-400';
-      default: return 'bg-steel-700/50 text-steel-400';
+      case 'FILED': return 'bg-green-50 text-green-700 border border-green-200';
+      case 'SENT': return 'bg-blue-50 text-blue-700 border border-blue-200';
+      case 'GENERATED': return 'bg-yellow-50 text-yellow-700 border border-yellow-200';
+      default: return 'bg-steel-100 text-steel-500 border border-steel-200';
     }
   };
 
@@ -158,15 +158,15 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Tax Advisory</h1>
-          <p className="text-steel-400 text-sm mt-1">1099 generation, tax summaries, and expense categorization</p>
+          <h1 className="text-2xl font-bold text-steel-800">Tax Advisory</h1>
+          <p className="text-steel-500 text-sm mt-1">1099 generation, tax summaries, and expense categorization</p>
         </div>
         <div className="flex items-center gap-3">
-          <label className="text-steel-400 text-sm">Tax Year:</label>
+          <label className="text-steel-500 text-sm">Tax Year:</label>
           <select
             value={data.selectedYear}
             onChange={(e) => changeYear(Number(e.target.value))}
-            className="bg-steel-800 text-white border border-steel-700 rounded px-3 py-1.5 text-sm"
+            className="bg-white text-steel-800 border border-steel-300 rounded px-3 py-1.5 text-sm"
           >
             {data.availableYears.map(y => (
               <option key={y} value={y}>{y}</option>
@@ -176,15 +176,15 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-steel-800/50 rounded-lg p-1">
+      <div className="flex gap-1 bg-steel-100 rounded-lg p-1">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
               tab === t.key
-                ? 'bg-safety text-diesel'
-                : 'text-steel-300 hover:text-white hover:bg-steel-700/50'
+                ? 'bg-diesel text-white shadow-sm'
+                : 'text-steel-600 hover:bg-steel-50'
             }`}
           >
             {t.label}
@@ -199,23 +199,23 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
         <div className="space-y-6">
           {/* Summary banner */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-steel-800 rounded-lg p-4">
-              <div className="text-steel-400 text-xs uppercase tracking-wider">Total Contractors</div>
-              <div className="text-2xl font-bold text-white mt-1">{data.contractors.length}</div>
+            <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+              <div className="text-steel-500 text-xs uppercase tracking-wider">Total Contractors</div>
+              <div className="text-2xl font-bold text-steel-800 mt-1">{data.contractors.length}</div>
             </div>
-            <div className="bg-steel-800 rounded-lg p-4">
-              <div className="text-steel-400 text-xs uppercase tracking-wider">Need 1099 (≥ $600)</div>
-              <div className="text-2xl font-bold text-safety mt-1">{contractorsOver600.length}</div>
+            <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+              <div className="text-steel-500 text-xs uppercase tracking-wider">Need 1099 (≥ $600)</div>
+              <div className="text-2xl font-bold text-diesel mt-1">{contractorsOver600.length}</div>
             </div>
-            <div className="bg-steel-800 rounded-lg p-4">
-              <div className="text-steel-400 text-xs uppercase tracking-wider">Total Contractor Payments</div>
-              <div className="text-2xl font-bold text-white mt-1">{fmt(data.contractors.reduce((s, c) => s + c.totalPaid, 0))}</div>
+            <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+              <div className="text-steel-500 text-xs uppercase tracking-wider">Total Contractor Payments</div>
+              <div className="text-2xl font-bold text-steel-800 mt-1">{fmt(data.contractors.reduce((s, c) => s + c.totalPaid, 0))}</div>
             </div>
           </div>
 
           {/* Filing status overview */}
           <div className="flex items-center gap-4 text-xs">
-            <span className="text-steel-400">Filing Progress:</span>
+            <span className="text-steel-500">Filing Progress:</span>
             {(['NOT_STARTED', 'GENERATED', 'SENT', 'FILED'] as FilingStatus[]).map(status => {
               const count = contractorsOver600.filter(c => (filingStatuses[c.id] || 'NOT_STARTED') === status).length;
               return (
@@ -228,14 +228,14 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
 
           {/* Contractors needing 1099 */}
           {contractorsOver600.length > 0 && (
-            <div className="bg-steel-800/50 rounded-lg overflow-hidden">
-              <div className="p-4 border-b border-steel-700">
-                <h2 className="text-white font-semibold">1099-NEC Required (≥ $600 in {data.selectedYear})</h2>
+            <div className="bg-white border border-steel-200 rounded-lg overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-steel-200 bg-steel-50">
+                <h2 className="text-steel-800 font-semibold">1099-NEC Required (≥ $600 in {data.selectedYear})</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-steel-800 text-steel-400 text-xs uppercase tracking-wider">
+                    <tr className="bg-steel-50 text-steel-500 text-xs uppercase tracking-wider border-b border-steel-200">
                       <th className="text-left p-3">Contractor</th>
                       <th className="text-left p-3">Address</th>
                       <th className="text-right p-3">Total Paid</th>
@@ -243,26 +243,26 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
                       <th className="text-center p-3">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-steel-700/50">
+                  <tbody className="divide-y divide-steel-100">
                     {contractorsOver600.map(c => {
                       const status = filingStatuses[c.id] || 'NOT_STARTED';
                       const fullAddress = [c.address, c.city, c.state, c.zip].filter(Boolean).join(', ');
                       return (
-                        <tr key={c.id} className="hover:bg-steel-700/30">
+                        <tr key={c.id} className="hover:bg-steel-50">
                           <td className="p-3">
-                            <div className="text-white font-medium">{c.name}</div>
-                            <div className="text-steel-400 text-xs">{c.phone}</div>
-                            {c.email && <div className="text-steel-400 text-xs">{c.email}</div>}
+                            <div className="text-steel-800 font-medium">{c.name}</div>
+                            <div className="text-steel-500 text-xs">{c.phone}</div>
+                            {c.email && <div className="text-steel-500 text-xs">{c.email}</div>}
                           </td>
-                          <td className="p-3 text-steel-300 text-xs max-w-[200px]">
-                            {fullAddress || <span className="text-red-400">Missing address</span>}
+                          <td className="p-3 text-steel-600 text-xs max-w-[200px]">
+                            {fullAddress || <span className="text-red-500">Missing address</span>}
                           </td>
-                          <td className="p-3 text-right font-mono text-white">{fmt(c.totalPaid)}</td>
+                          <td className="p-3 text-right font-mono text-steel-800">{fmt(c.totalPaid)}</td>
                           <td className="p-3 text-center">
                             <select
                               value={status}
                               onChange={e => updateFilingStatus(c.id, e.target.value as FilingStatus)}
-                              className={`text-xs rounded px-2 py-1 border-0 ${getStatusColor(status)} cursor-pointer`}
+                              className={`text-xs rounded px-2 py-1 ${getStatusColor(status)} cursor-pointer`}
                             >
                               <option value="NOT_STARTED">Not Started</option>
                               <option value="GENERATED">Generated</option>
@@ -273,7 +273,7 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
                           <td className="p-3 text-center">
                             <button
                               onClick={() => window.open(`/api/tax/1099?driverId=${c.id}&year=${data.selectedYear}`, '_blank')}
-                              className="text-xs bg-safety/20 text-safety px-3 py-1 rounded hover:bg-safety/30 transition-colors"
+                              className="text-xs bg-diesel text-white px-3 py-1.5 rounded hover:bg-diesel/90 transition-colors"
                             >
                               Generate PDF
                             </button>
@@ -289,22 +289,22 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
 
           {/* Contractors under $600 */}
           {contractorsUnder600.length > 0 && (
-            <div className="bg-steel-800/30 rounded-lg overflow-hidden">
-              <div className="p-4 border-b border-steel-700/50">
-                <h2 className="text-steel-300 font-semibold">Under $600 — No 1099 Required</h2>
+            <div className="bg-steel-50 border border-steel-200 rounded-lg overflow-hidden">
+              <div className="p-4 border-b border-steel-200">
+                <h2 className="text-steel-600 font-semibold">Under $600 — No 1099 Required</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-steel-500 text-xs uppercase tracking-wider">
+                    <tr className="text-steel-500 text-xs uppercase tracking-wider border-b border-steel-200">
                       <th className="text-left p-3">Contractor</th>
                       <th className="text-right p-3">Total Paid</th>
                       <th className="text-right p-3">Remaining to $600</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-steel-700/30">
+                  <tbody className="divide-y divide-steel-100">
                     {contractorsUnder600.map(c => (
-                      <tr key={c.id} className="text-steel-400">
+                      <tr key={c.id} className="text-steel-600">
                         <td className="p-3">{c.name}</td>
                         <td className="p-3 text-right font-mono">{fmt(c.totalPaid)}</td>
                         <td className="p-3 text-right font-mono">{fmt(600 - c.totalPaid)}</td>
@@ -317,33 +317,33 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
           )}
 
           {data.contractors.length === 0 && (
-            <div className="bg-steel-800/30 rounded-lg p-8 text-center">
-              <div className="text-steel-400 text-lg mb-2">No Contractors Found</div>
+            <div className="bg-steel-50 border border-steel-200 rounded-lg p-8 text-center">
+              <div className="text-steel-600 text-lg mb-2">No Contractors Found</div>
               <p className="text-steel-500 text-sm">Drivers marked as &quot;Contractor&quot; worker type will appear here for 1099 generation.</p>
             </div>
           )}
 
           {/* Payer info preview */}
-          <div className="bg-steel-800/50 rounded-lg p-4">
-            <h3 className="text-white font-semibold text-sm mb-3">Payer Information (Your Company)</h3>
+          <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+            <h3 className="text-steel-800 font-semibold text-sm mb-3">Payer Information (Your Company)</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div>
-                <span className="text-steel-400">Company: </span>
-                <span className="text-white">{data.company.name || '—'}</span>
+                <span className="text-steel-500">Company: </span>
+                <span className="text-steel-800">{data.company.name || '—'}</span>
               </div>
               <div>
-                <span className="text-steel-400">EIN: </span>
-                <span className="text-white">{data.company.ein || <span className="text-red-400">Not set — go to Settings</span>}</span>
+                <span className="text-steel-500">EIN: </span>
+                <span className="text-steel-800">{data.company.ein || <span className="text-red-500">Not set — go to Settings</span>}</span>
               </div>
               <div>
-                <span className="text-steel-400">Address: </span>
-                <span className="text-white">
+                <span className="text-steel-500">Address: </span>
+                <span className="text-steel-800">
                   {[data.company.address, data.company.city, data.company.state, data.company.zip].filter(Boolean).join(', ') || '—'}
                 </span>
               </div>
               <div>
-                <span className="text-steel-400">Phone: </span>
-                <span className="text-white">{data.company.phone || '—'}</span>
+                <span className="text-steel-500">Phone: </span>
+                <span className="text-steel-800">{data.company.phone || '—'}</span>
               </div>
             </div>
           </div>
@@ -357,35 +357,35 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
         <div className="space-y-6">
           {/* Annual totals */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-steel-800 rounded-lg p-4">
-              <div className="text-steel-400 text-xs uppercase tracking-wider">Gross Revenue</div>
-              <div className="text-xl font-bold text-green-400 mt-1">{fmt(data.totalRevenue)}</div>
+            <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+              <div className="text-steel-500 text-xs uppercase tracking-wider">Gross Revenue</div>
+              <div className="text-xl font-bold text-green-600 mt-1">{fmt(data.totalRevenue)}</div>
             </div>
-            <div className="bg-steel-800 rounded-lg p-4">
-              <div className="text-steel-400 text-xs uppercase tracking-wider">Total Expenses</div>
-              <div className="text-xl font-bold text-red-400 mt-1">{fmt(data.totalExpenses)}</div>
+            <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+              <div className="text-steel-500 text-xs uppercase tracking-wider">Total Expenses</div>
+              <div className="text-xl font-bold text-red-600 mt-1">{fmt(data.totalExpenses)}</div>
             </div>
-            <div className="bg-steel-800 rounded-lg p-4">
-              <div className="text-steel-400 text-xs uppercase tracking-wider">Payroll</div>
-              <div className="text-xl font-bold text-blue-400 mt-1">{fmt(data.totalPayroll)}</div>
+            <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+              <div className="text-steel-500 text-xs uppercase tracking-wider">Payroll</div>
+              <div className="text-xl font-bold text-blue-600 mt-1">{fmt(data.totalPayroll)}</div>
             </div>
-            <div className="bg-steel-800 rounded-lg p-4">
-              <div className="text-steel-400 text-xs uppercase tracking-wider">Net Profit</div>
-              <div className={`text-xl font-bold mt-1 ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+              <div className="text-steel-500 text-xs uppercase tracking-wider">Net Profit</div>
+              <div className={`text-xl font-bold mt-1 ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {fmt(netProfit)}
               </div>
             </div>
           </div>
 
           {/* Quarterly breakdown */}
-          <div className="bg-steel-800/50 rounded-lg overflow-hidden">
-            <div className="p-4 border-b border-steel-700">
-              <h2 className="text-white font-semibold">Quarterly Breakdown — {data.selectedYear}</h2>
+          <div className="bg-white border border-steel-200 rounded-lg overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-steel-200 bg-steel-50">
+              <h2 className="text-steel-800 font-semibold">Quarterly Breakdown — {data.selectedYear}</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-steel-800 text-steel-400 text-xs uppercase tracking-wider">
+                  <tr className="bg-steel-50 text-steel-500 text-xs uppercase tracking-wider border-b border-steel-200">
                     <th className="text-left p-3">Quarter</th>
                     <th className="text-right p-3">Revenue</th>
                     <th className="text-right p-3">Expenses</th>
@@ -393,19 +393,19 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
                     <th className="text-right p-3">Net</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-steel-700/50">
+                <tbody className="divide-y divide-steel-100">
                   {[0, 1, 2, 3].map(q => {
                     const rev = data.quarterlyRevenue[q];
                     const exp = data.quarterlyExpenses[q];
                     const pay = data.quarterlyPayroll[q];
                     const net = rev - exp - pay;
                     return (
-                      <tr key={q} className="hover:bg-steel-700/30">
-                        <td className="p-3 text-white font-medium">Q{q + 1} ({['Jan–Mar', 'Apr–Jun', 'Jul–Sep', 'Oct–Dec'][q]})</td>
-                        <td className="p-3 text-right font-mono text-green-400">{fmt(rev)}</td>
-                        <td className="p-3 text-right font-mono text-red-400">{fmt(exp)}</td>
-                        <td className="p-3 text-right font-mono text-blue-400">{fmt(pay)}</td>
-                        <td className={`p-3 text-right font-mono font-semibold ${net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <tr key={q} className="hover:bg-steel-50">
+                        <td className="p-3 text-steel-800 font-medium">Q{q + 1} ({['Jan–Mar', 'Apr–Jun', 'Jul–Sep', 'Oct–Dec'][q]})</td>
+                        <td className="p-3 text-right font-mono text-green-600">{fmt(rev)}</td>
+                        <td className="p-3 text-right font-mono text-red-600">{fmt(exp)}</td>
+                        <td className="p-3 text-right font-mono text-blue-600">{fmt(pay)}</td>
+                        <td className={`p-3 text-right font-mono font-semibold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {fmt(net)}
                         </td>
                       </tr>
@@ -413,12 +413,12 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-steel-800 font-semibold">
-                    <td className="p-3 text-white">Annual Total</td>
-                    <td className="p-3 text-right font-mono text-green-400">{fmt(data.totalRevenue)}</td>
-                    <td className="p-3 text-right font-mono text-red-400">{fmt(data.totalExpenses)}</td>
-                    <td className="p-3 text-right font-mono text-blue-400">{fmt(data.totalPayroll)}</td>
-                    <td className={`p-3 text-right font-mono ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <tr className="bg-steel-50 font-semibold border-t border-steel-200">
+                    <td className="p-3 text-steel-800">Annual Total</td>
+                    <td className="p-3 text-right font-mono text-green-600">{fmt(data.totalRevenue)}</td>
+                    <td className="p-3 text-right font-mono text-red-600">{fmt(data.totalExpenses)}</td>
+                    <td className="p-3 text-right font-mono text-blue-600">{fmt(data.totalPayroll)}</td>
+                    <td className={`p-3 text-right font-mono ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {fmt(netProfit)}
                     </td>
                   </tr>
@@ -428,69 +428,69 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
           </div>
 
           {/* Estimated tax liability */}
-          <div className="bg-steel-800/50 rounded-lg p-4">
-            <h3 className="text-white font-semibold mb-3">Estimated Tax Liability (Self-Employment)</h3>
-            <p className="text-steel-400 text-xs mb-4">These are rough estimates only — consult your tax professional for accurate calculations.</p>
+          <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+            <h3 className="text-steel-800 font-semibold mb-3">Estimated Tax Liability (Self-Employment)</h3>
+            <p className="text-steel-500 text-xs mb-4">These are rough estimates only — consult your tax professional for accurate calculations.</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-steel-800 rounded p-3">
-                <div className="text-steel-400 text-xs">Self-Employment Tax (15.3%)</div>
-                <div className="text-white font-bold mt-1">{fmt(Math.max(0, netProfit * 0.9235 * 0.153))}</div>
-                <div className="text-steel-500 text-xs mt-1">On 92.35% of net profit</div>
+              <div className="bg-steel-50 border border-steel-200 rounded p-3">
+                <div className="text-steel-500 text-xs">Self-Employment Tax (15.3%)</div>
+                <div className="text-steel-800 font-bold mt-1">{fmt(Math.max(0, netProfit * 0.9235 * 0.153))}</div>
+                <div className="text-steel-400 text-xs mt-1">On 92.35% of net profit</div>
               </div>
-              <div className="bg-steel-800 rounded p-3">
-                <div className="text-steel-400 text-xs">Est. Federal Income Tax (22%)</div>
-                <div className="text-white font-bold mt-1">{fmt(Math.max(0, netProfit * 0.22))}</div>
-                <div className="text-steel-500 text-xs mt-1">Marginal rate estimate</div>
+              <div className="bg-steel-50 border border-steel-200 rounded p-3">
+                <div className="text-steel-500 text-xs">Est. Federal Income Tax (22%)</div>
+                <div className="text-steel-800 font-bold mt-1">{fmt(Math.max(0, netProfit * 0.22))}</div>
+                <div className="text-steel-400 text-xs mt-1">Marginal rate estimate</div>
               </div>
-              <div className="bg-steel-800 rounded p-3">
-                <div className="text-steel-400 text-xs">Quarterly Payment Estimate</div>
-                <div className="text-safety font-bold mt-1">{fmt(Math.max(0, (netProfit * 0.9235 * 0.153 + netProfit * 0.22) / 4))}</div>
-                <div className="text-steel-500 text-xs mt-1">Due Apr 15, Jun 15, Sep 15, Jan 15</div>
+              <div className="bg-steel-50 border border-steel-200 rounded p-3">
+                <div className="text-steel-500 text-xs">Quarterly Payment Estimate</div>
+                <div className="text-diesel font-bold mt-1">{fmt(Math.max(0, (netProfit * 0.9235 * 0.153 + netProfit * 0.22) / 4))}</div>
+                <div className="text-steel-400 text-xs mt-1">Due Apr 15, Jun 15, Sep 15, Jan 15</div>
               </div>
             </div>
           </div>
 
           {/* Workforce summary */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-steel-800/50 rounded-lg p-4">
-              <h3 className="text-white font-semibold mb-3">Contractor Summary</h3>
+            <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+              <h3 className="text-steel-800 font-semibold mb-3">Contractor Summary</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-steel-400">Total contractors</span>
-                  <span className="text-white">{data.contractors.length}</span>
+                  <span className="text-steel-500">Total contractors</span>
+                  <span className="text-steel-800">{data.contractors.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-steel-400">Active contractors</span>
-                  <span className="text-white">{data.contractors.filter(c => c.active).length}</span>
+                  <span className="text-steel-500">Active contractors</span>
+                  <span className="text-steel-800">{data.contractors.filter(c => c.active).length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-steel-400">1099s required</span>
-                  <span className="text-safety">{contractorsOver600.length}</span>
+                  <span className="text-steel-500">1099s required</span>
+                  <span className="text-diesel font-semibold">{contractorsOver600.length}</span>
                 </div>
-                <div className="flex justify-between border-t border-steel-700 pt-2">
-                  <span className="text-steel-400">Total paid to contractors</span>
-                  <span className="text-white font-mono">{fmt(data.contractors.reduce((s, c) => s + c.totalPaid, 0))}</span>
+                <div className="flex justify-between border-t border-steel-200 pt-2">
+                  <span className="text-steel-500">Total paid to contractors</span>
+                  <span className="text-steel-800 font-mono">{fmt(data.contractors.reduce((s, c) => s + c.totalPaid, 0))}</span>
                 </div>
               </div>
             </div>
-            <div className="bg-steel-800/50 rounded-lg p-4">
-              <h3 className="text-white font-semibold mb-3">Employee Summary</h3>
+            <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+              <h3 className="text-steel-800 font-semibold mb-3">Employee Summary</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-steel-400">Total employees</span>
-                  <span className="text-white">{data.employees.length}</span>
+                  <span className="text-steel-500">Total employees</span>
+                  <span className="text-steel-800">{data.employees.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-steel-400">Active employees</span>
-                  <span className="text-white">{data.employees.filter(e => e.active).length}</span>
+                  <span className="text-steel-500">Active employees</span>
+                  <span className="text-steel-800">{data.employees.filter(e => e.active).length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-steel-400">Hourly workers</span>
-                  <span className="text-white">{data.employees.filter(e => e.payType === 'HOURLY').length}</span>
+                  <span className="text-steel-500">Hourly workers</span>
+                  <span className="text-steel-800">{data.employees.filter(e => e.payType === 'HOURLY').length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-steel-400">Salary workers</span>
-                  <span className="text-white">{data.employees.filter(e => e.payType === 'SALARY').length}</span>
+                  <span className="text-steel-500">Salary workers</span>
+                  <span className="text-steel-800">{data.employees.filter(e => e.payType === 'SALARY').length}</span>
                 </div>
               </div>
             </div>
@@ -498,12 +498,12 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
 
           {/* Outstanding invoices warning */}
           {data.unpaidInvoices > 0 && (
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div className="flex items-center gap-2">
-                <span className="text-yellow-400 text-lg">⚠</span>
+                <span className="text-yellow-600 text-lg">⚠</span>
                 <div>
-                  <div className="text-yellow-400 font-medium text-sm">Outstanding Invoices</div>
-                  <div className="text-yellow-400/70 text-xs mt-1">
+                  <div className="text-yellow-700 font-medium text-sm">Outstanding Invoices</div>
+                  <div className="text-yellow-600 text-xs mt-1">
                     You have {fmt(data.unpaidInvoices)} in unpaid invoices for {data.selectedYear}. This revenue is invoiced but not yet collected.
                   </div>
                 </div>
@@ -519,35 +519,35 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
       {tab === 'expenses' && (
         <div className="space-y-6">
           {/* IRS Schedule C mapping */}
-          <div className="bg-steel-800/50 rounded-lg overflow-hidden">
-            <div className="p-4 border-b border-steel-700">
-              <h2 className="text-white font-semibold">IRS Schedule C Category Mapping — {data.selectedYear}</h2>
-              <p className="text-steel-400 text-xs mt-1">Your expenses mapped to IRS Schedule C line items for tax filing</p>
+          <div className="bg-white border border-steel-200 rounded-lg overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-steel-200 bg-steel-50">
+              <h2 className="text-steel-800 font-semibold">IRS Schedule C Category Mapping — {data.selectedYear}</h2>
+              <p className="text-steel-500 text-xs mt-1">Your expenses mapped to IRS Schedule C line items for tax filing</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-steel-800 text-steel-400 text-xs uppercase tracking-wider">
+                  <tr className="bg-steel-50 text-steel-500 text-xs uppercase tracking-wider border-b border-steel-200">
                     <th className="text-left p-3">Schedule C Line</th>
                     <th className="text-left p-3">IRS Description</th>
                     <th className="text-left p-3">Your Categories</th>
                     <th className="text-right p-3">Total Amount</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-steel-700/50">
+                <tbody className="divide-y divide-steel-100">
                   {irsCategoryRollup.map((row, i) => (
-                    <tr key={i} className="hover:bg-steel-700/30">
-                      <td className="p-3 text-safety font-mono font-medium">{row.scheduleC}</td>
-                      <td className="p-3 text-white">{row.irsDesc}</td>
-                      <td className="p-3 text-steel-300 text-xs">{row.categories.join(', ')}</td>
-                      <td className="p-3 text-right font-mono text-white font-semibold">{fmt(row.amount)}</td>
+                    <tr key={i} className="hover:bg-steel-50">
+                      <td className="p-3 text-diesel font-mono font-medium">{row.scheduleC}</td>
+                      <td className="p-3 text-steel-800">{row.irsDesc}</td>
+                      <td className="p-3 text-steel-600 text-xs">{row.categories.join(', ')}</td>
+                      <td className="p-3 text-right font-mono text-steel-800 font-semibold">{fmt(row.amount)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-steel-800 font-semibold">
-                    <td colSpan={3} className="p-3 text-white">Total Deductible Expenses</td>
-                    <td className="p-3 text-right font-mono text-safety">{fmt(data.totalExpenses)}</td>
+                  <tr className="bg-steel-50 font-semibold border-t border-steel-200">
+                    <td colSpan={3} className="p-3 text-steel-800">Total Deductible Expenses</td>
+                    <td className="p-3 text-right font-mono text-diesel">{fmt(data.totalExpenses)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -555,8 +555,8 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
           </div>
 
           {/* Category breakdown chart (simple bar) */}
-          <div className="bg-steel-800/50 rounded-lg p-4">
-            <h3 className="text-white font-semibold mb-4">Expense Breakdown by Category</h3>
+          <div className="bg-white border border-steel-200 rounded-lg p-4 shadow-sm">
+            <h3 className="text-steel-800 font-semibold mb-4">Expense Breakdown by Category</h3>
             <div className="space-y-3">
               {Object.entries(data.expenseByCategory)
                 .sort((a, b) => b[1] - a[1])
@@ -565,12 +565,12 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
                   return (
                     <div key={cat}>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-steel-300">{CATEGORY_LABELS[cat] || cat}</span>
-                        <span className="text-white font-mono">{fmt(amount)} <span className="text-steel-500">({pct.toFixed(1)}%)</span></span>
+                        <span className="text-steel-600">{CATEGORY_LABELS[cat] || cat}</span>
+                        <span className="text-steel-800 font-mono">{fmt(amount)} <span className="text-steel-400">({pct.toFixed(1)}%)</span></span>
                       </div>
-                      <div className="h-2 bg-steel-700 rounded-full overflow-hidden">
+                      <div className="h-2 bg-steel-200 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-safety rounded-full transition-all"
+                          className="h-full bg-diesel rounded-full transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -581,14 +581,14 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
           </div>
 
           {/* Expense detail table with filters */}
-          <div className="bg-steel-800/50 rounded-lg overflow-hidden">
-            <div className="p-4 border-b border-steel-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <h2 className="text-white font-semibold">Expense Detail ({filteredExpenses.length} records)</h2>
+          <div className="bg-white border border-steel-200 rounded-lg overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-steel-200 bg-steel-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h2 className="text-steel-800 font-semibold">Expense Detail ({filteredExpenses.length} records)</h2>
               <div className="flex gap-2">
                 <select
                   value={expenseCategoryFilter}
                   onChange={e => setExpenseCategoryFilter(e.target.value)}
-                  className="bg-steel-800 text-white border border-steel-700 rounded px-2 py-1 text-xs"
+                  className="bg-white text-steel-800 border border-steel-300 rounded px-2 py-1 text-xs"
                 >
                   <option value="ALL">All Categories</option>
                   {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
@@ -598,7 +598,7 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
                 <select
                   value={expenseTruckFilter}
                   onChange={e => setExpenseTruckFilter(e.target.value)}
-                  className="bg-steel-800 text-white border border-steel-700 rounded px-2 py-1 text-xs"
+                  className="bg-white text-steel-800 border border-steel-300 rounded px-2 py-1 text-xs"
                 >
                   <option value="ALL">All Trucks</option>
                   {data.trucks.map(t => (
@@ -610,7 +610,7 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
             <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0">
-                  <tr className="bg-steel-800 text-steel-400 text-xs uppercase tracking-wider">
+                  <tr className="bg-steel-50 text-steel-500 text-xs uppercase tracking-wider border-b border-steel-200">
                     <th className="text-left p-3">Date</th>
                     <th className="text-left p-3">Category</th>
                     <th className="text-left p-3">IRS Line</th>
@@ -619,32 +619,32 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
                     <th className="text-right p-3">Amount</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-steel-700/50">
+                <tbody className="divide-y divide-steel-100">
                   {filteredExpenses.slice(0, 200).map(exp => {
                     const irs = IRS_CATEGORY_MAP[exp.category] || IRS_CATEGORY_MAP.OTHER;
                     const truckNum = exp.truckId ? data.trucks.find(t => t.id === exp.truckId)?.truckNumber : null;
                     return (
-                      <tr key={exp.id} className="hover:bg-steel-700/30">
-                        <td className="p-3 text-steel-300 whitespace-nowrap">{new Date(exp.date).toLocaleDateString()}</td>
+                      <tr key={exp.id} className="hover:bg-steel-50">
+                        <td className="p-3 text-steel-600 whitespace-nowrap">{new Date(exp.date).toLocaleDateString()}</td>
                         <td className="p-3">
-                          <span className="text-xs bg-steel-700 text-steel-200 rounded px-2 py-0.5">
+                          <span className="text-xs bg-steel-100 text-steel-700 rounded px-2 py-0.5">
                             {CATEGORY_LABELS[exp.category] || exp.category}
                           </span>
                         </td>
-                        <td className="p-3 text-safety text-xs font-mono">{irs.scheduleC}</td>
-                        <td className="p-3 text-steel-300 text-xs max-w-[200px] truncate">
+                        <td className="p-3 text-diesel text-xs font-mono">{irs.scheduleC}</td>
+                        <td className="p-3 text-steel-600 text-xs max-w-[200px] truncate">
                           {exp.description || '—'}
-                          {truckNum && <span className="text-steel-500 ml-1">({truckNum})</span>}
+                          {truckNum && <span className="text-steel-400 ml-1">({truckNum})</span>}
                         </td>
-                        <td className="p-3 text-steel-300 text-xs">{exp.vendor || '—'}</td>
-                        <td className="p-3 text-right font-mono text-white">{fmt(exp.amount)}</td>
+                        <td className="p-3 text-steel-600 text-xs">{exp.vendor || '—'}</td>
+                        <td className="p-3 text-right font-mono text-steel-800">{fmt(exp.amount)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
               {filteredExpenses.length > 200 && (
-                <div className="p-3 text-center text-steel-500 text-xs">
+                <div className="p-3 text-center text-steel-400 text-xs">
                   Showing first 200 of {filteredExpenses.length} records
                 </div>
               )}
@@ -655,9 +655,9 @@ export function TaxAdvisory({ data }: { data: TaxData }) {
           </div>
 
           {/* Tax deduction tips */}
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-            <h3 className="text-blue-400 font-semibold text-sm mb-2">Tax Deduction Reminders</h3>
-            <div className="text-blue-400/70 text-xs space-y-1">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-blue-700 font-semibold text-sm mb-2">Tax Deduction Reminders</h3>
+            <div className="text-blue-600 text-xs space-y-1">
               <p>• Keep receipts for all expenses over $75 — the IRS may request documentation during an audit.</p>
               <p>• Vehicle expenses can be deducted using actual costs or the standard mileage rate (check current IRS rate).</p>
               <p>• Insurance premiums, permits, and registration fees are fully deductible business expenses.</p>
