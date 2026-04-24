@@ -45,6 +45,33 @@ export async function PATCH(req: NextRequest) {
     if (fields.hauledTo !== undefined) data.hauledTo = fields.hauledTo?.trim() || '';
     if (fields.material !== undefined) data.material = fields.material?.trim() || null;
     if (fields.ticketRef !== undefined) data.ticketRef = fields.ticketRef?.trim() || null;
+
+    // Duplicate ticketRef check within the same job
+    if (data.ticketRef && ticket.jobId) {
+      const duplicate = await prisma.ticket.findFirst({
+        where: {
+          jobId: ticket.jobId,
+          ticketRef: data.ticketRef,
+          id: { not: id },
+          deletedAt: null,
+        },
+        select: { id: true, ticketNumber: true, ticketRef: true },
+      });
+      if (duplicate && !fields.forceReplace) {
+        return NextResponse.json({
+          error: `Ticket # "${data.ticketRef}" already exists on this job (System #${String(duplicate.ticketNumber).padStart(4, '0')})`,
+          duplicate: true,
+          duplicateTicketId: duplicate.id,
+          duplicateTicketNumber: duplicate.ticketNumber,
+          ticketRef: data.ticketRef,
+        }, { status: 409 });
+      }
+      // forceReplace: clear the ticketRef on the conflicting ticket
+      if (duplicate && fields.forceReplace) {
+        await prisma.ticket.update({ where: { id: duplicate.id }, data: { ticketRef: null } });
+      }
+    }
+
     if (fields.date !== undefined) data.date = fields.date ? new Date(fields.date) : null;
     if (fields.ratePerUnit !== undefined) data.ratePerUnit = fields.ratePerUnit ? parseFloat(fields.ratePerUnit) : null;
 

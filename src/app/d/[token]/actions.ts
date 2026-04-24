@@ -684,6 +684,47 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
 
   await enforceTicketLimit(driver.companyId, items.length);
 
+  // Check for duplicate ticketRefs within this job before creating any tickets
+  const ticketRefs = items
+    .filter(i => i.ticketRef?.trim())
+    .map(i => i.ticketRef.trim());
+
+  if (ticketRefs.length > 0) {
+    // Check for duplicates within the batch itself
+    const seen = new Set<string>();
+    for (const ref of ticketRefs) {
+      if (seen.has(ref)) {
+        return {
+          success: false,
+          error: `Duplicate ticket # "${ref}" found in your upload batch. Each ticket must have a unique number.`,
+          duplicateRef: ref,
+        };
+      }
+      seen.add(ref);
+    }
+
+    // Check against existing tickets in the same job
+    const existing = await prisma.ticket.findMany({
+      where: {
+        jobId: job.id,
+        ticketRef: { in: ticketRefs },
+        deletedAt: null,
+      },
+      select: { ticketRef: true, ticketNumber: true },
+    });
+
+    if (existing.length > 0) {
+      const conflicts = existing.map(e =>
+        `"${e.ticketRef}" (System #${String(e.ticketNumber).padStart(4, '0')})`
+      ).join(', ');
+      return {
+        success: false,
+        error: `Ticket # ${conflicts} already exist${existing.length > 1 ? '' : 's'} on this job.`,
+        duplicates: existing.map(e => ({ ticketRef: e.ticketRef, ticketNumber: e.ticketNumber })),
+      };
+    }
+  }
+
   const results: { ticketId: string; ticketNumber: number; photoUrl: string }[] = [];
 
   for (const item of items) {

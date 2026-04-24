@@ -152,6 +152,14 @@ export default function TicketDashboard({
   const [localRef, setLocalRef] = useState<Record<string, string>>({});
   const [savingRefId, setSavingRefId] = useState<string | null>(null);
 
+  // Duplicate ticketRef conflict state
+  const [dupConflict, setDupConflict] = useState<{
+    ticketId: string;
+    ticketRef: string;
+    duplicateTicketId: string;
+    duplicateTicketNumber: number;
+  } | null>(null);
+
   // Bulk edit panel
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [bulkEditFields, setBulkEditFields] = useState<Record<string, string>>({});
@@ -302,20 +310,34 @@ export default function TicketDashboard({
   }
 
   // Inline ticket ref auto-save
-  async function handleInlineRefSave(ticketId: string, value: string) {
+  async function handleInlineRefSave(ticketId: string, value: string, forceReplace = false) {
     setLocalRef(prev => ({ ...prev, [ticketId]: value }));
     setSavingRefId(ticketId);
     setActionError(null);
+    setDupConflict(null);
     try {
       const res = await fetch('/api/tickets', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: ticketId, ticketRef: value }),
+        body: JSON.stringify({ id: ticketId, ticketRef: value, forceReplace }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setActionError(data.error || 'Failed to update ticket #');
-        setLocalRef(prev => { const next = { ...prev }; delete next[ticketId]; return next; });
+        if (data.duplicate) {
+          setDupConflict({
+            ticketId,
+            ticketRef: data.ticketRef,
+            duplicateTicketId: data.duplicateTicketId,
+            duplicateTicketNumber: data.duplicateTicketNumber,
+          });
+          setLocalRef(prev => { const next = { ...prev }; delete next[ticketId]; return next; });
+        } else {
+          setActionError(data.error || 'Failed to update ticket #');
+          setLocalRef(prev => { const next = { ...prev }; delete next[ticketId]; return next; });
+        }
+      } else {
+        // If we replaced, reload to get fresh data
+        if (forceReplace) window.location.reload();
       }
     } catch {
       setActionError('Network error');
@@ -777,6 +799,32 @@ export default function TicketDashboard({
             </button>
             <button type="button" onClick={() => { setShowBulkEdit(false); setBulkEditFields({}); }}
               className="btn-ghost text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate ticket # conflict banner */}
+      {dupConflict && (
+        <div className="mx-5 mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-2 rounded border border-amber-300 bg-amber-50 px-4 py-3">
+          <span className="text-amber-600 text-sm">&#9888;</span>
+          <span className="text-sm text-amber-800 flex-1">
+            Ticket # &quot;{dupConflict.ticketRef}&quot; already exists on this job
+            (System #{String(dupConflict.duplicateTicketNumber).padStart(4, '0')}).
+            Replace the existing ticket number?
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleInlineRefSave(dupConflict.ticketId, dupConflict.ticketRef, true)}
+              className="px-3 py-1 text-sm font-medium rounded bg-amber-600 text-white hover:bg-amber-700"
+            >
+              Replace
+            </button>
+            <button
+              onClick={() => setDupConflict(null)}
+              className="px-3 py-1 text-sm font-medium rounded border border-amber-300 text-amber-700 hover:bg-amber-100"
+            >
               Cancel
             </button>
           </div>

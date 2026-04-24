@@ -1264,6 +1264,9 @@ function CompletedJobCard({
       if (res.success) {
         setSubmitResult({ count: res.count, tickets: res.tickets });
         setItems([]);
+      } else if (res.error) {
+        // Duplicate ticketRef or other validation error from the action
+        setError(res.error);
       }
     } catch (err: any) {
       setError(err.message || 'Submit failed');
