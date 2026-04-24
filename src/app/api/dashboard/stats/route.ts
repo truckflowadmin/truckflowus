@@ -32,22 +32,22 @@ export async function GET() {
       prisma.ticket.count({
         where: { companyId, status: { in: ['DISPATCHED', 'IN_PROGRESS'] }, deletedAt: null },
       }),
-      // Done Today — only use completedAt
+      // Done Today — use ticket date (haul date) for accurate counts
       prisma.ticket.count({
         where: {
           companyId,
           status: 'COMPLETED',
           deletedAt: null,
-          completedAt: { gte: todayStart, lte: todayEnd },
+          date: { gte: todayStart, lte: todayEnd },
         },
       }),
-      // Done This Week — only use completedAt
+      // Done This Week — use ticket date (haul date) for accurate counts
       prisma.ticket.count({
         where: {
           companyId,
           status: 'COMPLETED',
           deletedAt: null,
-          completedAt: { gte: weekStart, lte: weekEnd },
+          date: { gte: weekStart, lte: weekEnd },
         },
       }),
       prisma.driver.count({ where: { companyId, active: true } }),
