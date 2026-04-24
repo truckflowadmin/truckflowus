@@ -297,15 +297,16 @@ model TimeOffRequest {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   companyId String
   name      String
   contact   String?
   phone     String?
   email     String?
   address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   tickets  Ticket[]
@@ -419,6 +420,7 @@ model Job {
   assignedAt    DateTime?
   startedAt     DateTime?
   completedAt   DateTime?
+  deletedAt     DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -508,6 +510,7 @@ model Ticket {
   // Dispatcher review — once set, driver can no longer edit
   dispatcherReviewedAt DateTime?
   dispatcherReviewedBy String?
+  deletedAt      DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

@@ -237,7 +237,7 @@ export async function deleteTicketAction(formData: FormData) {
     }
   }
 
-  await prisma.ticket.delete({ where: { id: ticketId } });
+  await prisma.ticket.update({ where: { id: ticketId }, data: { deletedAt: new Date() } });
   revalidatePath('/tickets');
   redirect('/tickets');
 }

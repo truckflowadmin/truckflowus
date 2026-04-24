@@ -105,7 +105,7 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    await prisma.ticket.delete({ where: { id } });
+    await prisma.ticket.update({ where: { id }, data: { deletedAt: new Date() } });
 
     revalidatePath('/tickets');
     revalidatePath('/jobs');

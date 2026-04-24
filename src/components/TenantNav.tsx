@@ -14,6 +14,7 @@ const TABS = [
   { href: '/passwords', label: 'Passwords' },
   { href: '/debug', label: 'Debug' },
   { href: '/audit', label: 'Audit Log' },
+  { href: '/trash', label: 'Trash' },
 ];
 
 export default function TenantNav({

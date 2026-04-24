@@ -509,10 +509,10 @@ export async function deleteJobAction(jobId: string) {
     throw new Error('This job has invoiced tickets and cannot be deleted');
   }
 
-  // Delete in order: tickets → assignments → job
-  await prisma.ticket.deleteMany({ where: { jobId } });
-  await prisma.$executeRaw`DELETE FROM "JobAssignment" WHERE "jobId" = ${jobId}`;
-  await prisma.job.delete({ where: { id: jobId } });
+  // Soft-delete: mark job and its tickets as deleted (assignments stay for audit)
+  const now = new Date();
+  await prisma.ticket.updateMany({ where: { jobId, deletedAt: null }, data: { deletedAt: now } });
+  await prisma.job.update({ where: { id: jobId }, data: { deletedAt: now } });
 
   revalidatePath('/jobs');
   redirect('/jobs');

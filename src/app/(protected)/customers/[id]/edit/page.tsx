@@ -52,7 +52,7 @@ async function deleteCustomerAction(formData: FormData) {
     throw new Error(`Cannot delete this customer — they have ${parts.join(', ')} linked. Remove or reassign those records first.`);
   }
 
-  await prisma.customer.delete({ where: { id } });
+  await prisma.customer.update({ where: { id }, data: { deletedAt: new Date() } });
   revalidatePath('/customers');
   redirect('/customers');
 }
