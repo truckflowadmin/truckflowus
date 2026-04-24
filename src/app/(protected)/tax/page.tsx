@@ -225,15 +225,7 @@ export default async function TaxPage({
       selectedYear,
       availableYears,
     };
-  });
-
-  if (!data) {
-    return (
-      <div className="p-6 text-red-400">
-        Failed to load tax data. Please try refreshing the page.
-      </div>
-    );
-  }
+  }, 'Unable to load tax advisory data');
 
   return <TaxAdvisory data={data} />;
 }
