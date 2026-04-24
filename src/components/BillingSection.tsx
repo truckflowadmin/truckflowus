@@ -390,7 +390,7 @@ export default function BillingSection({
 
               <div className="border-t border-steel-200 pt-3 text-center text-xs text-steel-400">
                 TruckFlowUS &middot; Dump Truck Dispatch Software<br />
-                truckflowus.com &middot; support@truckflowus.com
+                truckflowus.com &middot; admin@truckflowus.com
               </div>
             </div>
 

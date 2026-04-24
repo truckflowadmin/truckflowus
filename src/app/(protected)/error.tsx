@@ -58,7 +58,7 @@ export default function ProtectedError({
 
         <p className="text-xs text-steel-400 mt-6">
           If this keeps happening, contact support at{' '}
-          <a href="mailto:support@truckflowus.com" className="underline">support@truckflowus.com</a>
+          <a href="mailto:admin@truckflowus.com" className="underline">admin@truckflowus.com</a>
           {error.digest ? ` and include reference: ${error.digest}` : ''}.
         </p>
       </div>

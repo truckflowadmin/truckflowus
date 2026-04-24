@@ -154,7 +154,7 @@ function buildEmail(type: BillingEmailType, vars: TemplateVars): { subject: stri
           <p><strong>To reactivate your account:</strong></p>
           <ul style="color:#333;line-height:1.8;">
             <li>Log in and subscribe to a plan</li>
-            <li>Or contact us at support@truckflowus.com for help</li>
+            <li>Or contact us at admin@truckflowus.com for help</li>
           </ul>
           <div style="margin:24px 0;">
             <a href="${appUrl}/subscribe" style="background:#f5a623;color:#1a1a2e;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;">Reactivate Your Account</a>

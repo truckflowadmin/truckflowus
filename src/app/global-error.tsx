@@ -49,7 +49,7 @@ export default function GlobalError({
 
           <p style={{ color: '#4a5568', fontSize: '11px', marginTop: '32px' }}>
             If this keeps happening, contact{' '}
-            <a href="mailto:support@truckflowus.com" style={{ color: '#7c8691', textDecoration: 'underline' }}>support@truckflowus.com</a>
+            <a href="mailto:admin@truckflowus.com" style={{ color: '#7c8691', textDecoration: 'underline' }}>admin@truckflowus.com</a>
             {error.digest ? ` with reference: ${error.digest}` : ''}.
           </p>
         </div>
