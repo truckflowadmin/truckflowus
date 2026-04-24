@@ -133,7 +133,8 @@ export function FinancialReports({
 }) {
   const tab = (initialTab as Tab) || 'overview';
 
-  // Build URLs for navigation — uses <a> tags for full page reload to ensure fresh server data
+  // Force hard navigation via window.location to bypass Next.js Router Cache entirely
+  const navigateTo = (url: string) => { window.location.href = url; };
   const tabUrl = (newTab: Tab) => `/reports?range=${currentRange}&tab=${newTab}`;
   const rangeUrl = (range: string) => `/reports?range=${range}&tab=${tab}`;
 
@@ -177,15 +178,15 @@ export function FinancialReports({
         </div>
         <div className="flex flex-wrap gap-1">
           {RANGE_OPTIONS.map((p) => (
-            <a
+            <button
               key={p.value}
-              href={rangeUrl(p.value)}
+              onClick={() => navigateTo(rangeUrl(p.value))}
               className={`px-2.5 py-1 rounded border text-xs font-medium ${
                 currentRange === p.value ? 'bg-diesel text-white border-diesel' : 'border-steel-300 bg-white hover:bg-steel-50'
               }`}
             >
               {p.label}
-            </a>
+            </button>
           ))}
         </div>
       </header>
@@ -199,9 +200,9 @@ export function FinancialReports({
       {/* Tab navigation */}
       <div className="flex gap-1 mb-6 overflow-x-auto pb-1 print:hidden">
         {TABS.map((t) => (
-          <a
+          <button
             key={t.key}
-            href={tabUrl(t.key)}
+            onClick={() => navigateTo(tabUrl(t.key))}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
               tab === t.key
                 ? 'bg-diesel text-white shadow-sm'
@@ -209,7 +210,7 @@ export function FinancialReports({
             }`}
           >
             {t.label}
-          </a>
+          </button>
         ))}
 
         {/* Export buttons */}
