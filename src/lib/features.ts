@@ -50,6 +50,7 @@ export const FEATURES = {
   VIEW_SETTINGS: 'view_settings',
   VIEW_CHECKS: 'view_checks',
   VIEW_CALENDAR: 'view_calendar',
+  VIEW_TAX: 'view_tax',
 
   // ---- Advanced dispatcher features ----
   AI_JOB_SCAN: 'ai_job_scan',
@@ -305,6 +306,12 @@ export const FEATURE_CATALOG: {
     description: 'Access to the scheduling Calendar view',
     side: 'dispatcher_views',
   },
+  {
+    key: FEATURES.VIEW_TAX,
+    label: 'Tax Advisory tab',
+    description: 'Access to 1099 generation, tax summaries, and expense categorization',
+    side: 'dispatcher_views',
+  },
 
   // ---- Driver view access ----
   {
@@ -458,7 +465,7 @@ export const PLAN_SEED_DEFAULTS: {
       FEATURES.DRIVER_AI_EXTRACTION,
       FEATURES.DRIVER_CLAIM_JOBS,
       FEATURES.DRIVER_PIN_RESET,
-      // Dispatcher views — Pro adds Reports + SMS + Brokers + Fleet
+      // Dispatcher views — Pro adds Reports + SMS + Brokers + Fleet + Tax
       FEATURES.VIEW_DASHBOARD,
       FEATURES.VIEW_JOBS,
       FEATURES.VIEW_TICKETS,
@@ -471,6 +478,7 @@ export const PLAN_SEED_DEFAULTS: {
       FEATURES.VIEW_FLEET,
       FEATURES.VIEW_CHECKS,
       FEATURES.VIEW_CALENDAR,
+      FEATURES.VIEW_TAX,
       FEATURES.VIEW_SETTINGS,
       // Driver views
       FEATURES.VIEW_DRIVER_ACTIVE,
@@ -525,6 +533,7 @@ export const PLAN_SEED_DEFAULTS: {
       FEATURES.VIEW_FLEET,
       FEATURES.VIEW_CHECKS,
       FEATURES.VIEW_CALENDAR,
+      FEATURES.VIEW_TAX,
       FEATURES.VIEW_SETTINGS,
       // Driver views
       FEATURES.VIEW_DRIVER_ACTIVE,
@@ -552,6 +561,7 @@ export const NAV_FEATURE_MAP: Record<string, FeatureKey> = {
   '/settings': FEATURES.VIEW_SETTINGS,
   '/checks': FEATURES.VIEW_CHECKS,
   '/calendar': FEATURES.VIEW_CALENDAR,
+  '/tax': FEATURES.VIEW_TAX,
 };
 
 /** Format price cents as a display string like "$149.00/mo" or "Free". */

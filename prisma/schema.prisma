@@ -57,6 +57,8 @@ model Company {
   disabledFeatures  String[] // features removed even if the plan includes them
   suspended         Boolean  @default(false)
   suspendedAt       DateTime?
+  // Tax info
+  ein              String?   // Federal EIN for 1099 filing
   // Check / payment settings
   checkBankName        String?   // bank name displayed on printed checks
   checkRoutingNumber   String?   // bank routing number for printed checks

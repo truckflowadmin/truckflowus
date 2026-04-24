@@ -1,0 +1,155 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireSession } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import PDFDocument from 'pdfkit';
+
+export async function GET(req: NextRequest) {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const driverId = req.nextUrl.searchParams.get('driverId');
+  const yearStr = req.nextUrl.searchParams.get('year');
+  if (!driverId || !yearStr) {
+    return NextResponse.json({ error: 'Missing driverId or year' }, { status: 400 });
+  }
+
+  const year = parseInt(yearStr, 10);
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd = new Date(year + 1, 0, 1);
+
+  // Verify driver belongs to this company and is a contractor
+  const driver = await prisma.driver.findFirst({
+    where: { id: driverId, companyId: session.companyId, workerType: 'CONTRACTOR' },
+    select: {
+      name: true,
+      address: true,
+      city: true,
+      state: true,
+      zip: true,
+      phone: true,
+      email: true,
+    },
+  });
+
+  if (!driver) {
+    return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
+  }
+
+  // Get company info
+  const company = await prisma.company.findUnique({
+    where: { id: session.companyId },
+    select: {
+      name: true,
+      address: true,
+      city: true,
+      state: true,
+      zip: true,
+      phone: true,
+      ein: true,
+    },
+  });
+
+  // Sum payments for the year
+  const payments = await prisma.driverPayment.findMany({
+    where: {
+      driverId,
+      companyId: session.companyId,
+      status: 'PAID',
+      paidAt: { gte: yearStart, lt: yearEnd },
+    },
+    select: { finalAmount: true },
+  });
+
+  const totalPaid = payments.reduce((s, p) => s + Number(p.finalAmount), 0);
+
+  // Generate PDF
+  const doc = new PDFDocument({ size: 'LETTER', margin: 50 });
+  const chunks: Buffer[] = [];
+
+  doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+  const pdfPromise = new Promise<Buffer>((resolve) => {
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+
+  const payerAddress = [company?.address, company?.city, company?.state, company?.zip].filter(Boolean).join(', ');
+  const recipientAddress = [driver.address, driver.city, driver.state, driver.zip].filter(Boolean).join(', ');
+
+  // Header
+  doc.fontSize(18).font('Helvetica-Bold').text('1099-NEC', { align: 'center' });
+  doc.fontSize(10).font('Helvetica').text(`Nonemployee Compensation — Tax Year ${year}`, { align: 'center' });
+  doc.moveDown(0.5);
+  doc.fontSize(8).fillColor('#666').text('FOR INFORMATIONAL PURPOSES — NOT AN OFFICIAL IRS FORM', { align: 'center' });
+  doc.fillColor('#000');
+  doc.moveDown(1.5);
+
+  // Divider
+  doc.moveTo(50, doc.y).lineTo(562, doc.y).stroke('#ccc');
+  doc.moveDown(0.8);
+
+  // Payer section
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('#333').text("PAYER'S Information");
+  doc.moveDown(0.3);
+  doc.fontSize(10).font('Helvetica').fillColor('#000');
+  doc.text(company?.name || 'Company Name');
+  if (payerAddress) doc.text(payerAddress);
+  if (company?.phone) doc.text(`Phone: ${company.phone}`);
+  doc.moveDown(0.3);
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('#333').text("PAYER'S TIN (EIN)");
+  doc.fontSize(10).font('Helvetica').fillColor('#000').text(company?.ein || '___-_______');
+  doc.moveDown(1);
+
+  // Divider
+  doc.moveTo(50, doc.y).lineTo(562, doc.y).stroke('#ccc');
+  doc.moveDown(0.8);
+
+  // Recipient section
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('#333').text("RECIPIENT'S Information");
+  doc.moveDown(0.3);
+  doc.fontSize(10).font('Helvetica').fillColor('#000');
+  doc.text(driver.name);
+  if (recipientAddress) doc.text(recipientAddress);
+  if (driver.phone) doc.text(`Phone: ${driver.phone}`);
+  if (driver.email) doc.text(`Email: ${driver.email}`);
+  doc.moveDown(0.3);
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('#333').text("RECIPIENT'S TIN (SSN/EIN)");
+  doc.fontSize(10).font('Helvetica').fillColor('#000').text('___-__-____ (to be provided by recipient)');
+  doc.moveDown(1.5);
+
+  // Divider
+  doc.moveTo(50, doc.y).lineTo(562, doc.y).stroke('#ccc');
+  doc.moveDown(0.8);
+
+  // Compensation box
+  const boxY = doc.y;
+  doc.rect(50, boxY, 512, 60).fillAndStroke('#f8f8f8', '#ccc');
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('#333').text('1. Nonemployee Compensation', 70, boxY + 10);
+  doc.fontSize(24).font('Helvetica-Bold').fillColor('#000').text(
+    `$${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    70,
+    boxY + 28,
+  );
+  doc.moveDown(3);
+
+  // Additional info
+  doc.fontSize(8).font('Helvetica').fillColor('#666');
+  doc.text(`Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 50);
+  doc.text(`This is an informational copy generated by ${company?.name || 'TruckFlowUS'}. This is NOT a substitute for the official IRS Form 1099-NEC.`, 50);
+  doc.text('The payer is responsible for filing the official form with the IRS and providing Copy B to the recipient.', 50);
+  doc.moveDown(1);
+  doc.text('Amounts shown are based on payments marked as PAID in the system for the specified tax year.', 50);
+
+  doc.end();
+  const pdfBuffer = await pdfPromise;
+
+  return new NextResponse(pdfBuffer, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="1099-NEC_${year}_${driver.name.replace(/\s+/g, '_')}.pdf"`,
+    },
+  });
+}

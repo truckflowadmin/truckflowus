@@ -17,6 +17,7 @@ const NAV = [
   { href: '/invoices', labelKey: 'nav.invoices', icon: '$' },
   { href: '/checks', labelKey: 'nav.checks', icon: '✎' },
   { href: '/reports', labelKey: 'nav.reports', icon: '◈' },
+  { href: '/tax', labelKey: 'nav.tax', icon: '📋' },
   { href: '/sms', labelKey: 'nav.sms', icon: '📨' },
   { href: '/brokers', labelKey: 'nav.brokers', icon: '⇆' },
   { href: '/calendar', labelKey: 'nav.calendar', icon: '📆' },

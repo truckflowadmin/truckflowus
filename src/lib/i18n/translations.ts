@@ -92,6 +92,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'nav.brokers': { en: 'Brokers', es: 'Corredores' },
   'nav.calendar': { en: 'Calendar', es: 'Calendario' },
   'nav.settings': { en: 'Settings', es: 'Configuración' },
+  'nav.tax': { en: 'Tax Advisory', es: 'Asesoría Fiscal' },
   'nav.dispatch': { en: 'Dispatch', es: 'Despacho' },
 
   // ─── Nav (Superadmin) ─────────────────────────────────────────────────
