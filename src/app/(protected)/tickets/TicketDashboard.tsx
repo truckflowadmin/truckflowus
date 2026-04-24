@@ -146,6 +146,10 @@ export default function TicketDashboard({
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
 
+  // Inline quantity editing — local state for optimistic updates
+  const [localQty, setLocalQty] = useState<Record<string, { quantity: number; quantityType: string }>>({});
+  const [savingQtyId, setSavingQtyId] = useState<string | null>(null);
+
   // Bulk edit panel
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [bulkEditFields, setBulkEditFields] = useState<Record<string, string>>({});
@@ -252,6 +256,46 @@ export default function TicketDashboard({
       setActionError('Network error');
     } finally {
       setReviewingId(null);
+    }
+  }
+
+  // Inline quantity auto-save
+  async function handleInlineQtyChange(ticketId: string, field: 'quantity' | 'quantityType', value: string) {
+    const current = localQty[ticketId] ?? (() => {
+      const t = tickets.find(tk => tk.id === ticketId);
+      return t ? { quantity: t.quantity, quantityType: t.quantityType } : { quantity: 1, quantityType: 'LOADS' };
+    })();
+
+    let newQty = current.quantity;
+    let newType = current.quantityType;
+    if (field === 'quantity') {
+      const parsed = parseFloat(value);
+      if (isNaN(parsed) || parsed < 0) return;
+      newQty = parsed;
+    } else {
+      newType = value;
+    }
+
+    setLocalQty(prev => ({ ...prev, [ticketId]: { quantity: newQty, quantityType: newType } }));
+    setSavingQtyId(ticketId);
+    setActionError(null);
+    try {
+      const res = await fetch('/api/tickets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: ticketId, quantity: String(newQty), quantityType: newType }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(data.error || 'Failed to update quantity');
+        // Revert on error
+        setLocalQty(prev => { const next = { ...prev }; delete next[ticketId]; return next; });
+      }
+    } catch {
+      setActionError('Network error');
+      setLocalQty(prev => { const next = { ...prev }; delete next[ticketId]; return next; });
+    } finally {
+      setSavingQtyId(null);
     }
   }
 
@@ -764,8 +808,35 @@ export default function TicketDashboard({
                   </td>
                   <td className="px-3 py-3 text-steel-600">{t.truckNumber ?? '—'}</td>
                   <td className="px-3 py-3">{t.material ?? '—'}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">
-                    {fmtQty(t.quantity, t.quantityType)} {qtyUnit(t.quantityType)}
+                  <td className="px-3 py-3 text-right">
+                    {t.invoiced ? (
+                      <span className="tabular-nums">{fmtQty(t.quantity, t.quantityType)} {qtyUnit(t.quantityType)}</span>
+                    ) : (
+                      <div className="flex items-center justify-end gap-1">
+                        <input
+                          type="number"
+                          step={((localQty[t.id]?.quantityType ?? t.quantityType) === 'TONS') ? '0.01' : '1'}
+                          min="0"
+                          value={localQty[t.id]?.quantity ?? t.quantity}
+                          disabled={savingQtyId === t.id}
+                          onChange={(e) => handleInlineQtyChange(t.id, 'quantity', e.target.value)}
+                          className="w-16 text-right text-xs border border-steel-200 rounded px-1.5 py-1 bg-white tabular-nums focus:border-safety focus:ring-1 focus:ring-safety/30"
+                        />
+                        <select
+                          value={localQty[t.id]?.quantityType ?? t.quantityType}
+                          disabled={savingQtyId === t.id}
+                          onChange={(e) => handleInlineQtyChange(t.id, 'quantityType', e.target.value)}
+                          className="text-xs border border-steel-200 rounded px-1 py-1 bg-white cursor-pointer"
+                        >
+                          <option value="LOADS">ld</option>
+                          <option value="TONS">tn</option>
+                          <option value="YARDS">yd</option>
+                        </select>
+                        {savingQtyId === t.id && (
+                          <span className="text-[10px] text-steel-400 animate-pulse">…</span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">
                     {t.ratePerUnit != null ? `$${t.ratePerUnit.toFixed(2)}` : '—'}

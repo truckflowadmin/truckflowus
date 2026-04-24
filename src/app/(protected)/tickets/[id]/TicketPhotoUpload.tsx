@@ -10,6 +10,10 @@ interface ExtractedData {
   date: string | null;
 }
 
+/* We only surface the ticket number for corrections — tons/yards/date
+   are still captured by AI but the dispatcher only needs to verify the
+   physical ticket number when reviewing photos. */
+
 interface Props {
   ticketId: string;
   currentPhotoUrl: string | null;
@@ -212,49 +216,15 @@ export default function TicketPhotoUpload({ ticketId, currentPhotoUrl, currentEx
 
             {editing ? (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-steel-500 block mb-1">Physical Ticket #</label>
-                    <input
-                      type="text"
-                      value={extracted.ticketNumber ?? ''}
-                      onChange={(e) => setExtracted((p) => ({ ...p, ticketNumber: e.target.value || null }))}
-                      className="input text-sm w-full"
-                      placeholder="e.g. 12345"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-steel-500 block mb-1">Ticket Date</label>
-                    <input
-                      type="text"
-                      value={extracted.date ?? ''}
-                      onChange={(e) => setExtracted((p) => ({ ...p, date: e.target.value || null }))}
-                      className="input text-sm w-full"
-                      placeholder="e.g. 04/17/2026"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-steel-500 block mb-1">Tons</label>
-                    <input
-                      type="text"
-                      value={extracted.tons ?? ''}
-                      onChange={(e) => setExtracted((p) => ({ ...p, tons: e.target.value || null, yards: e.target.value ? null : p.yards }))}
-                      className="input text-sm w-full"
-                      placeholder="e.g. 22.5"
-                      disabled={!!extracted.yards}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-steel-500 block mb-1">Yards</label>
-                    <input
-                      type="text"
-                      value={extracted.yards ?? ''}
-                      onChange={(e) => setExtracted((p) => ({ ...p, yards: e.target.value || null, tons: e.target.value ? null : p.tons }))}
-                      disabled={!!extracted.tons}
-                      className="input text-sm w-full"
-                      placeholder="e.g. 14"
-                    />
-                  </div>
+                <div className="max-w-xs">
+                  <label className="text-xs text-steel-500 block mb-1">Physical Ticket #</label>
+                  <input
+                    type="text"
+                    value={extracted.ticketNumber ?? ''}
+                    onChange={(e) => setExtracted((p) => ({ ...p, ticketNumber: e.target.value || null }))}
+                    className="input text-sm w-full"
+                    placeholder="e.g. 12345"
+                  />
                 </div>
                 <div className="flex items-center gap-2 pt-1">
                   <button
@@ -263,7 +233,7 @@ export default function TicketPhotoUpload({ ticketId, currentPhotoUrl, currentEx
                     onClick={handleSaveCorrections}
                     className="btn-accent text-xs px-3 py-1.5 disabled:opacity-50"
                   >
-                    {saving ? 'Saving…' : 'Save Corrections'}
+                    {saving ? 'Saving…' : 'Save'}
                   </button>
                   <button
                     type="button"
@@ -275,31 +245,11 @@ export default function TicketPhotoUpload({ ticketId, currentPhotoUrl, currentEx
                 </div>
               </div>
             ) : hasExtracted ? (
-              <dl className="grid grid-cols-2 gap-3 text-sm">
-                {extracted.ticketNumber && (
-                  <div>
-                    <dt className="text-xs text-steel-500">Physical Ticket #</dt>
-                    <dd className="font-medium">{extracted.ticketNumber}</dd>
-                  </div>
-                )}
-                {extracted.date && (
-                  <div>
-                    <dt className="text-xs text-steel-500">Ticket Date</dt>
-                    <dd className="font-medium">{extracted.date}</dd>
-                  </div>
-                )}
-                {extracted.tons && (
-                  <div>
-                    <dt className="text-xs text-steel-500">Tons</dt>
-                    <dd className="font-medium">{extracted.tons}</dd>
-                  </div>
-                )}
-                {extracted.yards && (
-                  <div>
-                    <dt className="text-xs text-steel-500">Yards</dt>
-                    <dd className="font-medium">{extracted.yards}</dd>
-                  </div>
-                )}
+              <dl className="text-sm">
+                <div>
+                  <dt className="text-xs text-steel-500">Physical Ticket #</dt>
+                  <dd className="font-medium">{extracted.ticketNumber || <span className="text-steel-400 italic">Not detected</span>}</dd>
+                </div>
               </dl>
             ) : (
               <p className="text-xs text-steel-500 italic">No data extracted yet. Upload a photo to scan.</p>

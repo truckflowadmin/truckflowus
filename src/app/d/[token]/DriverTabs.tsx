@@ -1500,13 +1500,10 @@ function CompletedJobCard({
                           </div>
                           <p className="text-[10px] text-steel-400 mt-0.5 truncate">{item.fileName}</p>
 
-                          {/* AI extraction summary */}
-                          {canAiExtract && (item.scannedTons || item.scannedYards || item.scannedTicketNumber) && (
-                            <div className="text-[10px] text-blue-600 bg-blue-50 rounded px-2 py-1 mt-1 flex flex-wrap gap-x-3">
-                              {item.scannedTicketNumber && <span>Ticket: <strong>{item.scannedTicketNumber}</strong></span>}
-                              {item.scannedTons && <span>Tons: <strong>{item.scannedTons}</strong></span>}
-                              {item.scannedYards && <span>Yards: <strong>{item.scannedYards}</strong></span>}
-                              {item.scannedDate && <span>Date: <strong>{item.scannedDate}</strong></span>}
+                          {/* AI extraction summary — ticket number only */}
+                          {canAiExtract && item.scannedTicketNumber && (
+                            <div className="text-[10px] text-blue-600 bg-blue-50 rounded px-2 py-1 mt-1">
+                              Ticket: <strong>{item.scannedTicketNumber}</strong>
                             </div>
                           )}
                         </div>
@@ -1937,7 +1934,7 @@ function CompletedCard({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const hasPhoto = !!ticket.photoUrl || !!result;
-  const hasScanned = !!ticket.scannedTons || !!ticket.scannedYards || !!ticket.scannedTicketNumber || !!ticket.scannedDate;
+  const hasScanned = !!ticket.scannedTicketNumber || !!ticket.scannedTons || !!ticket.scannedYards || !!ticket.scannedDate;
 
   async function handleUpload() {
     const file = fileRef.current?.files?.[0];
@@ -1983,34 +1980,11 @@ function CompletedCard({
         {/* Existing scanned data from a previous upload */}
         {hasScanned && !result && (
           <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
-            <div className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2">
-              AI Scanned Data
+            <div className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-1">
+              Scanned Ticket #
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {ticket.scannedTicketNumber && (
-                <div>
-                  <span className="text-steel-500">Ticket #:</span>{' '}
-                  <span className="font-medium">{ticket.scannedTicketNumber}</span>
-                </div>
-              )}
-              {ticket.scannedDate && (
-                <div>
-                  <span className="text-steel-500">Date:</span>{' '}
-                  <span className="font-medium">{ticket.scannedDate}</span>
-                </div>
-              )}
-              {ticket.scannedTons && (
-                <div>
-                  <span className="text-steel-500">Tons:</span>{' '}
-                  <span className="font-medium">{ticket.scannedTons}</span>
-                </div>
-              )}
-              {ticket.scannedYards && (
-                <div>
-                  <span className="text-steel-500">Yards:</span>{' '}
-                  <span className="font-medium">{ticket.scannedYards}</span>
-                </div>
-              )}
+            <div className="text-sm font-medium">
+              {ticket.scannedTicketNumber || <span className="text-steel-400 italic">Not detected</span>}
             </div>
           </div>
         )}
@@ -2022,23 +1996,9 @@ function CompletedCard({
               {result.extracted ? 'AI Extracted' : 'Photo Uploaded'}
             </div>
             {result.extracted ? (
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-steel-500">Ticket #:</span>{' '}
-                  <span className="font-medium">{result.data.ticketNumber || '—'}</span>
-                </div>
-                <div>
-                  <span className="text-steel-500">Date:</span>{' '}
-                  <span className="font-medium">{result.data.date || '—'}</span>
-                </div>
-                <div>
-                  <span className="text-steel-500">Tons:</span>{' '}
-                  <span className="font-medium">{result.data.tons || '—'}</span>
-                </div>
-                <div>
-                  <span className="text-steel-500">Yards:</span>{' '}
-                  <span className="font-medium">{result.data.yards || '—'}</span>
-                </div>
+              <div className="text-xs">
+                <span className="text-steel-500">Ticket #:</span>{' '}
+                <span className="font-medium">{result.data.ticketNumber || 'Not detected'}</span>
               </div>
             ) : (
               <p className="text-xs text-blue-700">Photo saved. Dispatcher will review manually.</p>
@@ -2063,7 +2023,7 @@ function CompletedCard({
               <div className="flex items-center justify-center gap-2 py-4 px-3 rounded-lg border-2 border-dashed border-steel-300 bg-steel-50 cursor-pointer hover:border-safety transition-colors">
                 <span className="text-2xl">📸</span>
                 <span className="text-sm font-medium text-steel-700">
-                  {canAiExtract ? 'Upload ticket photo for AI scan' : 'Upload ticket photo'}
+                  {canAiExtract ? 'Upload ticket photo to scan ticket #' : 'Upload ticket photo'}
                 </span>
               </div>
               <input
