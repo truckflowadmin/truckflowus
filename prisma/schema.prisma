@@ -705,6 +705,16 @@ enum PaymentStatus {
   VOID
 }
 
+enum PaymentMethod {
+  CHECK
+  CASH
+  DIRECT_DEPOSIT
+  MONEY_ORDER
+  ZELLE
+  VENMO
+  OTHER
+}
+
 /// Driver payment records — tracks each pay period with full breakdown.
 model DriverPayment {
   id              String        @id @default(cuid())
@@ -725,6 +735,10 @@ model DriverPayment {
   calculatedAmount Decimal      @default(0) @db.Decimal(10, 2) // system-calculated
   adjustedAmount   Decimal?     @db.Decimal(10, 2)              // dispatcher override
   finalAmount      Decimal      @default(0) @db.Decimal(10, 2) // what was actually paid
+  /// Payment method & manual tracking
+  isManual        Boolean       @default(false)       // true = recorded manually (off-platform payment)
+  paymentMethod   PaymentMethod @default(CHECK)       // how the payment was made
+  referenceNumber String?                              // external reference (deposit confirmation, receipt #, etc.)
   /// Notes & status
   notes           String?       @db.Text
   status          PaymentStatus @default(PENDING)

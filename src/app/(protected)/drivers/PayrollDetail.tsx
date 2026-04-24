@@ -21,6 +21,9 @@ interface Payment {
   status: 'PENDING' | 'PAID' | 'VOID';
   paidAt: string | null;
   createdAt: string;
+  isManual?: boolean;
+  paymentMethod?: string;
+  referenceNumber?: string | null;
 }
 
 interface CalcResult {
@@ -87,6 +90,26 @@ const STATUS_STYLES: Record<string, string> = {
   PAID: 'bg-green-100 text-green-800',
   VOID: 'bg-steel-200 text-steel-600',
 };
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CHECK: 'Check',
+  CASH: 'Cash',
+  DIRECT_DEPOSIT: 'Direct Deposit',
+  MONEY_ORDER: 'Money Order',
+  ZELLE: 'Zelle',
+  VENMO: 'Venmo',
+  OTHER: 'Other',
+};
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: 'CHECK', label: 'Check (written manually)' },
+  { value: 'CASH', label: 'Cash' },
+  { value: 'DIRECT_DEPOSIT', label: 'Direct Deposit / ACH' },
+  { value: 'MONEY_ORDER', label: 'Money Order' },
+  { value: 'ZELLE', label: 'Zelle' },
+  { value: 'VENMO', label: 'Venmo' },
+  { value: 'OTHER', label: 'Other' },
+];
 
 function formatCurrency(val: string | number) {
   const num = typeof val === 'string' ? parseFloat(val) : val;
@@ -381,7 +404,7 @@ function CheckView({ data, onClose }: { data: CheckData; onClose: () => void }) 
 // Component
 // ---------------------------------------------------------------------------
 export default function PayrollDetail({ driverId, driverName, workerType, payType, payRate, onClose }: Props) {
-  const [view, setView] = useState<'history' | 'create' | 'check'>('history');
+  const [view, setView] = useState<'history' | 'create' | 'manual' | 'check'>('history');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkData, setCheckData] = useState<CheckData | null>(null);
@@ -401,6 +424,18 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
   const [payNotes, setPayNotes] = useState('');
   const [markAsPaid, setMarkAsPaid] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Manual payment form
+  const [manualAmount, setManualAmount] = useState('');
+  const [manualMethod, setManualMethod] = useState('DIRECT_DEPOSIT');
+  const [manualDate, setManualDate] = useState('');
+  const [manualRefNumber, setManualRefNumber] = useState('');
+  const [manualNotes, setManualNotes] = useState('');
+  const [manualPeriodStart, setManualPeriodStart] = useState('');
+  const [manualPeriodEnd, setManualPeriodEnd] = useState('');
+  const [manualStatus, setManualStatus] = useState<'PAID' | 'PENDING'>('PAID');
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualSuccess, setManualSuccess] = useState(false);
 
   // -- Fetch payment history --
   const fetchPayments = useCallback(async () => {
@@ -513,6 +548,51 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
     if (res.ok) fetchPayments();
   }
 
+  // -- Save manual payment --
+  async function saveManualPayment() {
+    if (!manualAmount || !manualPeriodStart || !manualPeriodEnd) return;
+    setManualSaving(true);
+    setManualSuccess(false);
+    try {
+      const res = await fetch('/api/drivers/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverId,
+          periodStart: manualPeriodStart,
+          periodEnd: manualPeriodEnd,
+          hoursWorked: 0,
+          jobsCompleted: 0,
+          ticketsCompleted: 0,
+          payType: payType || 'HOURLY',
+          payRate: payRate ? parseFloat(payRate) : 0,
+          calculatedAmount: 0,
+          adjustedAmount: null,
+          finalAmount: parseFloat(manualAmount),
+          notes: manualNotes || `Manual ${PAYMENT_METHOD_LABELS[manualMethod] || manualMethod} payment${manualRefNumber ? ` — Ref: ${manualRefNumber}` : ''}`,
+          status: manualStatus,
+          isManual: true,
+          paymentMethod: manualMethod,
+          referenceNumber: manualRefNumber || null,
+        }),
+      });
+      if (res.ok) {
+        setManualSuccess(true);
+        // Reset form
+        setManualAmount('');
+        setManualRefNumber('');
+        setManualNotes('');
+        setManualPeriodStart('');
+        setManualPeriodEnd('');
+        setManualDate('');
+        fetchPayments();
+        // Auto-switch to history after short delay
+        setTimeout(() => { setManualSuccess(false); setView('history'); }, 1500);
+      }
+    } catch { /* ignore */ }
+    setManualSaving(false);
+  }
+
   // Summary stats
   const totalPaid = payments.filter((p) => p.status === 'PAID').reduce((sum, p) => sum + parseFloat(p.finalAmount), 0);
   const pendingTotal = payments.filter((p) => p.status === 'PENDING').reduce((sum, p) => sum + parseFloat(p.finalAmount), 0);
@@ -572,6 +652,14 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
               }`}
             >
               + Create Payment
+            </button>
+            <button
+              onClick={() => setView('manual')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                view === 'manual' ? 'bg-white text-steel-900 shadow-sm' : 'text-steel-500 hover:text-steel-700'
+              }`}
+            >
+              + Record Manual Payment
             </button>
           </div>
         </div>
@@ -660,18 +748,36 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
                         <td className="py-2.5 pr-3 whitespace-nowrap">
                           <div className="text-xs">{formatDate(p.periodStart)}</div>
                           <div className="text-[10px] text-steel-400">to {formatDate(p.periodEnd)}</div>
-                        </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums">{parseFloat(p.hoursWorked).toFixed(1)}h</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums">{p.jobsCompleted}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums">{p.ticketsCompleted}</td>
-                        <td className="py-2.5 px-3 text-xs whitespace-nowrap">
-                          {formatRate(p.payType, p.payRate)}
-                        </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-steel-500">
-                          {formatCurrency(p.calculatedAmount)}
+                          {p.isManual && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold bg-purple-100 text-purple-700">
+                                MANUAL
+                              </span>
+                              <span className="text-[9px] text-steel-400">
+                                {PAYMENT_METHOD_LABELS[p.paymentMethod || ''] || ''}
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-2.5 px-3 text-right tabular-nums">
-                          {p.adjustedAmount ? (
+                          {p.isManual ? <span className="text-steel-300">—</span> : `${parseFloat(p.hoursWorked).toFixed(1)}h`}
+                        </td>
+                        <td className="py-2.5 px-3 text-right tabular-nums">
+                          {p.isManual ? <span className="text-steel-300">—</span> : p.jobsCompleted}
+                        </td>
+                        <td className="py-2.5 px-3 text-right tabular-nums">
+                          {p.isManual ? <span className="text-steel-300">—</span> : p.ticketsCompleted}
+                        </td>
+                        <td className="py-2.5 px-3 text-xs whitespace-nowrap">
+                          {p.isManual ? <span className="text-steel-300">—</span> : formatRate(p.payType, p.payRate)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-steel-500">
+                          {p.isManual ? <span className="text-steel-300">—</span> : formatCurrency(p.calculatedAmount)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right tabular-nums">
+                          {p.isManual ? (
+                            <span className="text-steel-300">—</span>
+                          ) : p.adjustedAmount ? (
                             <span className="text-amber-600">{formatCurrency(p.adjustedAmount)}</span>
                           ) : (
                             <span className="text-steel-300">—</span>
@@ -690,6 +796,9 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
                         </td>
                         <td className="py-2.5 px-3 text-xs text-steel-500 max-w-[120px] truncate" title={p.notes ?? ''}>
                           {p.notes || '—'}
+                          {p.referenceNumber && (
+                            <div className="text-[10px] text-steel-400 mt-0.5">Ref: {p.referenceNumber}</div>
+                          )}
                         </td>
                         <td className="py-2.5 pl-3 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">
@@ -741,7 +850,158 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
               </div>
             )}
           </>
-        ) : (
+        ) : view === 'manual' ? (
+          /* Record Manual Payment View */
+          <div className="max-w-2xl">
+            <h4 className="font-semibold mb-2">Record Manual Payment</h4>
+            <p className="text-xs text-steel-500 mb-5">
+              Record a payment made outside the system — direct deposits, cash, manually written checks, Zelle, Venmo, etc.
+              This will be tracked in payment history, reports, and tax records.
+            </p>
+
+            {manualSuccess && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
+                Manual payment recorded successfully.
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {/* Amount & Method */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-steel-600 mb-1">Amount Paid *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-steel-400">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={manualAmount}
+                      onChange={(e) => setManualAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="input w-full pl-7"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-steel-600 mb-1">Payment Method *</label>
+                  <select
+                    value={manualMethod}
+                    onChange={(e) => setManualMethod(e.target.value)}
+                    className="input w-full"
+                  >
+                    {PAYMENT_METHOD_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Period */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-steel-600 mb-1">Period Start *</label>
+                  <input
+                    type="date"
+                    value={manualPeriodStart}
+                    onChange={(e) => setManualPeriodStart(e.target.value)}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-steel-600 mb-1">Period End *</label>
+                  <input
+                    type="date"
+                    value={manualPeriodEnd}
+                    onChange={(e) => setManualPeriodEnd(e.target.value)}
+                    className="input w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Reference & Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-steel-600 mb-1">
+                    Reference / Confirmation #
+                    <span className="text-steel-400 font-normal"> (optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={manualRefNumber}
+                    onChange={(e) => setManualRefNumber(e.target.value)}
+                    placeholder="e.g. deposit confirmation, check #, receipt"
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-steel-600 mb-1">Payment Status</label>
+                  <select
+                    value={manualStatus}
+                    onChange={(e) => setManualStatus(e.target.value as 'PAID' | 'PENDING')}
+                    className="input w-full"
+                  >
+                    <option value="PAID">Already Paid</option>
+                    <option value="PENDING">Pending (not yet completed)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-medium text-steel-600 mb-1">
+                  Notes
+                  <span className="text-steel-400 font-normal"> (optional)</span>
+                </label>
+                <textarea
+                  value={manualNotes}
+                  onChange={(e) => setManualNotes(e.target.value)}
+                  placeholder="Any additional details about this payment..."
+                  className="input w-full h-20 resize-none"
+                />
+              </div>
+
+              {/* Preview card */}
+              {manualAmount && (
+                <div className="panel p-4 bg-steel-50 border border-steel-200 rounded-lg">
+                  <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold mb-2">Payment Summary</div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm text-steel-600">{driverName}</div>
+                      <div className="text-xs text-steel-400">
+                        {PAYMENT_METHOD_LABELS[manualMethod] || manualMethod}
+                        {manualRefNumber && ` — Ref: ${manualRefNumber}`}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-green-700">{formatCurrency(parseFloat(manualAmount) || 0)}</div>
+                      <div className={`text-xs font-medium ${manualStatus === 'PAID' ? 'text-green-600' : 'text-amber-600'}`}>
+                        {manualStatus === 'PAID' ? 'Already Paid' : 'Pending'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  onClick={saveManualPayment}
+                  disabled={manualSaving || !manualAmount || !manualPeriodStart || !manualPeriodEnd}
+                  className="btn btn-primary"
+                >
+                  {manualSaving ? 'Saving...' : 'Record Payment'}
+                </button>
+                <button
+                  onClick={() => setView('history')}
+                  className="btn px-4 py-2 border border-steel-300 rounded text-sm hover:bg-steel-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : view === 'create' ? (
           /* Create Payment View */
           <div className="max-w-2xl">
             <h4 className="font-semibold mb-4">Calculate Payment</h4>
@@ -874,7 +1134,7 @@ export default function PayrollDetail({ driverId, driverName, workerType, payTyp
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

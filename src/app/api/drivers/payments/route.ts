@@ -54,10 +54,16 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { driverId, periodStart, periodEnd, hoursWorked, jobsCompleted, ticketsCompleted,
-          payType, payRate, calculatedAmount, adjustedAmount, finalAmount, notes, status } = body;
+          payType, payRate, calculatedAmount, adjustedAmount, finalAmount, notes, status,
+          isManual, paymentMethod, referenceNumber } = body;
 
   if (!driverId || !periodStart || !periodEnd) {
     return NextResponse.json({ error: 'driverId, periodStart, periodEnd required' }, { status: 400 });
+  }
+
+  // Manual payments must have a finalAmount
+  if (isManual && (finalAmount === undefined || finalAmount === null)) {
+    return NextResponse.json({ error: 'finalAmount required for manual payments' }, { status: 400 });
   }
 
   // Verify driver belongs to this company
@@ -87,6 +93,9 @@ export async function POST(req: NextRequest) {
   );
   const nextCheckNumber = maxNum + 1;
 
+  // Determine effective status — manual payments default to PAID
+  const effectiveStatus = status === 'PAID' || (isManual && status !== 'PENDING') ? 'PAID' : 'PENDING';
+
   const payment = await prisma.driverPayment.create({
     data: {
       companyId: session.companyId,
@@ -103,8 +112,11 @@ export async function POST(req: NextRequest) {
       adjustedAmount: adjustedAmount ?? null,
       finalAmount: finalAmount ?? calculatedAmount ?? 0,
       notes: notes ?? null,
-      status: status === 'PAID' ? 'PAID' : 'PENDING',
-      paidAt: status === 'PAID' ? new Date() : null,
+      isManual: isManual ?? false,
+      paymentMethod: paymentMethod ?? 'CHECK',
+      referenceNumber: referenceNumber ?? null,
+      status: effectiveStatus,
+      paidAt: effectiveStatus === 'PAID' ? new Date() : null,
     } as any,
   });
 
