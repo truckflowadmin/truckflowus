@@ -23,7 +23,7 @@ export default async function JobsPage() {
         customer: { select: { id: true, name: true } },
         broker: { select: { id: true, name: true } },
         driver: { select: { id: true, name: true } },
-        _count: { select: { tickets: true } },
+        _count: { select: { tickets: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'desc' },
     }),

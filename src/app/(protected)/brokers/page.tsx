@@ -11,7 +11,7 @@ export default async function BrokersPage() {
     where: { companyId: session.companyId },
     orderBy: { name: 'asc' },
     include: {
-      _count: { select: { tickets: true } },
+      _count: { select: { tickets: { where: { deletedAt: null } } } },
     },
   });
 

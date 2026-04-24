@@ -239,7 +239,7 @@ export default async function TenantJobsPage({ params }: { params: { id: string 
         driver: { select: { id: true, name: true } },
         customer: { select: { id: true, name: true } },
         broker: { select: { id: true, name: true } },
-        _count: { select: { tickets: true } },
+        _count: { select: { tickets: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'desc' },
       take: 200,

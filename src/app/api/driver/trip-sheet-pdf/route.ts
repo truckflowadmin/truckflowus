@@ -21,11 +21,12 @@ export async function GET(req: NextRequest) {
     where: {
       id: sheetId,
       companyId: session.companyId,
-      tickets: { some: { driverId: session.driverId } },
+      tickets: { some: { driverId: session.driverId, deletedAt: null } },
     },
     include: {
       broker: true,
       tickets: {
+        where: { deletedAt: null },
         include: {
           customer: true,
           driver: {

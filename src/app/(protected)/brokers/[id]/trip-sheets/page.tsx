@@ -30,6 +30,7 @@ export default async function TripSheetsListPage({ params }: { params: { id: str
     where: { brokerId: broker.id, companyId: session.companyId },
     include: {
       tickets: {
+        where: { deletedAt: null },
         include: {
           customer: true,
           driver: { include: { assignedTruck: { select: { truckNumber: true } } } },

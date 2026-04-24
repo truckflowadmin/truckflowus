@@ -27,7 +27,7 @@ export default async function CustomersPage() {
   const customers = await prisma.customer.findMany({
     where: { companyId: session.companyId },
     orderBy: { name: 'asc' },
-    include: { _count: { select: { tickets: true, invoices: true } } },
+    include: { _count: { select: { tickets: { where: { deletedAt: null } }, invoices: true } } },
   });
 
   return (

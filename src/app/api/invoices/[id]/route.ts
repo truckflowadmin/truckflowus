@@ -22,7 +22,7 @@ export async function DELETE(
   try {
     const inv = await prisma.invoice.findFirst({
       where: { id: invoiceId, companyId: session.companyId },
-      include: { _count: { select: { tickets: true } } },
+      include: { _count: { select: { tickets: { where: { deletedAt: null } } } } },
     });
     if (!inv) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });

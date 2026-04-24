@@ -26,7 +26,7 @@ export default async function InvoiceDetail({ params }: { params: { id: string }
     include: {
       customer: true,
       broker: true,
-      tickets: { orderBy: { completedAt: 'asc' } },
+      tickets: { where: { deletedAt: null }, orderBy: { completedAt: 'asc' } },
       company: true,
     },
   });

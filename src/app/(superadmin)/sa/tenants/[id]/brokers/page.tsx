@@ -85,7 +85,7 @@ export default async function TenantBrokersPage({ params }: { params: { id: stri
   const brokers = await prisma.broker.findMany({
     where: { companyId: company.id },
     orderBy: { name: 'asc' },
-    include: { _count: { select: { tickets: true, tripSheets: true } } },
+    include: { _count: { select: { tickets: { where: { deletedAt: null } }, tripSheets: true } } },
   });
 
   // All brokers available to assign: unassigned (null companyId) + other companies

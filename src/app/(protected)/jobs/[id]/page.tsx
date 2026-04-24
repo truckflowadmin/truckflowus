@@ -26,6 +26,7 @@ export default async function JobDetailPage({
         orderBy: { assignedAt: 'asc' },
       },
       tickets: {
+        where: { deletedAt: null },
         orderBy: { createdAt: 'asc' },
         select: {
           id: true,

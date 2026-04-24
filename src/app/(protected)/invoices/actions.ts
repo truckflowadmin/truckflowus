@@ -305,6 +305,7 @@ export async function emailInvoiceAction(formData: FormData) {
       customer: true,
       broker: true,
       tickets: {
+        where: { deletedAt: null },
         orderBy: { completedAt: 'asc' },
         include: { customer: true, driver: { include: { assignedTruck: { select: { truckNumber: true } } } } },
       },

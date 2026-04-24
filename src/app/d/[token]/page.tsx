@@ -90,7 +90,7 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
         customer: { select: { name: true } },
         broker: { select: { name: true } },
         assignments: { select: { driverId: true } },
-        _count: { select: { tickets: true } },
+        _count: { select: { tickets: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'desc' },
       take: 50,
@@ -121,7 +121,7 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
         assignments: {
           where: { driverId: driver.id },
         },
-        _count: { select: { tickets: true } },
+        _count: { select: { tickets: { where: { deletedAt: null } } } },
       },
       orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
       take: 100,
@@ -167,7 +167,7 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
           where: { driverId: driver.id },
         },
         tickets: {
-          where: { driverId: driver.id },
+          where: { driverId: driver.id, deletedAt: null },
           select: {
             id: true,
             ticketNumber: true,
@@ -218,7 +218,7 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
       include: {
         broker: { select: { name: true } },
         tickets: {
-          where: { driverId: driver.id },
+          where: { driverId: driver.id, deletedAt: null },
           select: {
             id: true,
             ticketNumber: true,

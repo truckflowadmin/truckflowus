@@ -14,7 +14,7 @@ export default async function InvoicesPage() {
   const [invoices, customers, brokers] = await Promise.all([
     prisma.invoice.findMany({
       where: { companyId: session.companyId },
-      include: { customer: true, broker: true, _count: { select: { tickets: true } } },
+      include: { customer: true, broker: true, _count: { select: { tickets: { where: { deletedAt: null } } } } },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.customer.findMany({ where: { companyId: session.companyId }, orderBy: { name: 'asc' } }),

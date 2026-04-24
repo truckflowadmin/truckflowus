@@ -31,7 +31,7 @@ export async function GET(_req: Request) {
       invoiceNumber: true,
       invoiceType: true,
       createdAt: true,
-      _count: { select: { tickets: true } },
+      _count: { select: { tickets: { where: { deletedAt: null } } } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -44,7 +44,7 @@ export async function GET(_req: Request) {
       status: true,
       invoiceType: true,
       createdAt: true,
-      _count: { select: { tickets: true } },
+      _count: { select: { tickets: { where: { deletedAt: null } } } },
     },
     orderBy: { createdAt: 'desc' },
   });

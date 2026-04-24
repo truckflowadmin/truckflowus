@@ -16,6 +16,7 @@ export async function GET(
     include: {
       broker: true,
       tickets: {
+        where: { deletedAt: null },
         include: { customer: true, driver: { include: { assignedTruck: { select: { truckNumber: true } } } } },
         orderBy: [{ driverId: 'asc' }, { date: 'asc' }],
       },

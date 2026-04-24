@@ -61,7 +61,7 @@ export default async function SuperadminBrokersPage() {
     orderBy: { createdAt: 'desc' },
     include: {
       company: { select: { name: true, id: true } },
-      _count: { select: { tickets: true } },
+      _count: { select: { tickets: { where: { deletedAt: null } } } },
     },
   });
 
