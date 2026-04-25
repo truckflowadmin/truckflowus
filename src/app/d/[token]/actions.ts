@@ -676,14 +676,6 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
     const invoicedCheck = await prisma.ticket.count({ where: { jobId, invoiceId: { not: null } } });
     if (invoicedCheck > 0) return { success: false, error: 'This job has invoiced tickets and cannot be modified.' };
 
-    // Get next ticket number
-    const lastTicket = await prisma.ticket.findFirst({
-      where: { companyId: driver.companyId },
-      orderBy: { ticketNumber: 'desc' },
-      select: { ticketNumber: true },
-    });
-    let nextNum = (lastTicket?.ticketNumber ?? 1000) + 1;
-
     // Check ticket limit
     try {
       await enforceTicketLimit(driver.companyId, items.length);
@@ -734,41 +726,66 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
 
     const results: { ticketId: string; ticketNumber: number; photoUrl: string }[] = [];
 
+    // Helper: get next available ticket number with retry on unique constraint collision
+    async function getNextTicketNumber(companyId: string): Promise<number> {
+      const last = await prisma.ticket.findFirst({
+        where: { companyId },
+        orderBy: { ticketNumber: 'desc' },
+        select: { ticketNumber: true },
+      });
+      return (last?.ticketNumber ?? 1000) + 1;
+    }
+
     for (const item of items) {
       if (!item.hauledFrom?.trim() || !item.hauledTo?.trim()) continue;
 
-      const ticketNumber = nextNum++;
-      const ticket = await prisma.ticket.create({
-        data: {
-          companyId: driver.companyId,
-          ticketNumber,
-          jobId: job.id,
-          driverId: driver.id,
-          customerId: job.customerId,
-          brokerId: job.brokerId,
-          status: 'COMPLETED',
-          hauledFrom: item.hauledFrom.trim(),
-          hauledTo: item.hauledTo.trim(),
-          material: item.material?.trim() || job.material,
-          truckNumber: (driver as any).assignedTruck?.truckNumber ?? null,
-          quantityType: (item.quantityType as any) || job.quantityType,
-          quantity: item.quantity || 1,
-          ratePerUnit: job.ratePerUnit,
-          date: item.date ? new Date(item.date + 'T00:00:00Z') : job.date,
-          ticketRef: item.ticketRef?.trim() || null,
-          driverNotes: item.driverNotes?.trim() || null,
-          photoUrl: item.photoUrl,
-          completedAt: new Date(),
-          // Preserve original AI-scanned data
-          scannedTons: item.scannedTons ?? null,
-          scannedYards: item.scannedYards ?? null,
-          scannedTicketNumber: item.scannedTicketNumber ?? null,
-          scannedDate: item.scannedDate ?? null,
-          scannedRawText: item.scannedRawText ?? null,
-        },
-      });
-
-      results.push({ ticketId: ticket.id, ticketNumber, photoUrl: item.photoUrl });
+      // Retry up to 3 times on ticket number collision (race condition / stale data)
+      let ticket = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const ticketNumber = await getNextTicketNumber(driver.companyId);
+        try {
+          ticket = await prisma.ticket.create({
+            data: {
+              companyId: driver.companyId,
+              ticketNumber,
+              jobId: job.id,
+              driverId: driver.id,
+              customerId: job.customerId,
+              brokerId: job.brokerId,
+              status: 'COMPLETED',
+              hauledFrom: item.hauledFrom.trim(),
+              hauledTo: item.hauledTo.trim(),
+              material: item.material?.trim() || job.material,
+              truckNumber: (driver as any).assignedTruck?.truckNumber ?? null,
+              quantityType: (item.quantityType as any) || job.quantityType,
+              quantity: item.quantity || 1,
+              ratePerUnit: job.ratePerUnit,
+              date: item.date ? new Date(item.date + 'T00:00:00Z') : job.date,
+              ticketRef: item.ticketRef?.trim() || null,
+              driverNotes: item.driverNotes?.trim() || null,
+              photoUrl: item.photoUrl,
+              completedAt: new Date(),
+              // Preserve original AI-scanned data
+              scannedTons: item.scannedTons ?? null,
+              scannedYards: item.scannedYards ?? null,
+              scannedTicketNumber: item.scannedTicketNumber ?? null,
+              scannedDate: item.scannedDate ?? null,
+              scannedRawText: item.scannedRawText ?? null,
+            },
+          });
+          results.push({ ticketId: ticket.id, ticketNumber, photoUrl: item.photoUrl });
+          break; // success
+        } catch (createErr: any) {
+          // If unique constraint violation on ticketNumber, retry with fresh number
+          const isUniqueViolation =
+            createErr?.code === 'P2002' ||
+            createErr?.message?.includes('Unique constraint');
+          if (isUniqueViolation && attempt < 2) {
+            continue; // retry
+          }
+          throw createErr; // re-throw non-retryable errors
+        }
+      }
     }
 
     if (results.length === 0) return { success: false, error: 'No valid tickets to create — fill in Hauled From and Hauled To.' };
