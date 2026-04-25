@@ -440,6 +440,7 @@ export default function JobDetail({ job: initialJob, invoiced = false }: { job: 
     if (job.status === 'ASSIGNED') nextStatuses.push('IN_PROGRESS', 'CANCELLED');
     if (job.status === 'IN_PROGRESS') nextStatuses.push('COMPLETED', 'CANCELLED');
     if (job.status === 'PARTIALLY_COMPLETED') nextStatuses.push('COMPLETED', 'IN_PROGRESS', 'CANCELLED');
+    if (job.status === 'COMPLETED') nextStatuses.push('IN_PROGRESS', 'ASSIGNED');
     if (job.status === 'CANCELLED') nextStatuses.push('CREATED');
   }
 

@@ -401,92 +401,105 @@ export async function updateJobStatusAction(jobId: string, newStatus: string, as
   }
 
   // Fetch assignments via raw SQL (generated client doesn't know new columns)
-  const allAssignments: any[] = await prisma.$queryRaw`
-    SELECT id, "jobId", "driverId", status, "startedAt", "completedAt",
-           "driverTimeSeconds", "lastResumedAt"
-    FROM "JobAssignment"
-    WHERE "jobId" = ${jobId}
-  `;
+  let allAssignments: any[] = [];
+  try {
+    allAssignments = await prisma.$queryRaw`
+      SELECT id, "jobId", "driverId", status, "startedAt", "completedAt",
+             "driverTimeSeconds", "lastResumedAt"
+      FROM "JobAssignment"
+      WHERE "jobId" = ${jobId}
+    `;
+  } catch (err) {
+    console.error('[updateJobStatus] Failed to fetch assignments:', err);
+    throw new Error('Failed to load driver assignments. Please try again.');
+  }
 
   const now = new Date();
 
-  if (assignmentId) {
-    // ── Per-driver status change (dispatcher adjusting one driver's status) ──
-    const assignment = allAssignments.find((a: any) => a.id === assignmentId);
-    if (!assignment) throw new Error('Assignment not found');
+  try {
+    if (assignmentId) {
+      // ── Per-driver status change (dispatcher adjusting one driver's status) ──
+      const assignment = allAssignments.find((a: any) => a.id === assignmentId);
+      if (!assignment) throw new Error('Assignment not found');
 
-    // Build raw SQL update for the assignment
-    if (newStatus === 'IN_PROGRESS' && !assignment.startedAt) {
-      await prisma.$executeRaw`UPDATE "JobAssignment" SET status = ${newStatus}, "startedAt" = ${now}, "lastResumedAt" = ${now} WHERE id = ${assignmentId}`;
-    } else if (newStatus === 'COMPLETED' && !assignment.completedAt) {
-      await prisma.$executeRaw`UPDATE "JobAssignment" SET status = ${newStatus}, "completedAt" = ${now}, "lastResumedAt" = NULL WHERE id = ${assignmentId}`;
-    } else if (newStatus === 'ASSIGNED') {
-      await prisma.$executeRaw`UPDATE "JobAssignment" SET status = ${newStatus}, "lastResumedAt" = NULL WHERE id = ${assignmentId}`;
-    } else {
-      await prisma.$executeRaw`UPDATE "JobAssignment" SET status = ${newStatus} WHERE id = ${assignmentId}`;
-    }
-
-    // Derive job-level status from all assignments
-    const allStatuses = allAssignments.map((a: any) =>
-      a.id === assignmentId ? newStatus : a.status
-    );
-
-    let jobStatus = job.status;
-    if (allStatuses.every((s: string) => s === 'COMPLETED')) {
-      jobStatus = 'COMPLETED';
-    } else if (allStatuses.every((s: string) => s === 'CANCELLED')) {
-      jobStatus = 'CANCELLED';
-    } else if (allStatuses.some((s: string) => s === 'COMPLETED')) {
-      // Some completed but not all → partially completed
-      jobStatus = 'PARTIALLY_COMPLETED';
-    } else if (allStatuses.some((s: string) => s === 'IN_PROGRESS')) {
-      jobStatus = 'IN_PROGRESS';
-    } else if (allStatuses.some((s: string) => s === 'ASSIGNED')) {
-      jobStatus = 'ASSIGNED';
-    }
-
-    if (jobStatus !== job.status) {
-      // Use raw SQL because PARTIALLY_COMPLETED may not be in generated Prisma client
-      const statusEnum = Prisma.raw(`'${jobStatus}'::"JobStatus"`);
-      if (jobStatus === 'COMPLETED' && !job.completedAt) {
-        await prisma.$executeRaw`UPDATE "Job" SET status = ${statusEnum}, "completedAt" = ${now} WHERE id = ${jobId}`;
-      } else if (jobStatus === 'IN_PROGRESS' && !job.startedAt) {
-        await prisma.$executeRaw`UPDATE "Job" SET status = ${statusEnum}, "startedAt" = ${now} WHERE id = ${jobId}`;
+      // Build raw SQL update for the assignment
+      if (newStatus === 'IN_PROGRESS' && !assignment.startedAt) {
+        await prisma.$executeRaw`UPDATE "JobAssignment" SET status = ${newStatus}, "startedAt" = ${now}, "lastResumedAt" = ${now} WHERE id = ${assignmentId}`;
+      } else if (newStatus === 'COMPLETED' && !assignment.completedAt) {
+        await prisma.$executeRaw`UPDATE "JobAssignment" SET status = ${newStatus}, "completedAt" = ${now}, "lastResumedAt" = NULL WHERE id = ${assignmentId}`;
+      } else if (newStatus === 'ASSIGNED') {
+        await prisma.$executeRaw`UPDATE "JobAssignment" SET status = ${newStatus}, "lastResumedAt" = NULL WHERE id = ${assignmentId}`;
       } else {
-        await prisma.$executeRaw`UPDATE "Job" SET status = ${statusEnum} WHERE id = ${jobId}`;
+        await prisma.$executeRaw`UPDATE "JobAssignment" SET status = ${newStatus} WHERE id = ${assignmentId}`;
+      }
+
+      // Derive job-level status from all assignments
+      const allStatuses = allAssignments.map((a: any) =>
+        a.id === assignmentId ? newStatus : a.status
+      );
+
+      let jobStatus = job.status;
+      if (allStatuses.every((s: string) => s === 'COMPLETED')) {
+        jobStatus = 'COMPLETED';
+      } else if (allStatuses.every((s: string) => s === 'CANCELLED')) {
+        jobStatus = 'CANCELLED';
+      } else if (allStatuses.some((s: string) => s === 'COMPLETED')) {
+        // Some completed but not all → partially completed
+        jobStatus = 'PARTIALLY_COMPLETED';
+      } else if (allStatuses.some((s: string) => s === 'IN_PROGRESS')) {
+        jobStatus = 'IN_PROGRESS';
+      } else if (allStatuses.some((s: string) => s === 'ASSIGNED')) {
+        jobStatus = 'ASSIGNED';
+      }
+
+      if (jobStatus !== job.status) {
+        // Use raw SQL because PARTIALLY_COMPLETED may not be in generated Prisma client
+        const statusEnum = Prisma.raw(`'${jobStatus}'::"JobStatus"`);
+        if (jobStatus === 'COMPLETED' && !job.completedAt) {
+          await prisma.$executeRaw`UPDATE "Job" SET status = ${statusEnum}, "completedAt" = ${now} WHERE id = ${jobId}`;
+        } else if (jobStatus === 'IN_PROGRESS' && !job.startedAt) {
+          await prisma.$executeRaw`UPDATE "Job" SET status = ${statusEnum}, "startedAt" = ${now} WHERE id = ${jobId}`;
+        } else {
+          await prisma.$executeRaw`UPDATE "Job" SET status = ${statusEnum} WHERE id = ${jobId}`;
+        }
+      }
+    } else {
+      // ── Bulk status change (all drivers at once) ──
+      // Use raw SQL to support PARTIALLY_COMPLETED (not in generated Prisma client)
+      const bulkStatusEnum = Prisma.raw(`'${newStatus}'::"JobStatus"`);
+      if (newStatus === 'COMPLETED' && !job.completedAt) {
+        await prisma.$executeRaw`UPDATE "Job" SET status = ${bulkStatusEnum}, "completedAt" = ${now} WHERE id = ${jobId}`;
+      } else if (newStatus === 'IN_PROGRESS' && !job.startedAt) {
+        await prisma.$executeRaw`UPDATE "Job" SET status = ${bulkStatusEnum}, "startedAt" = ${now} WHERE id = ${jobId}`;
+      } else {
+        await prisma.$executeRaw`UPDATE "Job" SET status = ${bulkStatusEnum} WHERE id = ${jobId}`;
+      }
+
+      // Cascade to all assignments via raw SQL
+      if (allAssignments.length > 0) {
+        if (newStatus === 'IN_PROGRESS') {
+          await prisma.$executeRaw`
+            UPDATE "JobAssignment" SET status = ${newStatus}, "startedAt" = ${now}, "lastResumedAt" = ${now}
+            WHERE "jobId" = ${jobId}
+          `;
+        } else if (newStatus === 'COMPLETED') {
+          await prisma.$executeRaw`
+            UPDATE "JobAssignment" SET status = ${newStatus}, "completedAt" = ${now}, "lastResumedAt" = NULL
+            WHERE "jobId" = ${jobId}
+          `;
+        } else {
+          await prisma.$executeRaw`
+            UPDATE "JobAssignment" SET status = ${newStatus}
+            WHERE "jobId" = ${jobId}
+          `;
+        }
       }
     }
-  } else {
-    // ── Bulk status change (all drivers at once) ──
-    // Use raw SQL to support PARTIALLY_COMPLETED (not in generated Prisma client)
-    const bulkStatusEnum = Prisma.raw(`'${newStatus}'::"JobStatus"`);
-    if (newStatus === 'COMPLETED' && !job.completedAt) {
-      await prisma.$executeRaw`UPDATE "Job" SET status = ${bulkStatusEnum}, "completedAt" = ${now} WHERE id = ${jobId}`;
-    } else if (newStatus === 'IN_PROGRESS' && !job.startedAt) {
-      await prisma.$executeRaw`UPDATE "Job" SET status = ${bulkStatusEnum}, "startedAt" = ${now} WHERE id = ${jobId}`;
-    } else {
-      await prisma.$executeRaw`UPDATE "Job" SET status = ${bulkStatusEnum} WHERE id = ${jobId}`;
-    }
-
-    // Cascade to all assignments via raw SQL
-    if (allAssignments.length > 0) {
-      if (newStatus === 'IN_PROGRESS') {
-        await prisma.$executeRaw`
-          UPDATE "JobAssignment" SET status = ${newStatus}, "startedAt" = ${now}, "lastResumedAt" = ${now}
-          WHERE "jobId" = ${jobId}
-        `;
-      } else if (newStatus === 'COMPLETED') {
-        await prisma.$executeRaw`
-          UPDATE "JobAssignment" SET status = ${newStatus}, "completedAt" = ${now}, "lastResumedAt" = NULL
-          WHERE "jobId" = ${jobId}
-        `;
-      } else {
-        await prisma.$executeRaw`
-          UPDATE "JobAssignment" SET status = ${newStatus}
-          WHERE "jobId" = ${jobId}
-        `;
-      }
-    }
+  } catch (err: any) {
+    console.error('[updateJobStatus] Status update failed:', err);
+    // Re-throw user-facing errors, wrap DB errors
+    if (err.message === 'Assignment not found') throw err;
+    throw new Error(`Failed to update status to ${newStatus}. Please try again.`);
   }
 
   revalidatePath('/jobs');
