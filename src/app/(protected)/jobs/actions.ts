@@ -551,13 +551,13 @@ export async function recordLoadAction(jobId: string) {
   }
   if (job.totalLoads > 0 && job.completedLoads >= job.totalLoads) throw new Error('All loads already completed');
 
-  // Get next ticket number
-  const lastTicket = await prisma.ticket.findFirst({
-    where: { companyId },
-    orderBy: { ticketNumber: 'desc' },
-    select: { ticketNumber: true },
-  });
-  const ticketNumber = (lastTicket?.ticketNumber ?? 1000) + 1;
+  // Get next ticket number — use raw SQL to bypass soft-delete middleware
+  // (Prisma middleware adds `deletedAt IS NULL` which skips deleted tickets,
+  // but their numbers still occupy the unique constraint)
+  const ticketNumRows = await prisma.$queryRaw<[{ maxNum: number | null }]>`
+    SELECT MAX("ticketNumber") AS "maxNum" FROM "Ticket" WHERE "companyId" = ${companyId}
+  `;
+  const ticketNumber = (ticketNumRows[0]?.maxNum ?? 1000) + 1;
 
   // Truck number: only use driver's assigned truck
   const driverTruck = job.driver?.assignedTruck?.truckNumber ?? null;

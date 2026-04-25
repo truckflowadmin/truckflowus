@@ -39,13 +39,11 @@ export async function bulkCreateTicketsAction(ticketsJson: string) {
   for (const t of tickets) {
     if (!t.hauledFrom?.trim() || !t.hauledTo?.trim()) continue;
 
-    // Get next ticket number
-    const last = await prisma.ticket.findFirst({
-      where: { companyId: session.companyId },
-      orderBy: { ticketNumber: 'desc' },
-      select: { ticketNumber: true },
-    });
-    const ticketNumber = (last?.ticketNumber ?? 1000) + 1;
+    // Get next ticket number — raw SQL bypasses soft-delete middleware
+    const ticketNumRows = await prisma.$queryRaw<[{ maxNum: number | null }]>`
+      SELECT MAX("ticketNumber") AS "maxNum" FROM "Ticket" WHERE "companyId" = ${session.companyId}
+    `;
+    const ticketNumber = (ticketNumRows[0]?.maxNum ?? 1000) + 1;
 
     // Save material for future reuse
     if (t.material) {

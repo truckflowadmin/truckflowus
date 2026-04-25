@@ -42,12 +42,11 @@ async function createTicket(formData: FormData) {
     truckNumber = driver?.truckNumber || null;
   }
 
-  const last = await prisma.ticket.findFirst({
-    where: { companyId },
-    orderBy: { ticketNumber: 'desc' },
-    select: { ticketNumber: true },
-  });
-  const ticketNumber2 = (last?.ticketNumber ?? 1000) + 1;
+  // Use raw SQL to bypass soft-delete middleware for accurate max ticket number
+  const ticketNumRows = await prisma.$queryRaw<[{ maxNum: number | null }]>`
+    SELECT MAX("ticketNumber") AS "maxNum" FROM "Ticket" WHERE "companyId" = ${companyId}
+  `;
+  const ticketNumber2 = (ticketNumRows[0]?.maxNum ?? 1000) + 1;
 
   await enforceTicketLimit(companyId);
   const ticket = await prisma.ticket.create({

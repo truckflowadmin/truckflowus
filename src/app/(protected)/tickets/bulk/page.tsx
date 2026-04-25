@@ -23,13 +23,11 @@ async function bulkCreateAction(formData: FormData) {
 
   if (!hauledFrom || !hauledTo) throw new Error('Hauled From and Hauled To are required');
 
-  // Get next ticket number
-  const last = await prisma.ticket.findFirst({
-    where: { companyId: session.companyId },
-    orderBy: { ticketNumber: 'desc' },
-    select: { ticketNumber: true },
-  });
-  let nextNum = (last?.ticketNumber ?? 1000) + 1;
+  // Get next ticket number — use raw SQL to bypass soft-delete middleware
+  const ticketNumRows = await prisma.$queryRaw<[{ maxNum: number | null }]>`
+    SELECT MAX("ticketNumber") AS "maxNum" FROM "Ticket" WHERE "companyId" = ${session.companyId}
+  `;
+  let nextNum = (ticketNumRows[0]?.maxNum ?? 1000) + 1;
 
   const driver = driverId
     ? await prisma.driver.findFirst({

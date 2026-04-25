@@ -14,12 +14,12 @@ function appUrl() {
 }
 
 async function nextTicketNumber(companyId: string): Promise<number> {
-  const last = await prisma.ticket.findFirst({
-    where: { companyId },
-    orderBy: { ticketNumber: 'desc' },
-    select: { ticketNumber: true },
-  });
-  return (last?.ticketNumber ?? 1000) + 1;
+  // Use raw SQL to bypass soft-delete middleware — Prisma adds `deletedAt IS NULL`
+  // to reads, hiding deleted tickets whose numbers still occupy the unique constraint
+  const rows = await prisma.$queryRaw<[{ maxNum: number | null }]>`
+    SELECT MAX("ticketNumber") AS "maxNum" FROM "Ticket" WHERE "companyId" = ${companyId}
+  `;
+  return (rows[0]?.maxNum ?? 1000) + 1;
 }
 
 /* ---------- Inline creation helpers ---------- */
@@ -253,12 +253,7 @@ export async function duplicateTicketAction(formData: FormData) {
   // Enforce plan ticket limit
   await enforceTicketLimit(session.companyId);
 
-  const last = await prisma.ticket.findFirst({
-    where: { companyId: session.companyId },
-    orderBy: { ticketNumber: 'desc' },
-    select: { ticketNumber: true },
-  });
-  const ticketNumber = (last?.ticketNumber ?? 1000) + 1;
+  const ticketNumber = await nextTicketNumber(session.companyId);
 
   const dup = await prisma.ticket.create({
     data: {

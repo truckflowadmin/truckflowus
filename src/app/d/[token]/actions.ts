@@ -726,22 +726,25 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
 
     const results: { ticketId: string; ticketNumber: number; photoUrl: string }[] = [];
 
-    // Helper: get next available ticket number with retry on unique constraint collision
+    // Use raw SQL to get the true max ticket number — bypasses the soft-delete
+    // middleware which adds `deletedAt IS NULL` to Prisma reads. Without this,
+    // soft-deleted tickets are invisible to findFirst but their numbers still
+    // occupy the unique constraint, causing collisions.
     async function getNextTicketNumber(companyId: string): Promise<number> {
-      const last = await prisma.ticket.findFirst({
-        where: { companyId },
-        orderBy: { ticketNumber: 'desc' },
-        select: { ticketNumber: true },
-      });
-      return (last?.ticketNumber ?? 1000) + 1;
+      const rows = await prisma.$queryRaw<[{ maxNum: number | null }]>`
+        SELECT MAX("ticketNumber") AS "maxNum"
+        FROM "Ticket"
+        WHERE "companyId" = ${companyId}
+      `;
+      return (rows[0]?.maxNum ?? 1000) + 1;
     }
 
     for (const item of items) {
       if (!item.hauledFrom?.trim() || !item.hauledTo?.trim()) continue;
 
-      // Retry up to 3 times on ticket number collision (race condition / stale data)
+      // Retry up to 5 times on ticket number collision (concurrent requests)
       let ticket = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 5; attempt++) {
         const ticketNumber = await getNextTicketNumber(driver.companyId);
         try {
           ticket = await prisma.ticket.create({
@@ -780,7 +783,7 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
           const isUniqueViolation =
             createErr?.code === 'P2002' ||
             createErr?.message?.includes('Unique constraint');
-          if (isUniqueViolation && attempt < 2) {
+          if (isUniqueViolation && attempt < 4) {
             continue; // retry
           }
           throw createErr; // re-throw non-retryable errors
