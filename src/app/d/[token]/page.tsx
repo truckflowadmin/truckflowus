@@ -68,13 +68,12 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
       orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
     }),
 
-    // Completed today count
+    // Tickets uploaded by this driver today (scanned or manually created)
     has(FEATURES.DRIVER_DAILY_STATS)
       ? prisma.ticket.count({
           where: {
             driverId: driver.id,
-            status: 'COMPLETED',
-            completedAt: { gte: todayStart },
+            createdAt: { gte: todayStart },
           },
         })
       : Promise.resolve(0),

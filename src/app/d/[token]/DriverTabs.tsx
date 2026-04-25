@@ -295,6 +295,7 @@ export default function DriverTabs(props: DriverTabsProps) {
   const { t } = useLanguage();
   const [tab, setTab] = useState<'active' | 'available' | 'upcoming' | 'completed' | 'calendar' | 'expenses' | 'profile'>('active');
   const [loggingOut, setLoggingOut] = useState(false);
+  const [doneToday, setDoneToday] = useState(props.completedToday);
 
   // Auto-refresh every 30s so driver sees dispatcher changes (cancellations, new jobs, etc.)
   useEffect(() => {
@@ -303,6 +304,11 @@ export default function DriverTabs(props: DriverTabsProps) {
     }, 30_000);
     return () => clearInterval(id);
   }, [router]);
+
+  // Sync doneToday with server-computed value on re-render (e.g. after router.refresh)
+  useEffect(() => {
+    setDoneToday(props.completedToday);
+  }, [props.completedToday]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -337,6 +343,12 @@ export default function DriverTabs(props: DriverTabsProps) {
               {props.companyName}
             </div>
           </div>
+          {props.canSeeDailyStats && (
+            <div className="flex flex-col items-center px-2">
+              <span className="text-2xl font-black text-safety leading-none">{doneToday}</span>
+              <span className="text-[10px] text-steel-400 uppercase tracking-wider">Today</span>
+            </div>
+          )}
           <LanguageToggle variant="driver" />
           <button
             onClick={handleLogout}
@@ -480,6 +492,7 @@ export default function DriverTabs(props: DriverTabsProps) {
             canAiExtract={props.canAiExtract}
             tripSheets={props.tripSheets}
             payroll={props.payroll}
+            onTicketsCreated={(count) => setDoneToday((prev) => prev + count)}
           />
         ) : (
           <ActiveJobsTab
@@ -869,6 +882,7 @@ function CompletedTab({
   canAiExtract,
   tripSheets,
   payroll,
+  onTicketsCreated,
 }: {
   tickets: TicketData[];
   completedJobs: CompletedJobData[];
@@ -877,6 +891,7 @@ function CompletedTab({
   canAiExtract: boolean;
   tripSheets: TripSheetData[];
   payroll: PayrollData;
+  onTicketsCreated?: (count: number) => void;
 }) {
   const { t } = useLanguage();
 
@@ -1020,6 +1035,7 @@ function CompletedTab({
               canAiExtract={canAiExtract}
               forceExpand
               highlight="yellow"
+              onTicketsCreated={onTicketsCreated}
             />
           ))}
         </div>
@@ -1038,6 +1054,7 @@ function CompletedTab({
               token={token}
               canUploadPhotos={canUploadPhotos}
               canAiExtract={canAiExtract}
+              onTicketsCreated={onTicketsCreated}
             />
           ))}
         </div>
@@ -1067,6 +1084,7 @@ function CompletedTab({
                   token={token}
                   canUploadPhotos={canUploadPhotos}
                   canAiExtract={canAiExtract}
+                  onTicketsCreated={onTicketsCreated}
                 />
               ))}
             </div>
@@ -1111,6 +1129,7 @@ function CompletedJobCard({
   canAiExtract,
   forceExpand,
   highlight,
+  onTicketsCreated,
 }: {
   job: CompletedJobData;
   token: string;
@@ -1118,6 +1137,7 @@ function CompletedJobCard({
   canAiExtract: boolean;
   forceExpand?: boolean;
   highlight?: 'yellow';
+  onTicketsCreated?: (count: number) => void;
 }) {
   const { t } = useLanguage();
   const hasMissingPhotos = job.tickets.some((tk) => !tk.photoUrl);
@@ -1264,6 +1284,7 @@ function CompletedJobCard({
       if (res.success && res.count !== undefined && res.tickets) {
         setSubmitResult({ count: res.count, tickets: res.tickets });
         setItems([]);
+        onTicketsCreated?.(res.count);
       } else if (!res.success && res.error) {
         // Duplicate ticketRef or other validation error from the action
         setError(res.error);
