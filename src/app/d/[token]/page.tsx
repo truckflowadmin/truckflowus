@@ -36,8 +36,19 @@ export async function DriverPortalContent({ driverId }: { driverId: string }) {
   // Resolve feature flags from the company's plan (single query).
   const has = await loadCompanyFeatures(driver.companyId);
 
-  // Date boundaries (computed once)
-  const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+  // Date boundaries (computed once) — use US Eastern so "today" matches driver's local day
+  // On Vercel (UTC server), we need midnight Eastern as a UTC timestamp.
+  // Step 1: get today's date string in ET (e.g. "2026-04-24")
+  const etDateStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  // Step 2: compute ET's UTC offset using a noon reference (avoids DST edge at midnight)
+  const refUTC = new Date(`${etDateStr}T12:00:00Z`);
+  const refET = new Date(refUTC.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const etOffsetMs = refET.getTime() - refUTC.getTime(); // +offset means ET is behind UTC
+  // Step 3: midnight ET in UTC = midnight local minus the offset
+  const todayStart = new Date(`${etDateStr}T00:00:00Z`);
+  todayStart.setTime(todayStart.getTime() - etOffsetMs);
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   thirtyDaysAgo.setHours(0, 0, 0, 0);
