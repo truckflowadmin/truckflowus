@@ -618,7 +618,7 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
   const jobId = String(formData.get('jobId') || '');
   const itemsJson = String(formData.get('items') || '[]');
 
-  if (!token || !jobId) throw new Error('Missing fields');
+  if (!token || !jobId) return { success: false, error: 'Missing fields' };
 
   // Parse the reviewed items
   let items: {
@@ -641,158 +641,168 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
   try {
     items = JSON.parse(itemsJson);
   } catch {
-    throw new Error('Invalid data');
+    return { success: false, error: 'Invalid data' };
   }
-  if (!items.length) throw new Error('No tickets to submit');
+  if (!items.length) return { success: false, error: 'No tickets to submit' };
 
-  // Validate driver — include assigned truck for fresh truck number
-  const driver = await prisma.driver.findUnique({
-    where: { accessToken: token },
-    include: { assignedTruck: { select: { truckNumber: true } } },
-  });
-  if (!driver || !driver.active) throw new Error('Invalid driver link');
+  try {
+    // Validate driver — include assigned truck for fresh truck number
+    const driver = await prisma.driver.findUnique({
+      where: { accessToken: token },
+      include: { assignedTruck: { select: { truckNumber: true } } },
+    });
+    if (!driver || !driver.active) return { success: false, error: 'Invalid driver link' };
 
-  // Feature gate
-  const hasFn = await loadCompanyFeatures(driver.companyId);
-  if (!hasFn(FEATURES.DRIVER_PHOTO_UPLOAD)) {
-    throw new Error('Photo upload is not available on this plan');
-  }
+    // Feature gate
+    const hasFn = await loadCompanyFeatures(driver.companyId);
+    if (!hasFn(FEATURES.DRIVER_PHOTO_UPLOAD)) {
+      return { success: false, error: 'Photo upload is not available on your plan. Contact your dispatcher.' };
+    }
 
-  // Verify the job belongs to this driver
-  const job = await prisma.job.findFirst({
-    where: {
-      id: jobId,
-      status: { in: ['CREATED', 'ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED', 'COMPLETED'] },
-      OR: [
-        { driverId: driver.id },
-        { assignments: { some: { driverId: driver.id } } },
-      ],
-    },
-  });
-  if (!job) throw new Error('Job not found');
+    // Verify the job belongs to this driver
+    const job = await prisma.job.findFirst({
+      where: {
+        id: jobId,
+        status: { in: ['CREATED', 'ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED', 'COMPLETED'] },
+        OR: [
+          { driverId: driver.id },
+          { assignments: { some: { driverId: driver.id } } },
+        ],
+      },
+    });
+    if (!job) return { success: false, error: 'Job not found. It may have been cancelled or you are no longer assigned.' };
 
-  // Block if job has invoiced tickets
-  const invoicedCheck = await prisma.ticket.count({ where: { jobId, invoiceId: { not: null } } });
-  if (invoicedCheck > 0) throw new Error('This job has invoiced tickets and cannot be modified');
+    // Block if job has invoiced tickets
+    const invoicedCheck = await prisma.ticket.count({ where: { jobId, invoiceId: { not: null } } });
+    if (invoicedCheck > 0) return { success: false, error: 'This job has invoiced tickets and cannot be modified.' };
 
-  // Get next ticket number
-  const lastTicket = await prisma.ticket.findFirst({
-    where: { companyId: driver.companyId },
-    orderBy: { ticketNumber: 'desc' },
-    select: { ticketNumber: true },
-  });
-  let nextNum = (lastTicket?.ticketNumber ?? 1000) + 1;
+    // Get next ticket number
+    const lastTicket = await prisma.ticket.findFirst({
+      where: { companyId: driver.companyId },
+      orderBy: { ticketNumber: 'desc' },
+      select: { ticketNumber: true },
+    });
+    let nextNum = (lastTicket?.ticketNumber ?? 1000) + 1;
 
-  await enforceTicketLimit(driver.companyId, items.length);
+    // Check ticket limit
+    try {
+      await enforceTicketLimit(driver.companyId, items.length);
+    } catch (limitErr: any) {
+      return { success: false, error: limitErr.message || 'Monthly ticket limit reached. Contact your dispatcher.' };
+    }
 
-  // Check for duplicate ticketRefs within this job before creating any tickets
-  const ticketRefs = items
-    .filter(i => i.ticketRef?.trim())
-    .map(i => i.ticketRef.trim());
+    // Check for duplicate ticketRefs within this job before creating any tickets
+    const ticketRefs = items
+      .filter(i => i.ticketRef?.trim())
+      .map(i => i.ticketRef.trim());
 
-  if (ticketRefs.length > 0) {
-    // Check for duplicates within the batch itself
-    const seen = new Set<string>();
-    for (const ref of ticketRefs) {
-      if (seen.has(ref)) {
+    if (ticketRefs.length > 0) {
+      // Check for duplicates within the batch itself
+      const seen = new Set<string>();
+      for (const ref of ticketRefs) {
+        if (seen.has(ref)) {
+          return {
+            success: false,
+            error: `Duplicate ticket # "${ref}" found in your upload batch. Each ticket must have a unique number.`,
+            duplicateRef: ref,
+          };
+        }
+        seen.add(ref);
+      }
+
+      // Check against existing tickets in the same job
+      const existing = await prisma.ticket.findMany({
+        where: {
+          jobId: job.id,
+          ticketRef: { in: ticketRefs },
+          deletedAt: null,
+        },
+        select: { ticketRef: true, ticketNumber: true },
+      });
+
+      if (existing.length > 0) {
+        const conflicts = existing.map(e =>
+          `"${e.ticketRef}" (System #${String(e.ticketNumber).padStart(4, '0')})`
+        ).join(', ');
         return {
           success: false,
-          error: `Duplicate ticket # "${ref}" found in your upload batch. Each ticket must have a unique number.`,
-          duplicateRef: ref,
+          error: `Ticket # ${conflicts} already exist${existing.length > 1 ? '' : 's'} on this job.`,
+          duplicates: existing.map(e => ({ ticketRef: e.ticketRef, ticketNumber: e.ticketNumber })),
         };
       }
-      seen.add(ref);
     }
 
-    // Check against existing tickets in the same job
-    const existing = await prisma.ticket.findMany({
-      where: {
-        jobId: job.id,
-        ticketRef: { in: ticketRefs },
-        deletedAt: null,
-      },
-      select: { ticketRef: true, ticketNumber: true },
-    });
+    const results: { ticketId: string; ticketNumber: number; photoUrl: string }[] = [];
 
-    if (existing.length > 0) {
-      const conflicts = existing.map(e =>
-        `"${e.ticketRef}" (System #${String(e.ticketNumber).padStart(4, '0')})`
-      ).join(', ');
-      return {
-        success: false,
-        error: `Ticket # ${conflicts} already exist${existing.length > 1 ? '' : 's'} on this job.`,
-        duplicates: existing.map(e => ({ ticketRef: e.ticketRef, ticketNumber: e.ticketNumber })),
-      };
+    for (const item of items) {
+      if (!item.hauledFrom?.trim() || !item.hauledTo?.trim()) continue;
+
+      const ticketNumber = nextNum++;
+      const ticket = await prisma.ticket.create({
+        data: {
+          companyId: driver.companyId,
+          ticketNumber,
+          jobId: job.id,
+          driverId: driver.id,
+          customerId: job.customerId,
+          brokerId: job.brokerId,
+          status: 'COMPLETED',
+          hauledFrom: item.hauledFrom.trim(),
+          hauledTo: item.hauledTo.trim(),
+          material: item.material?.trim() || job.material,
+          truckNumber: (driver as any).assignedTruck?.truckNumber ?? null,
+          quantityType: (item.quantityType as any) || job.quantityType,
+          quantity: item.quantity || 1,
+          ratePerUnit: job.ratePerUnit,
+          date: item.date ? new Date(item.date + 'T00:00:00Z') : job.date,
+          ticketRef: item.ticketRef?.trim() || null,
+          driverNotes: item.driverNotes?.trim() || null,
+          photoUrl: item.photoUrl,
+          completedAt: new Date(),
+          // Preserve original AI-scanned data
+          scannedTons: item.scannedTons ?? null,
+          scannedYards: item.scannedYards ?? null,
+          scannedTicketNumber: item.scannedTicketNumber ?? null,
+          scannedDate: item.scannedDate ?? null,
+          scannedRawText: item.scannedRawText ?? null,
+        },
+      });
+
+      results.push({ ticketId: ticket.id, ticketNumber, photoUrl: item.photoUrl });
     }
-  }
 
-  const results: { ticketId: string; ticketNumber: number; photoUrl: string }[] = [];
+    if (results.length === 0) return { success: false, error: 'No valid tickets to create — fill in Hauled From and Hauled To.' };
 
-  for (const item of items) {
-    if (!item.hauledFrom?.trim() || !item.hauledTo?.trim()) continue;
-
-    const ticketNumber = nextNum++;
-    const ticket = await prisma.ticket.create({
-      data: {
-        companyId: driver.companyId,
-        ticketNumber,
-        jobId: job.id,
-        driverId: driver.id,
-        customerId: job.customerId,
-        brokerId: job.brokerId,
-        status: 'COMPLETED',
-        hauledFrom: item.hauledFrom.trim(),
-        hauledTo: item.hauledTo.trim(),
-        material: item.material?.trim() || job.material,
-        truckNumber: (driver as any).assignedTruck?.truckNumber ?? null,
-        quantityType: (item.quantityType as any) || job.quantityType,
-        quantity: item.quantity || 1,
-        ratePerUnit: job.ratePerUnit,
-        date: item.date ? new Date(item.date + 'T00:00:00Z') : job.date,
-        ticketRef: item.ticketRef?.trim() || null,
-        driverNotes: item.driverNotes?.trim() || null,
-        photoUrl: item.photoUrl,
-        completedAt: new Date(),
-        // Preserve original AI-scanned data
-        scannedTons: item.scannedTons ?? null,
-        scannedYards: item.scannedYards ?? null,
-        scannedTicketNumber: item.scannedTicketNumber ?? null,
-        scannedDate: item.scannedDate ?? null,
-        scannedRawText: item.scannedRawText ?? null,
-      },
+    // Update completed loads on the job
+    const totalTickets = await prisma.ticket.count({
+      where: { jobId: job.id, status: 'COMPLETED' },
+    });
+    await prisma.job.update({
+      where: { id: job.id },
+      data: { completedLoads: totalTickets },
     });
 
-    results.push({ ticketId: ticket.id, ticketNumber, photoUrl: item.photoUrl });
+    // Notify dispatcher
+    createNotification({
+      companyId: driver.companyId,
+      type: 'TICKET_PHOTOS_UPLOADED' as any,
+      title: `${driver.name} submitted ${results.length} ticket${results.length !== 1 ? 's' : ''} for Job #${job.jobNumber}`,
+      link: `/jobs/${job.id}`,
+    });
+
+    revalidatePath('/d/portal');
+    revalidatePath('/tickets');
+    revalidatePath(`/jobs/${job.id}`);
+
+    return {
+      success: true,
+      count: results.length,
+      tickets: results,
+    };
+  } catch (err: any) {
+    console.error('[driverSubmitReviewedTickets] Unexpected error:', err);
+    return { success: false, error: err.message || 'Something went wrong. Please try again or contact your dispatcher.' };
   }
-
-  if (results.length === 0) throw new Error('No valid tickets to create — fill in Hauled From and Hauled To.');
-
-  // Update completed loads on the job
-  const totalTickets = await prisma.ticket.count({
-    where: { jobId: job.id, status: 'COMPLETED' },
-  });
-  await prisma.job.update({
-    where: { id: job.id },
-    data: { completedLoads: totalTickets },
-  });
-
-  // Notify dispatcher
-  createNotification({
-    companyId: driver.companyId,
-    type: 'TICKET_PHOTOS_UPLOADED' as any,
-    title: `${driver.name} submitted ${results.length} ticket${results.length !== 1 ? 's' : ''} for Job #${job.jobNumber}`,
-    link: `/jobs/${job.id}`,
-  });
-
-  revalidatePath('/d/portal');
-  revalidatePath('/tickets');
-  revalidatePath(`/jobs/${job.id}`);
-
-  return {
-    success: true,
-    count: results.length,
-    tickets: results,
-  };
 }
 
 // ---------------------------------------------------------------------------
