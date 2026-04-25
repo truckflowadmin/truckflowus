@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 interface Stats {
   pending: number;
@@ -43,21 +43,35 @@ export default function DashboardStats({ labels }: { labels: {
 } }) {
   const [stats, setStats] = useState<Stats | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const r = await fetch('/api/dashboard/stats', { cache: 'no-store' });
-        if (!r.ok) return;
-        const data = await r.json();
-        if (!cancelled) setStats(data);
-      } catch { /* ignore */ }
-    }
-    load();
-    // Refresh every 30 seconds while the tab is open
-    const interval = setInterval(load, 30_000);
-    return () => { cancelled = true; clearInterval(interval); };
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch('/api/dashboard/stats', { cache: 'no-store' });
+      if (!r.ok) return;
+      const data = await r.json();
+      setStats(data);
+    } catch { /* ignore */ }
   }, []);
+
+  useEffect(() => {
+    load();
+    // Refresh every 15 seconds while the tab is open
+    const interval = setInterval(load, 15_000);
+
+    // Re-fetch immediately when the tab becomes visible again
+    function onVisibility() {
+      if (document.visibilityState === 'visible') load();
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+
+    // Re-fetch when the window regains focus (covers tab switches + alt-tab)
+    window.addEventListener('focus', load);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', load);
+    };
+  }, [load]);
 
   if (!stats) {
     return (
