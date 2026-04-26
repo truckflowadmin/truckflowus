@@ -56,12 +56,13 @@ export async function apiFetch<T = any>(
 
   if (!noAuth) {
     const token = await getToken();
-    console.log(`[API] ${rest.method || 'GET'} ${path} | token=${token ? token.slice(0, 12) + '...' : 'NULL'}`);
     if (token) {
+      // Send token in BOTH headers. React Native on iOS silently strips the
+      // standard Authorization header on redirects / certain Vercel edge configs.
+      // X-Driver-Token is a custom header that survives the trip.
       headers['Authorization'] = `Bearer ${token}`;
+      headers['X-Driver-Token'] = token;
     }
-  } else {
-    console.log(`[API] ${rest.method || 'GET'} ${path} | noAuth=true`);
   }
 
   // WORKAROUND: React Native on iOS + Vercel has a bug where POST requests
@@ -91,10 +92,7 @@ export async function apiFetch<T = any>(
     throw new ApiError(msg, 0, { networkError: true });
   }
 
-  console.log(`[API] ${path} → status=${res.status}`);
   if (res.status === 401) {
-    const body401 = await res.text().catch(() => '');
-    console.log(`[API] 401 body: ${body401}`);
     // Only clear the token for authenticated requests (not login/noAuth calls).
     if (!noAuth) {
       await clearToken();
@@ -136,6 +134,7 @@ export async function apiUpload<T = any>(
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+    headers['X-Driver-Token'] = token;
   }
 
   const url = `${baseUrl}${path}`;

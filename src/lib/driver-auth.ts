@@ -101,10 +101,13 @@ export async function getDriverSession(): Promise<DriverSession | null> {
  * Call this from API routes that need to support both web and native app clients.
  */
 export async function getDriverSessionFromRequest(req: Request): Promise<DriverSession | null> {
-  // Try Authorization header first (mobile app)
+  // Try X-Driver-Token first (mobile app — immune to iOS Authorization header stripping)
+  // Then fall back to standard Authorization Bearer header (web / other clients)
+  const customToken = req.headers.get('X-Driver-Token');
   const authHeader = req.headers.get('Authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
+  const token = customToken || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
+
+  if (token) {
     const payload = verifyDriverSession(token);
     if (payload) {
       // Check session invalidation

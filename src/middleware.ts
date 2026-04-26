@@ -150,7 +150,7 @@ export async function middleware(req: NextRequest) {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Platform, X-Body',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Platform, X-Body, X-Driver-Token',
         'Access-Control-Max-Age': '86400',
       },
     });
