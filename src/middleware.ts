@@ -100,6 +100,12 @@ function isCsrfSafe(req: NextRequest): boolean {
 
   // Allow webhook endpoints (they use their own auth — signature validation)
   if (req.nextUrl.pathname.startsWith('/api/sms/webhook')) return true;
+  if (req.nextUrl.pathname.startsWith('/api/paypal/webhook')) return true;
+
+  // Allow mobile app requests — they use JWT Bearer tokens for auth, not cookies,
+  // so they're not vulnerable to CSRF. Mobile fetch() doesn't send origin/referer.
+  if (req.headers.get('x-platform') === 'mobile') return true;
+  if (req.nextUrl.pathname.startsWith('/api/driver/')) return true;
 
   const origin = req.headers.get('origin');
   const host = req.headers.get('host');
