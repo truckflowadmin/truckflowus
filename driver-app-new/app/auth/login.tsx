@@ -33,75 +33,66 @@ export default function LoginScreen() {
       log(`   FAIL: ${e.message}`);
     }
 
-    // Test 2: POST with text/plain content type (no CORS preflight)
+    // Test 2: POST with body (known to fail)
     try {
-      log('2) POST ping text/plain...');
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 10000);
+      log('2) POST + body...');
+      const c2 = new AbortController();
+      const t2 = setTimeout(() => c2.abort(), 8000);
       const r2 = await fetch(`${base}/api/driver/ping`, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain', 'X-Platform': 'mobile' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ test: true }),
-        signal: controller.signal,
+        signal: c2.signal,
       });
-      clearTimeout(t);
-      const d2 = await r2.json();
-      log(`   OK: ${JSON.stringify(d2)}`);
+      clearTimeout(t2);
+      log(`   OK: ${r2.status}`);
     } catch (e: any) {
-      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT 10s' : e.message}`);
+      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT' : e.message}`);
     }
 
-    // Test 3: POST with application/json (triggers CORS preflight)
+    // Test 3: POST with NO body at all
     try {
-      log('3) POST ping application/json...');
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 10000);
+      log('3) POST no body...');
+      const c3 = new AbortController();
+      const t3 = setTimeout(() => c3.abort(), 8000);
       const r3 = await fetch(`${base}/api/driver/ping`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Platform': 'mobile' },
-        body: JSON.stringify({ test: true }),
-        signal: controller.signal,
+        signal: c3.signal,
       });
-      clearTimeout(t);
+      clearTimeout(t3);
       const d3 = await r3.json();
       log(`   OK: ${JSON.stringify(d3)}`);
     } catch (e: any) {
-      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT 10s' : e.message}`);
+      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT' : e.message}`);
     }
 
-    // Test 4: POST with NO content-type header at all
+    // Test 4: GET with data in query string (workaround A)
     try {
-      log('4) POST ping no content-type...');
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 10000);
-      const r4 = await fetch(`${base}/api/driver/ping`, {
-        method: 'POST',
-        headers: { 'X-Platform': 'mobile' },
-        body: JSON.stringify({ test: true }),
-        signal: controller.signal,
-      });
-      clearTimeout(t);
+      log('4) GET + query params...');
+      const encoded = encodeURIComponent(JSON.stringify({ test: true }));
+      const r4 = await fetch(`${base}/api/driver/ping?d=${encoded}`);
       const d4 = await r4.json();
       log(`   OK: ${JSON.stringify(d4)}`);
     } catch (e: any) {
-      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT 10s' : e.message}`);
+      log(`   FAIL: ${e.message}`);
     }
 
-    // Test 5: POST with no custom headers at all
+    // Test 5: POST with data in X-Body header (workaround B)
     try {
-      log('5) POST ping bare (no headers)...');
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 10000);
+      log('5) POST + X-Body header...');
+      const c5 = new AbortController();
+      const t5 = setTimeout(() => c5.abort(), 8000);
+      const payload = btoa(JSON.stringify({ test: true }));
       const r5 = await fetch(`${base}/api/driver/ping`, {
         method: 'POST',
-        body: JSON.stringify({ test: true }),
-        signal: controller.signal,
+        headers: { 'X-Body': payload },
+        signal: c5.signal,
       });
-      clearTimeout(t);
+      clearTimeout(t5);
       const d5 = await r5.json();
       log(`   OK: ${JSON.stringify(d5)}`);
     } catch (e: any) {
-      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT 10s' : e.message}`);
+      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT' : e.message}`);
     }
 
     log('\nDone.');
