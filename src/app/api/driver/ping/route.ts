@@ -9,16 +9,22 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const ct = req.headers.get('content-type') || 'none';
   let body: any = null;
   try {
-    body = await req.json();
+    // Try to parse body as JSON regardless of content-type
+    const text = await req.text();
+    if (text) {
+      body = JSON.parse(text);
+    }
   } catch {
-    // empty body is fine
+    // not JSON, that's fine
   }
   return NextResponse.json({
     ok: true,
     method: 'POST',
     ts: Date.now(),
+    contentType: ct,
     echo: body,
   });
 }
