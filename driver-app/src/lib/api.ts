@@ -52,6 +52,8 @@ export async function apiFetch<T = any>(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Platform': 'mobile',
+    'Cache-Control': 'no-store, no-cache, must-revalidate',
+    'Pragma': 'no-cache',
     ...(rest.headers as Record<string, string>),
   };
 

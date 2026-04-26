@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, RefreshControl,
   StyleSheet, ActivityIndicator,
@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { colors } from '@/lib/colors';
 
 interface Job {
@@ -37,7 +38,6 @@ export default function JobsScreen() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<'my' | 'available'>('my');
 
   const load = useCallback(async () => {
@@ -49,16 +49,11 @@ export default function JobsScreen() {
       console.error('Failed to load jobs:', err);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    load();
-  }, [load]);
+  // Auto-refresh every 15s + refetch on app resume / tab focus
+  const { refreshing, onRefresh } = useAutoRefresh(load, { interval: 15_000 });
 
   const renderJob = ({ item }: { item: Job }) => {
     const statusColor = STATUS_COLORS[item.assignmentStatus || item.status] || STATUS_COLORS.CREATED;

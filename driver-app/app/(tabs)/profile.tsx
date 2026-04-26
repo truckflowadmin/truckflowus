@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert, Switch,
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { isTrackingActive } from '@/lib/location';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { colors } from '@/lib/colors';
 
 interface Profile {
@@ -46,7 +47,8 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Refresh on app resume / tab focus (no polling for profile)
+  useAutoRefresh(load, { interval: 60_000 });
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [

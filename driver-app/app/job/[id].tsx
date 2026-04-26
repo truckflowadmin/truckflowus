@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Alert,
   StyleSheet, ActivityIndicator, Linking, Platform,
@@ -7,6 +7,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch } from '@/lib/api';
 import { startTracking, stopTracking, isTrackingActive } from '@/lib/location';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { colors } from '@/lib/colors';
 
 interface JobDetail {
@@ -52,7 +53,8 @@ export default function JobDetailScreen() {
     }
   }, [id]);
 
-  useEffect(() => { load(); }, [load]);
+  // Auto-refresh every 15s + refetch on app resume / screen focus
+  useAutoRefresh(load, { interval: 15_000 });
 
   const handleStatusChange = async (newStatus: string) => {
     if (!job) return;

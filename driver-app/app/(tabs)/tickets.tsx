@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, RefreshControl,
   StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch } from '@/lib/api';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { colors } from '@/lib/colors';
 
 interface Ticket {
@@ -32,7 +33,6 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 export default function TicketsScreen() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<'active' | 'completed'>('active');
 
   const load = useCallback(async () => {
@@ -43,16 +43,11 @@ export default function TicketsScreen() {
       console.error('Failed to load tickets:', err);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    load();
-  }, [load]);
+  // Auto-refresh every 15s + refetch on app resume / tab focus
+  const { refreshing, onRefresh } = useAutoRefresh(load, { interval: 15_000 });
 
   const activeTickets = tickets.filter((t) =>
     ['PENDING', 'DISPATCHED', 'IN_PROGRESS', 'ISSUE'].includes(t.status)
