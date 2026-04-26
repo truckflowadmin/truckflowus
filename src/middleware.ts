@@ -142,6 +142,20 @@ function isCsrfSafe(req: NextRequest): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Handle CORS preflight for mobile app API requests
+  // Expo Go / React Native may send OPTIONS preflight for POST + JSON
+  if (req.method === 'OPTIONS' && pathname.startsWith('/api/driver/')) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Platform',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  }
+
   // CSRF check on API routes
   if (pathname.startsWith('/api/') && !isCsrfSafe(req)) {
     return new NextResponse(JSON.stringify({ error: 'CSRF validation failed' }), {
@@ -175,6 +189,13 @@ export async function middleware(req: NextRequest) {
   const response = NextResponse.next();
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);
+  }
+
+  // Add CORS headers for driver API routes (mobile app)
+  if (pathname.startsWith('/api/driver/') || pathname.startsWith('/api/tracking')) {
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Platform');
   }
 
   return response;
