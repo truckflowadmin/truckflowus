@@ -36,7 +36,8 @@ export default function ProfileScreen() {
   const load = useCallback(async () => {
     try {
       const data = await apiFetch('/api/driver/profile');
-      setProfile(data);
+      // API returns { driver: { ... } } — unwrap it
+      setProfile(data.driver || data);
       const isTracking = await isTrackingActive();
       setTracking(isTracking);
     } catch (err) {

@@ -40,6 +40,10 @@ export async function GET(req: NextRequest) {
       zip: true,
       emergencyContactName: true,
       emergencyContactPhone: true,
+      smsEnabled: true,
+      smsJobAssignment: true,
+      smsJobStatusChange: true,
+      lastLoginAt: true,
     },
   });
 
