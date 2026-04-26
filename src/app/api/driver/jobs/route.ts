@@ -7,10 +7,15 @@ import { getDriverSessionFromRequest } from '@/lib/driver-auth';
  * Returns the driver's assigned jobs and available (open) jobs.
  */
 export async function GET(req: NextRequest) {
+  const authHeader = req.headers.get('Authorization');
+  const platform = req.headers.get('X-Platform');
+  console.log(`[jobs] GET | Auth=${authHeader ? authHeader.slice(0, 25) + '...' : 'NONE'} | Platform=${platform}`);
   const session = await getDriverSessionFromRequest(req);
   if (!session) {
+    console.log('[jobs] getDriverSessionFromRequest returned null — 401');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  console.log(`[jobs] Session OK: driver=${session.driverId}, company=${session.companyId}`);
 
   const { driverId, companyId } = session;
 

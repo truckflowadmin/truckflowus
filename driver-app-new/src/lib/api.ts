@@ -56,9 +56,12 @@ export async function apiFetch<T = any>(
 
   if (!noAuth) {
     const token = await getToken();
+    console.log(`[API] ${rest.method || 'GET'} ${path} | token=${token ? token.slice(0, 12) + '...' : 'NULL'}`);
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+  } else {
+    console.log(`[API] ${rest.method || 'GET'} ${path} | noAuth=true`);
   }
 
   // WORKAROUND: React Native on iOS + Vercel has a bug where POST requests
@@ -88,9 +91,11 @@ export async function apiFetch<T = any>(
     throw new ApiError(msg, 0, { networkError: true });
   }
 
+  console.log(`[API] ${path} → status=${res.status}`);
   if (res.status === 401) {
+    const body401 = await res.text().catch(() => '');
+    console.log(`[API] 401 body: ${body401}`);
     // Only clear the token for authenticated requests (not login/noAuth calls).
-    // This prevents a stale checkSession() 401 from wiping a freshly-set token.
     if (!noAuth) {
       await clearToken();
     }

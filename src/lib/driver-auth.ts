@@ -54,7 +54,8 @@ export function signDriverSession(payload: DriverSession): string {
 export function verifyDriverSession(token: string): DriverSession | null {
   try {
     return jwt.verify(token, JWT_SECRET, { audience: 'driver' }) as DriverSession;
-  } catch {
+  } catch (err: any) {
+    console.log(`[driver-auth] JWT verify failed: ${err.message}`);
     return null;
   }
 }

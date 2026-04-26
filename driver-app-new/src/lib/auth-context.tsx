@@ -70,7 +70,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (res.ok && res.token) {
+        console.log(`[Auth] Login OK. Token starts: ${res.token.slice(0, 20)}...`);
         await setToken(res.token);
+        // Verify the write
+        const verify = await getToken();
+        console.log(`[Auth] Token stored. Re-read starts: ${verify ? verify.slice(0, 20) + '...' : 'NULL!'}`);
         setState({
           isLoading: false,
           isLoggedIn: true,
