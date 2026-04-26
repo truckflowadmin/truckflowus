@@ -32,7 +32,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       // Validate by fetching profile
-      const profile = await apiFetch('/api/driver/profile');
+      const data = await apiFetch('/api/driver/profile');
+      const profile = data.driver || data;
       setState({
         isLoading: false,
         isLoggedIn: true,
