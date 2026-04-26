@@ -98,6 +98,8 @@ model Company {
   billingEvents        BillingEvent[]
   smsLogs              SmsLog[]
   faxLogs              FaxLog[]
+  driverLocations      DriverLocation[]
+  proofOfDelivery      ProofOfDelivery[]
 
   @@index([planId])
 }
@@ -252,6 +254,8 @@ model Driver {
   documents       DriverDocument[]
   payments        DriverPayment[]
   expenses        Expense[]
+  locationPings   DriverLocation[]
+  proofOfDelivery ProofOfDelivery[]
 
   @@index([companyId])
   @@index([phone])
@@ -430,8 +434,10 @@ model Job {
   customer      Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
   broker        Broker?         @relation(fields: [brokerId], references: [id], onDelete: SetNull)
   driver        Driver?         @relation(fields: [driverId], references: [id], onDelete: SetNull)
-  tickets       Ticket[]
-  assignments   JobAssignment[]
+  tickets         Ticket[]
+  assignments     JobAssignment[]
+  locationPings   DriverLocation[]
+  proofOfDelivery ProofOfDelivery[]
 
   @@unique([companyId, jobNumber])
   @@index([companyId, status])
@@ -456,10 +462,57 @@ model JobAssignment {
 
   job    Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
   driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  locationPings DriverLocation[]
 
   @@unique([jobId, driverId]) // a driver can only be assigned once per job
   @@index([jobId])
   @@index([driverId])
+}
+
+// GPS location pings from the driver native app
+model DriverLocation {
+  id            String   @id @default(cuid())
+  companyId     String
+  driverId      String
+  jobId         String
+  assignmentId  String?
+  latitude      Float
+  longitude     Float
+  accuracy      Float?
+  speed         Float?
+  heading       Float?
+  altitude      Float?
+  recordedAt    DateTime // timestamp from the device
+  createdAt     DateTime @default(now())
+
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driver     Driver          @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  job        Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  assignment JobAssignment?  @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+
+  @@index([driverId, jobId])
+  @@index([jobId])
+  @@index([companyId, createdAt])
+}
+
+// Proof of delivery (photos + signatures)
+model ProofOfDelivery {
+  id          String   @id @default(cuid())
+  companyId   String
+  jobId       String
+  driverId    String
+  type        String   // "photo" or "signature"
+  fileUrl     String   // Vercel Blob URL
+  ticketRef   String?  // optional ticket reference number
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job     Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([driverId])
+  @@index([companyId])
 }
 
 model Material {

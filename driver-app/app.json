@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "TruckFlowUS Driver",
+    "slug": "truckflowus-driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "truckflowus",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E3A5F"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.truckflowus.driver",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "TruckFlowUS needs your location to track deliveries while a job is in progress.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "TruckFlowUS needs background location access to track deliveries even when the app is in the background.",
+        "NSCameraUsageDescription": "TruckFlowUS needs camera access to take proof-of-delivery photos.",
+        "NSPhotoLibraryUsageDescription": "TruckFlowUS needs photo library access to upload proof-of-delivery images.",
+        "UIBackgroundModes": ["location", "fetch"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1E3A5F"
+      },
+      "package": "com.truckflowus.driver",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "TruckFlowUS needs background location access to track deliveries.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TruckFlowUS needs camera access to take proof-of-delivery photos."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TruckFlowUS needs photo library access for proof-of-delivery images."
+        }
+      ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
+}

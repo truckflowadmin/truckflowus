@@ -96,6 +96,36 @@ export async function getDriverSession(): Promise<DriverSession | null> {
 }
 
 /**
+ * Get driver session from either cookie (web) or Authorization header (mobile app).
+ * Call this from API routes that need to support both web and native app clients.
+ */
+export async function getDriverSessionFromRequest(req: Request): Promise<DriverSession | null> {
+  // Try Authorization header first (mobile app)
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    const payload = verifyDriverSession(token);
+    if (payload) {
+      // Check session invalidation
+      const driver = await prisma.driver.findUnique({
+        where: { id: payload.driverId },
+        select: { sessionInvalidatedAt: true },
+      });
+      if (driver?.sessionInvalidatedAt) {
+        const decoded = jwt.decode(token) as { iat?: number } | null;
+        if (decoded?.iat && decoded.iat < driver.sessionInvalidatedAt.getTime() / 1000) {
+          return null;
+        }
+      }
+      return payload;
+    }
+  }
+
+  // Fall back to cookie (web)
+  return getDriverSession();
+}
+
+/**
  * Login a driver by phone + PIN. Returns session payload or null.
  */
 export async function loginDriver(phone: string, pin: string): Promise<DriverSession | { notFound: true } | { wrongPin: true }> {

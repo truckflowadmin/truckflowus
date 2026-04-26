@@ -126,8 +126,18 @@ export async function POST(req: NextRequest) {
 
     await clearAttempts(normalizedKey, 'driver_login');
     const token = signDriverSession(loginResult);
-    setDriverSessionCookie(token);
-    return NextResponse.json({ ok: true, driverName: loginResult.name });
+
+    // Mobile apps can't use httpOnly cookies — return the JWT in the response body
+    const isMobile = body.platform === 'mobile';
+    if (!isMobile) {
+      setDriverSessionCookie(token);
+    }
+    return NextResponse.json({
+      ok: true,
+      driverName: loginResult.name,
+      driverId: loginResult.driverId,
+      ...(isMobile ? { token } : {}),
+    });
   }
 
   // ---- FIRST-TIME SETUP (via token) ----
