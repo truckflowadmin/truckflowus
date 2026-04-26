@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getDriverSession } from '@/lib/driver-auth';
+import { getDriverSessionFromRequest } from '@/lib/driver-auth';
 import { generateBrokerInvoicePdf } from '@/lib/pdf';
 import { getTruckOverrides } from '@/lib/truck-overrides';
 import { format } from 'date-fns';
 
 export async function GET(req: NextRequest) {
-  const session = await getDriverSession();
+  const session = await getDriverSessionFromRequest(req);
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

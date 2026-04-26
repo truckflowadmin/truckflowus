@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getDriverSession } from '@/lib/driver-auth';
+import { getDriverSessionFromRequest } from '@/lib/driver-auth';
 import { createNotification, NOTIFICATION_TYPES } from '@/lib/notifications';
 import { validateFileSize } from '@/lib/upload-limits';
 import { uploadBlob } from '@/lib/blob-storage';
@@ -15,8 +15,8 @@ const DRIVER_CATEGORIES = ['FUEL', 'PARTS', 'OTHER'] as const;
 /**
  * GET /api/driver/expenses — list the authenticated driver's expenses
  */
-export async function GET() {
-  const session = await getDriverSession();
+export async function GET(req: NextRequest) {
+  const session = await getDriverSessionFromRequest(req);
   if (!session) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
@@ -48,7 +48,7 @@ export async function GET() {
  * Body: FormData with date, amount, category, optional description/vendor/notes/receipt
  */
 export async function POST(req: NextRequest) {
-  const session = await getDriverSession();
+  const session = await getDriverSessionFromRequest(req);
   if (!session) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }

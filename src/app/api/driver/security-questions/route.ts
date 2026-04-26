@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getDriverSession, hashAnswer, SECURITY_QUESTIONS } from '@/lib/driver-auth';
+import { getDriverSessionFromRequest, hashAnswer, SECURITY_QUESTIONS } from '@/lib/driver-auth';
 import { audit } from '@/lib/audit';
 import { getMobileBody } from '@/lib/mobile-body';
 
@@ -10,7 +10,7 @@ import { getMobileBody } from '@/lib/mobile-body';
  * Used when mustSetSecurityQuestions is true (after superadmin cleared them).
  */
 export async function POST(req: NextRequest) {
-  const session = await getDriverSession();
+  const session = await getDriverSessionFromRequest(req);
   if (!session) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }

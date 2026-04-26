@@ -89,8 +89,11 @@ export async function apiFetch<T = any>(
   }
 
   if (res.status === 401) {
-    // Session expired — clear token
-    await clearToken();
+    // Only clear the token for authenticated requests (not login/noAuth calls).
+    // This prevents a stale checkSession() 401 from wiping a freshly-set token.
+    if (!noAuth) {
+      await clearToken();
+    }
     throw new AuthError('Session expired. Please log in again.');
   }
 

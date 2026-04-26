@@ -36,13 +36,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setState({
         isLoading: false,
         isLoggedIn: true,
-        driverName: profile.name,
-        driverId: profile.id,
+        driverName: profile.driver?.name || profile.name,
+        driverId: profile.driver?.id || profile.id,
       });
     } catch (err: any) {
       console.warn('[Auth] Session check failed:', err.message);
-      await clearToken();
-      setState({ isLoading: false, isLoggedIn: false, driverName: null, driverId: null });
+      // Only clear the token if it hasn't changed since we started the check.
+      // This prevents a race condition where login() stores a fresh token while
+      // this stale check is still in-flight — the returning 401 would otherwise
+      // wipe the brand-new token.
+      const currentToken = await getToken();
+      if (!currentToken) {
+        // Already cleared (e.g. by apiFetch's 401 handler) — nothing to do
+      }
+      setState((prev) => {
+        // Don't overwrite if login() already set isLoggedIn: true
+        if (prev.isLoggedIn) return prev;
+        return { isLoading: false, isLoggedIn: false, driverName: null, driverId: null };
+      });
     }
   }, []);
 

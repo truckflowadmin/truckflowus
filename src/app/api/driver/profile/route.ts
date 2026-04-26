@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getDriverSession } from '@/lib/driver-auth';
+import { getDriverSessionFromRequest } from '@/lib/driver-auth';
 import { checkRateLimit, recordAttempt } from '@/lib/rate-limit';
 import { getMobileBody } from '@/lib/mobile-body';
 
 /**
  * GET /api/driver/profile — fetch the authenticated driver's profile
+ * Supports both cookie auth (web) and Bearer token auth (mobile app).
  */
-export async function GET() {
-  const session = await getDriverSession();
+export async function GET(req: NextRequest) {
+  const session = await getDriverSessionFromRequest(req);
   if (!session) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
@@ -53,7 +54,7 @@ export async function GET() {
  * POST /api/driver/profile — update the authenticated driver's profile fields
  */
 export async function POST(req: NextRequest) {
-  const session = await getDriverSession();
+  const session = await getDriverSessionFromRequest(req);
   if (!session) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
