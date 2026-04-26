@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getDriverSessionFromRequest } from '@/lib/driver-auth';
+import { getDriverSessionFromRequest, verifyDriverSession } from '@/lib/driver-auth';
+import jwt from 'jsonwebtoken';
 
 /**
  * GET /api/driver/jobs
@@ -9,13 +10,35 @@ import { getDriverSessionFromRequest } from '@/lib/driver-auth';
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('Authorization');
   const platform = req.headers.get('X-Platform');
-  console.log(`[jobs] GET | Auth=${authHeader ? authHeader.slice(0, 25) + '...' : 'NONE'} | Platform=${platform}`);
+
+  // --- TEMPORARY DEBUG: inline JWT diagnosis ---
+  let debugInfo: any = { authHeader: authHeader ? `${authHeader.slice(0, 30)}...` : 'NONE', platform };
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    try {
+      const decoded = jwt.decode(token, { complete: true });
+      debugInfo.decoded = decoded ? { header: decoded.header, aud: (decoded.payload as any)?.aud, exp: (decoded.payload as any)?.exp, driverId: (decoded.payload as any)?.driverId } : 'DECODE_FAILED';
+    } catch (e: any) {
+      debugInfo.decodeErr = e.message;
+    }
+    // Try verify without audience to see if the signature is OK
+    try {
+      const secret = process.env.JWT_SECRET;
+      debugInfo.hasSecret = !!secret;
+      debugInfo.secretLen = secret?.length;
+      const verified = jwt.verify(token, secret!, { audience: 'driver' });
+      debugInfo.verified = 'OK';
+    } catch (e: any) {
+      debugInfo.verifyErr = e.message;
+    }
+  }
+  console.log(`[jobs] DEBUG:`, JSON.stringify(debugInfo));
+  // --- END TEMPORARY DEBUG ---
+
   const session = await getDriverSessionFromRequest(req);
   if (!session) {
-    console.log('[jobs] getDriverSessionFromRequest returned null — 401');
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', _debug: debugInfo }, { status: 401 });
   }
-  console.log(`[jobs] Session OK: driver=${session.driverId}, company=${session.companyId}`);
 
   const { driverId, companyId } = session;
 
