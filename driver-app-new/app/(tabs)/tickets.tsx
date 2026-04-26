@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, RefreshControl,
-  StyleSheet, ActivityIndicator,
+  StyleSheet, ActivityIndicator, AppState,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch } from '@/lib/api';
@@ -48,6 +48,18 @@ export default function TicketsScreen() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-refresh every 30 seconds + when app comes back to foreground
+  useEffect(() => {
+    const interval = setInterval(load, 30_000);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') load();
+    });
+    return () => {
+      clearInterval(interval);
+      sub.remove();
+    };
+  }, [load]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
