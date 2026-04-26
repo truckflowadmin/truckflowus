@@ -93,5 +93,9 @@ export async function GET(
     driverTimeSeconds: assignment?.driverTimeSeconds || job.driverTimeSeconds,
     openForDrivers: job.openForDrivers,
     proofOfDelivery: job.proofOfDelivery,
+  }, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    },
   });
 }

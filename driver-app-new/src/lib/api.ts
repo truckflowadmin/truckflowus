@@ -72,7 +72,12 @@ export async function apiFetch<T = any>(
     headers['X-Body'] = btoa(JSON.stringify(body));
   }
 
-  const url = `${baseUrl}${path}`;
+  // Cache-bust GET requests so CDN/proxy never serves stale data
+  const isGet = !rest.method || rest.method === 'GET';
+  const sep = path.includes('?') ? '&' : '?';
+  const url = isGet
+    ? `${baseUrl}${path}${sep}_t=${Date.now()}`
+    : `${baseUrl}${path}`;
 
   let res: Response;
   try {
@@ -81,6 +86,7 @@ export async function apiFetch<T = any>(
     res = await fetch(url, {
       ...rest,
       headers,
+      cache: 'no-store',
       // No body — data goes in X-Body header to avoid iOS+Vercel hang
       signal: controller.signal,
     });

@@ -101,5 +101,9 @@ export async function GET(req: NextRequest) {
       assignmentStatus: null,
       assignmentId: null,
     })),
+  }, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    },
   });
 }
