@@ -2,11 +2,12 @@ import { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
-  StyleSheet, Linking,
+  StyleSheet, Linking, ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/lib/auth-context';
 import { colors } from '@/lib/colors';
+import { getApiUrl } from '@/lib/api';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -15,6 +16,61 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const pinRef = useRef<TextInput>(null);
+  const [netLog, setNetLog] = useState('');
+
+  const testNetwork = async () => {
+    setNetLog('Testing...\n');
+    const base = await getApiUrl();
+    const log = (msg: string) => setNetLog(prev => prev + msg + '\n');
+
+    // Test 1: GET ping
+    try {
+      log('1) GET /api/driver/ping...');
+      const r1 = await fetch(`${base}/api/driver/ping`);
+      const d1 = await r1.json();
+      log(`   OK: ${JSON.stringify(d1)}`);
+    } catch (e: any) {
+      log(`   FAIL: ${e.message}`);
+    }
+
+    // Test 2: POST ping with JSON body
+    try {
+      log('2) POST /api/driver/ping with JSON...');
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 10000);
+      const r2 = await fetch(`${base}/api/driver/ping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Platform': 'mobile' },
+        body: JSON.stringify({ test: true }),
+        signal: controller.signal,
+      });
+      clearTimeout(t);
+      const d2 = await r2.json();
+      log(`   OK: ${JSON.stringify(d2)}`);
+    } catch (e: any) {
+      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT after 10s' : e.message}`);
+    }
+
+    // Test 3: POST auth (actual login endpoint, expect 400)
+    try {
+      log('3) POST /api/driver/auth with JSON...');
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 10000);
+      const r3 = await fetch(`${base}/api/driver/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Platform': 'mobile' },
+        body: JSON.stringify({ action: 'login', phone: '0000000000', pin: '000000', platform: 'mobile' }),
+        signal: controller.signal,
+      });
+      clearTimeout(t);
+      const d3 = await r3.json();
+      log(`   Status: ${r3.status}, Body: ${JSON.stringify(d3).slice(0, 200)}`);
+    } catch (e: any) {
+      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT after 10s' : e.message}`);
+    }
+
+    log('\nDone.');
+  };
 
   const formatPhone = (text: string) => {
     const digits = text.replace(/\D/g, '');
@@ -130,6 +186,19 @@ export default function LoginScreen() {
           >
             <Text style={styles.forgotText}>Forgot PIN?</Text>
           </TouchableOpacity>
+
+          {/* Debug network test — remove after fixing */}
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.steel[500], marginTop: 12 }]}
+            onPress={testNetwork}
+          >
+            <Text style={styles.buttonText}>Test Network</Text>
+          </TouchableOpacity>
+          {netLog ? (
+            <ScrollView style={{ maxHeight: 200, marginTop: 8, backgroundColor: colors.steel[100], borderRadius: 8, padding: 8 }}>
+              <Text style={{ fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: colors.steel[800] }}>{netLog}</Text>
+            </ScrollView>
+          ) : null}
         </View>
       </View>
     </KeyboardAvoidingView>
