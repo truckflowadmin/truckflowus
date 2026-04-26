@@ -15,10 +15,10 @@ export default function TabsLayout() {
           backgroundColor: colors.white,
           borderTopColor: colors.steel[200],
           paddingBottom: 4,
-          height: 56,
+          height: 60,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
         },
       }}
@@ -33,11 +33,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="tickets"
+        name="history"
         options={{
-          title: 'Tickets',
+          title: 'History',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="receipt" size={size} color={color} />
+            <Ionicons name="time" size={size} color={color} />
           ),
         }}
       />
@@ -46,7 +46,25 @@ export default function TabsLayout() {
         options={{
           title: 'Upload',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="camera" size={24} color={color} />
+            <Ionicons name="camera" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: 'Calendar',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="expenses"
+        options={{
+          title: 'Expenses',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="wallet" size={size} color={color} />
           ),
         }}
       />
@@ -57,6 +75,13 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
+        }}
+      />
+      {/* Hide the old tickets tab - functionality moved to History */}
+      <Tabs.Screen
+        name="tickets"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
