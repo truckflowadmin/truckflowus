@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { fmtQty } from '@/lib/format';
 import RotatableImage from '@/components/RotatableImage';
 import { updateJobStatusAction, recordLoadAction, deleteJobAction } from '../actions';
@@ -143,6 +144,7 @@ interface JobData {
 }
 
 export default function JobDetail({ job: initialJob, invoiced = false }: { job: JobData; invoiced?: boolean }) {
+  const router = useRouter();
   const [job, setJob] = useState(initialJob);
   const [recording, setRecording] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -383,7 +385,10 @@ export default function JobDetail({ job: initialJob, invoiced = false }: { job: 
     if (!confirm('Are you sure you want to permanently delete this cancelled job? This cannot be undone.')) return;
     setDeleting(true);
     try {
-      await deleteJobAction(job.id);
+      const result = await deleteJobAction(job.id);
+      if (result?.ok) {
+        router.push('/jobs');
+      }
     } catch (err: any) {
       alert(err.message);
       setDeleting(false);

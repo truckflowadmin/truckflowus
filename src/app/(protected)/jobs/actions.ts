@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
@@ -213,7 +212,7 @@ export async function createJobAction(formData: FormData) {
   }
 
   revalidatePath('/jobs');
-  redirect(`/jobs/${job.id}`);
+  return { ok: true, jobId: job.id };
 }
 
 /* ── Update Job ── */
@@ -296,7 +295,7 @@ export async function updateJobAction(jobId: string, formData: FormData) {
   const allSlotsFilled = driverIds.length >= requiredTruckCount;
 
   const formStatus = (formData.get('status') as string) || '';
-  const validStatuses = ['CREATED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+  const validStatuses = ['CREATED', 'ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED', 'COMPLETED', 'CANCELLED'];
   let status: string = validStatuses.includes(formStatus) ? formStatus : job.status;
   // Auto-promote to ASSIGNED when any driver is assigned (and status wasn't manually changed)
   if (!formStatus && hasDrivers && status === 'CREATED') {
@@ -378,7 +377,7 @@ export async function updateJobAction(jobId: string, formData: FormData) {
   revalidatePath('/jobs');
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath('/tickets');
-  redirect(`/jobs/${jobId}`);
+  return { ok: true, jobId };
 }
 
 const VALID_STATUSES = ['CREATED', 'ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED', 'COMPLETED', 'CANCELLED'];
@@ -542,7 +541,7 @@ export async function deleteJobAction(jobId: string) {
   await prisma.job.update({ where: { id: jobId }, data: { deletedAt: now } });
 
   revalidatePath('/jobs');
-  redirect('/jobs');
+  return { ok: true };
 }
 
 /* ── Record a completed load → create a ticket ── */

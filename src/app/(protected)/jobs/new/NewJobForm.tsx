@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { createJobAction } from '../actions';
 import ScanPreviewModal, { type ScanPreviewData } from './ScanPreviewModal';
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function NewJobForm({ customers, drivers, materials, brokers }: Props) {
+  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [openForDrivers, setOpenForDrivers] = useState(false);
@@ -90,7 +92,10 @@ export default function NewJobForm({ customers, drivers, materials, brokers }: P
       // Inject multi-driver selection as JSON
       fd.set('driverIds', JSON.stringify(selectedDriverIds));
       fd.set('requiredTruckCount', String(requiredTruckCount));
-      await createJobAction(fd);
+      const result = await createJobAction(fd);
+      if (result?.ok) {
+        router.push(`/jobs/${result.jobId}`);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to create job');
       setSubmitting(false);

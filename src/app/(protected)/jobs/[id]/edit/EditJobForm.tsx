@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { updateJobAction } from '../../actions';
 const TRUCK_TYPE_LABELS: Record<string, string> = {
   SINGLE_AXLE: 'Single Axle',
@@ -45,6 +46,7 @@ interface Props {
 }
 
 export default function EditJobForm({ job, customers, drivers, materials, brokers }: Props) {
+  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [brokerId, setBrokerId] = useState(job.brokerId || '');
   const [error, setError] = useState('');
@@ -81,7 +83,10 @@ export default function EditJobForm({ job, customers, drivers, materials, broker
       const fd = new FormData(e.currentTarget);
       fd.set('driverIds', JSON.stringify(selectedDriverIds));
       fd.set('requiredTruckCount', String(requiredTruckCount));
-      await updateJobAction(job.id, fd);
+      const result = await updateJobAction(job.id, fd);
+      if (result?.ok) {
+        router.push(`/jobs/${job.id}`);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to update job');
       setSubmitting(false);
@@ -112,6 +117,7 @@ export default function EditJobForm({ job, customers, drivers, materials, broker
             <option value="CREATED">Created</option>
             <option value="ASSIGNED">Assigned</option>
             <option value="IN_PROGRESS">In Progress</option>
+            <option value="PARTIALLY_COMPLETED">Partially Completed</option>
             <option value="COMPLETED">Completed</option>
             <option value="CANCELLED">Cancelled</option>
           </select>
