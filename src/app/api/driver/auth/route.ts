@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
+import { getMobileBody } from '@/lib/mobile-body';
 import {
   loginDriver,
   signDriverSession,
@@ -23,7 +24,7 @@ const LOCKOUT_MS = 15 * 60 * 1000;
  * Actions: login, setup, reset-verify, reset-pin, logout
  */
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const body = await getMobileBody(req);
   const { action } = body;
 
   // ---- LOGIN ----

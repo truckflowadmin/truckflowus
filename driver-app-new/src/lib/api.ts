@@ -50,7 +50,6 @@ export async function apiFetch<T = any>(
   const { body, noAuth, ...rest } = opts;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     'X-Platform': 'mobile',
     ...(rest.headers as Record<string, string>),
   };
@@ -62,6 +61,13 @@ export async function apiFetch<T = any>(
     }
   }
 
+  // WORKAROUND: React Native on iOS + Vercel has a bug where POST requests
+  // with a body hang indefinitely. Encode the JSON payload as base64 in the
+  // X-Body header instead. The server reads from X-Body when present.
+  if (body) {
+    headers['X-Body'] = btoa(JSON.stringify(body));
+  }
+
   const url = `${baseUrl}${path}`;
 
   let res: Response;
@@ -71,7 +77,7 @@ export async function apiFetch<T = any>(
     res = await fetch(url, {
       ...rest,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      // No body — data goes in X-Body header to avoid iOS+Vercel hang
       signal: controller.signal,
     });
     clearTimeout(timeout);

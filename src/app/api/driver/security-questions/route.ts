@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getDriverSession, hashAnswer, SECURITY_QUESTIONS } from '@/lib/driver-auth';
 import { audit } from '@/lib/audit';
+import { getMobileBody } from '@/lib/mobile-body';
 
 /**
  * POST /api/driver/security-questions
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
-  const body = await req.json();
+  const body = await getMobileBody(req);
   const { securityQ1, securityA1, securityQ2, securityA2, securityQ3, securityA3 } = body;
 
   if (!securityQ1 || !securityA1 || !securityQ2 || !securityA2 || !securityQ3 || !securityA3) {

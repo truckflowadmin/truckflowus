@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getDriverSessionFromRequest } from '@/lib/driver-auth';
+import { getMobileBody } from '@/lib/mobile-body';
 
 /**
  * POST /api/driver/location
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { driverId, companyId } = session;
-  const body = await req.json();
+  const body = await getMobileBody(req);
   const { jobId, assignmentId, locations } = body;
 
   if (!jobId || !Array.isArray(locations) || locations.length === 0) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getDriverSession } from '@/lib/driver-auth';
 import { checkRateLimit, recordAttempt } from '@/lib/rate-limit';
+import { getMobileBody } from '@/lib/mobile-body';
 
 /**
  * GET /api/driver/profile — fetch the authenticated driver's profile
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
-  const body = await req.json();
+  const body = await getMobileBody(req);
   const {
     email,
     phone,

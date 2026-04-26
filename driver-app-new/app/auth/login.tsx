@@ -2,12 +2,11 @@ import { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
-  StyleSheet, Linking, ScrollView,
+  StyleSheet, Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/lib/auth-context';
 import { colors } from '@/lib/colors';
-import { getApiUrl } from '@/lib/api';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -16,87 +15,6 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const pinRef = useRef<TextInput>(null);
-  const [netLog, setNetLog] = useState('');
-
-  const testNetwork = async () => {
-    setNetLog('Testing...\n');
-    const base = await getApiUrl();
-    const log = (msg: string) => setNetLog(prev => prev + msg + '\n');
-
-    // Test 1: GET ping (baseline)
-    try {
-      log('1) GET ping...');
-      const r1 = await fetch(`${base}/api/driver/ping`);
-      const d1 = await r1.json();
-      log(`   OK: ${JSON.stringify(d1)}`);
-    } catch (e: any) {
-      log(`   FAIL: ${e.message}`);
-    }
-
-    // Test 2: POST with body (known to fail)
-    try {
-      log('2) POST + body...');
-      const c2 = new AbortController();
-      const t2 = setTimeout(() => c2.abort(), 8000);
-      const r2 = await fetch(`${base}/api/driver/ping`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ test: true }),
-        signal: c2.signal,
-      });
-      clearTimeout(t2);
-      log(`   OK: ${r2.status}`);
-    } catch (e: any) {
-      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT' : e.message}`);
-    }
-
-    // Test 3: POST with NO body at all
-    try {
-      log('3) POST no body...');
-      const c3 = new AbortController();
-      const t3 = setTimeout(() => c3.abort(), 8000);
-      const r3 = await fetch(`${base}/api/driver/ping`, {
-        method: 'POST',
-        signal: c3.signal,
-      });
-      clearTimeout(t3);
-      const d3 = await r3.json();
-      log(`   OK: ${JSON.stringify(d3)}`);
-    } catch (e: any) {
-      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT' : e.message}`);
-    }
-
-    // Test 4: GET with data in query string (workaround A)
-    try {
-      log('4) GET + query params...');
-      const encoded = encodeURIComponent(JSON.stringify({ test: true }));
-      const r4 = await fetch(`${base}/api/driver/ping?d=${encoded}`);
-      const d4 = await r4.json();
-      log(`   OK: ${JSON.stringify(d4)}`);
-    } catch (e: any) {
-      log(`   FAIL: ${e.message}`);
-    }
-
-    // Test 5: POST with data in X-Body header (workaround B)
-    try {
-      log('5) POST + X-Body header...');
-      const c5 = new AbortController();
-      const t5 = setTimeout(() => c5.abort(), 8000);
-      const payload = btoa(JSON.stringify({ test: true }));
-      const r5 = await fetch(`${base}/api/driver/ping`, {
-        method: 'POST',
-        headers: { 'X-Body': payload },
-        signal: c5.signal,
-      });
-      clearTimeout(t5);
-      const d5 = await r5.json();
-      log(`   OK: ${JSON.stringify(d5)}`);
-    } catch (e: any) {
-      log(`   FAIL: ${e.name === 'AbortError' ? 'TIMEOUT' : e.message}`);
-    }
-
-    log('\nDone.');
-  };
 
   const formatPhone = (text: string) => {
     const digits = text.replace(/\D/g, '');
@@ -213,18 +131,6 @@ export default function LoginScreen() {
             <Text style={styles.forgotText}>Forgot PIN?</Text>
           </TouchableOpacity>
 
-          {/* Debug network test — remove after fixing */}
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.steel[500], marginTop: 12 }]}
-            onPress={testNetwork}
-          >
-            <Text style={styles.buttonText}>Test Network</Text>
-          </TouchableOpacity>
-          {netLog ? (
-            <ScrollView style={{ maxHeight: 200, marginTop: 8, backgroundColor: colors.steel[100], borderRadius: 8, padding: 8 }}>
-              <Text style={{ fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: colors.steel[800] }}>{netLog}</Text>
-            </ScrollView>
-          ) : null}
         </View>
       </View>
     </KeyboardAvoidingView>
