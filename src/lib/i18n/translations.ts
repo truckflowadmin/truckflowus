@@ -116,6 +116,13 @@ const translations: Record<string, Record<Lang, string>> = {
   'dashboard.createFirst': { en: 'Create your first', es: 'Crea tu primera' },
   'dashboard.invoice': { en: 'invoice', es: 'factura' },
   'dashboard.invoices': { en: 'invoices', es: 'facturas' },
+  'dashboard.liveTracking': { en: 'Live Driver Tracking', es: 'Rastreo en Vivo' },
+  'dashboard.noActiveDrivers': { en: 'No drivers are currently on a job. Tracking will appear here when a driver starts a job from the app.', es: 'No hay conductores en un trabajo. El rastreo aparecerá aquí cuando un conductor inicie un trabajo desde la app.' },
+  'dashboard.trackingSpeed': { en: 'Speed', es: 'Velocidad' },
+  'dashboard.trackingLastUpdate': { en: 'Last update', es: 'Última actualización' },
+  'dashboard.trackingDestination': { en: 'Destination', es: 'Destino' },
+  'dashboard.trackingJob': { en: 'Job', es: 'Trabajo' },
+  'dashboard.trackingTruck': { en: 'Truck', es: 'Camión' },
 
   // ─── Tickets ───────────────────────────────────────────────────────────
   'tickets.title': { en: 'Tickets', es: 'Boletas' },

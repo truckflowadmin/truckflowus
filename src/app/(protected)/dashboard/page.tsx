@@ -6,6 +6,7 @@ import InspectionAlerts from '../fleet/InspectionAlerts';
 import { getServerLang, t, statusLabel } from '@/lib/i18n';
 import { safePage } from '@/lib/server-error';
 import DashboardStats from '@/components/DashboardStats';
+import DriverTrackingMap from '@/components/DriverTrackingMap';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -24,6 +25,16 @@ export default async function DashboardPage() {
       include: { driver: true, customer: true },
     });
   }, 'Unable to load the dashboard. Please try again.');
+
+  const trackingLabels = {
+    title: t('dashboard.liveTracking', lang),
+    noDrivers: t('dashboard.noActiveDrivers', lang),
+    speed: t('dashboard.trackingSpeed', lang),
+    lastUpdate: t('dashboard.trackingLastUpdate', lang),
+    destination: t('dashboard.trackingDestination', lang),
+    job: t('dashboard.trackingJob', lang),
+    truck: t('dashboard.trackingTruck', lang),
+  };
 
   const statsLabels = {
     pending: t('dashboard.pending', lang),
@@ -49,6 +60,8 @@ export default async function DashboardPage() {
       <InspectionAlerts />
 
       <DashboardStats labels={statsLabels} />
+
+      <DriverTrackingMap labels={trackingLabels} />
 
       <section className="panel">
         <div className="flex items-center justify-between px-5 py-4 border-b border-steel-200">

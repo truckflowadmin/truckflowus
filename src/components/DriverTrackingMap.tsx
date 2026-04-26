@@ -35,8 +35,8 @@ export default function DriverTrackingMap({ labels }: { labels: {
   const [loading, setLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState<DriverPin | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const googleMapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -55,14 +55,15 @@ export default function DriverTrackingMap({ labels }: { labels: {
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const apiKey = (window as any).__NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
       // Fallback: show a list view instead of map
       return;
     }
 
+    const g = (window as any).google;
     // Load Google Maps script if not already loaded
-    if (!(window as any).google?.maps) {
+    if (!g?.maps) {
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
       script.async = true;
@@ -74,7 +75,8 @@ export default function DriverTrackingMap({ labels }: { labels: {
 
     function initMap() {
       if (!mapRef.current) return;
-      googleMapRef.current = new google.maps.Map(mapRef.current, {
+      const gm = (window as any).google.maps;
+      googleMapRef.current = new gm.Map(mapRef.current, {
         center: { lat: 26.14, lng: -81.79 }, // SW Florida default
         zoom: 10,
         mapTypeControl: false,
@@ -88,18 +90,21 @@ export default function DriverTrackingMap({ labels }: { labels: {
     if (!googleMapRef.current) return;
 
     // Clear old markers
-    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current.forEach((m: any) => m.setMap(null));
     markersRef.current = [];
 
     if (drivers.length === 0) return;
 
-    const bounds = new google.maps.LatLngBounds();
+    const gm = (window as any).google?.maps;
+    if (!gm) return;
+
+    const bounds = new gm.LatLngBounds();
 
     drivers.forEach((driver) => {
       const pos = { lat: driver.latitude, lng: driver.longitude };
       bounds.extend(pos);
 
-      const marker = new google.maps.Marker({
+      const marker = new gm.Marker({
         position: pos,
         map: googleMapRef.current!,
         title: driver.driverName,
@@ -110,7 +115,7 @@ export default function DriverTrackingMap({ labels }: { labels: {
           fontSize: '11px',
         },
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
+          path: gm.SymbolPath.CIRCLE,
           scale: 16,
           fillColor: '#FF8C00',
           fillOpacity: 1,

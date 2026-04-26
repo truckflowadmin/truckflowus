@@ -14,6 +14,10 @@ export async function GET(req: NextRequest) {
   }
 
   const { companyId } = session;
+  if (!companyId) {
+    return NextResponse.json({ error: 'Company context required' }, { status: 403 });
+  }
+
   const jobId = req.nextUrl.searchParams.get('jobId');
 
   // If a specific jobId is requested, return locations for that job

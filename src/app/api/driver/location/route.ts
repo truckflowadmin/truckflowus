@@ -72,8 +72,9 @@ export async function GET(req: NextRequest) {
   }
 
   // Get latest location per driver for this job
+  const validJobId: string = jobId;
   const locations = await prisma.driverLocation.findMany({
-    where: { jobId, companyId },
+    where: { jobId: validJobId, companyId },
     orderBy: { recordedAt: 'desc' },
     take: 200,
     select: {
