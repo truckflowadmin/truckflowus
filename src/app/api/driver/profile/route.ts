@@ -4,6 +4,9 @@ import { getDriverSessionFromRequest } from '@/lib/driver-auth';
 import { checkRateLimit, recordAttempt } from '@/lib/rate-limit';
 import { getMobileBody } from '@/lib/mobile-body';
 
+// Prevent Vercel/Next.js edge caching — always fetch fresh data
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/driver/profile — fetch the authenticated driver's profile
  * Supports both cookie auth (web) and Bearer token auth (mobile app).

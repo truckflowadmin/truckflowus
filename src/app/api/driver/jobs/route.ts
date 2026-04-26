@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getDriverSessionFromRequest } from '@/lib/driver-auth';
 
+// Prevent Vercel/Next.js edge caching — always fetch fresh data
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/driver/jobs
  * Returns the driver's assigned jobs and available (open) jobs.
