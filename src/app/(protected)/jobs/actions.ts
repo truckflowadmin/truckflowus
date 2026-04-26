@@ -217,6 +217,7 @@ export async function createJobAction(formData: FormData) {
 
 /* ── Update Job ── */
 export async function updateJobAction(jobId: string, formData: FormData) {
+  try {
   const session = await requireSession();
 
   const job = await prisma.job.findFirst({
@@ -378,6 +379,10 @@ export async function updateJobAction(jobId: string, formData: FormData) {
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath('/tickets');
   return { ok: true, jobId };
+  } catch (err: any) {
+    console.error('[updateJobAction] Error:', err);
+    return { ok: false, error: err.message || 'Failed to update job' };
+  }
 }
 
 const VALID_STATUSES = ['CREATED', 'ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED', 'COMPLETED', 'CANCELLED'];

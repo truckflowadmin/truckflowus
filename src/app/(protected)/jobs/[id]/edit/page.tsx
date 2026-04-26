@@ -16,6 +16,7 @@ export default async function EditJobPage({
   const companyId = session.companyId;
   const { id } = await params;
 
+  try {
   const [job, customers, drivers, materials, brokers] = await Promise.all([
     prisma.job.findFirst({
       where: { id, companyId },
@@ -46,8 +47,14 @@ export default async function EditJobPage({
   if (!job) notFound();
 
   // Fetch photoUrl via raw SQL (generated client may not know this column yet)
-  const photoRows: any[] = await prisma.$queryRaw`SELECT "photoUrl" FROM "Job" WHERE id = ${id}`;
-  const jobPhotoUrl: string | null = photoRows[0]?.photoUrl ?? null;
+  let jobPhotoUrl: string | null = null;
+  try {
+    const photoRows: any[] = await prisma.$queryRaw`SELECT "photoUrl" FROM "Job" WHERE id = ${id}`;
+    jobPhotoUrl = photoRows[0]?.photoUrl ?? null;
+  } catch (photoErr) {
+    console.error('[EditJobPage] photoUrl query failed (column may not exist):', photoErr);
+    // Continue without photo — not critical for editing
+  }
 
   // Block editing invoiced jobs
   const invoicedCount = await prisma.ticket.count({
@@ -101,4 +108,19 @@ export default async function EditJobPage({
       </div>
     </div>
   );
+  } catch (err: any) {
+    console.error('[EditJobPage] Server component error:', err);
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <Link href="/jobs" className="text-sm text-steel-500 hover:text-steel-700">
+          ← Back to Jobs
+        </Link>
+        <h1 className="text-2xl font-bold text-red-700 mt-1 mb-4">Error Loading Edit Page</h1>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800 text-sm font-mono whitespace-pre-wrap">{err.message || 'Unknown error'}</p>
+          <p className="text-red-600 text-xs mt-2 font-mono whitespace-pre-wrap">{err.stack?.slice(0, 500)}</p>
+        </div>
+      </div>
+    );
+  }
 }

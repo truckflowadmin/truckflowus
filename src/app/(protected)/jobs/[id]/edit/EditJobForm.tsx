@@ -86,6 +86,9 @@ export default function EditJobForm({ job, customers, drivers, materials, broker
       const result = await updateJobAction(job.id, fd);
       if (result?.ok) {
         router.push(`/jobs/${job.id}`);
+      } else if (result?.error) {
+        setError(result.error);
+        setSubmitting(false);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to update job');
