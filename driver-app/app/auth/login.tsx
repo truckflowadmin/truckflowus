@@ -117,7 +117,7 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.forgotLink}>
+          <TouchableOpacity style={styles.forgotLink} onPress={() => router.push('/auth/forgot-pin')}>
             <Text style={styles.forgotText}>Forgot PIN?</Text>
           </TouchableOpacity>
         </View>

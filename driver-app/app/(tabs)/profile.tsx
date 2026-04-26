@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, apiUpload, getToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useI18n } from '@/lib/i18n';
 import { isTrackingActive } from '@/lib/location';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { colors } from '@/lib/colors';
@@ -38,6 +39,7 @@ interface Document {
 
 export default function ProfileScreen() {
   const { driverName, logout } = useAuth();
+  const { lang, t, setLang } = useI18n();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [tracking, setTracking] = useState(false);
@@ -243,15 +245,15 @@ export default function ProfileScreen() {
         )}
         <TouchableOpacity style={styles.editProfileBtn} onPress={startEditing}>
           <Ionicons name="create-outline" size={16} color={colors.safety[500]} />
-          <Text style={styles.editProfileText}>Edit Profile</Text>
+          <Text style={styles.editProfileText}>{t('profile.editProfile')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Contact */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Contact</Text>
-        <InfoRow icon="call" label="Phone" value={profile.phone} />
-        <InfoRow icon="mail" label="Email" value={profile.email || 'Not set'} />
+        <Text style={styles.sectionTitle}>{t('profile.contact')}</Text>
+        <InfoRow icon="call" label={t('common.phone')} value={profile.phone} />
+        <InfoRow icon="mail" label={t('common.email')} value={profile.email || t('common.notSet')} />
         {profile.truckNumber && (
           <InfoRow icon="car" label="Truck" value={profile.truckNumber} />
         )}
@@ -260,7 +262,7 @@ export default function ProfileScreen() {
       {/* Address */}
       {profile.address && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Address</Text>
+          <Text style={styles.sectionTitle}>{t('profile.address')}</Text>
           <InfoRow
             icon="location"
             label="Address"
@@ -272,15 +274,15 @@ export default function ProfileScreen() {
       {/* Emergency Contact */}
       {profile.emergencyContactName && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Emergency Contact</Text>
-          <InfoRow icon="person" label="Name" value={profile.emergencyContactName} />
-          <InfoRow icon="call" label="Phone" value={profile.emergencyContactPhone || 'Not set'} />
+          <Text style={styles.sectionTitle}>{t('profile.emergencyContact')}</Text>
+          <InfoRow icon="person" label={t('common.name')} value={profile.emergencyContactName} />
+          <InfoRow icon="call" label={t('common.phone')} value={profile.emergencyContactPhone || t('common.notSet')} />
         </View>
       )}
 
       {/* Documents */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Documents</Text>
+        <Text style={styles.sectionTitle}>{t('profile.documents')}</Text>
         <Text style={styles.docHint}>Upload your licenses and certifications</Text>
         {(['LICENSE_FRONT', 'LICENSE_BACK', 'MEDICAL_CERT'] as const).map((docType) => (
           <TouchableOpacity
@@ -306,9 +308,9 @@ export default function ProfileScreen() {
 
       {/* Notifications */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
+        <Text style={styles.sectionTitle}>{t('profile.notifications')}</Text>
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>SMS notifications</Text>
+          <Text style={styles.toggleLabel}>{t('profile.smsNotifications')}</Text>
           <Switch
             value={profile.smsEnabled}
             trackColor={{ true: colors.safety[500] }}
@@ -317,14 +319,37 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Language */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('profile.language')}</Text>
+        <View style={styles.langRow}>
+          <TouchableOpacity
+            style={[styles.langBtn, lang === 'en' && styles.langBtnActive]}
+            onPress={() => setLang('en')}
+          >
+            <Text style={[styles.langBtnText, lang === 'en' && styles.langBtnTextActive]}>
+              English
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.langBtn, lang === 'es' && styles.langBtnActive]}
+            onPress={() => setLang('es')}
+          >
+            <Text style={[styles.langBtnText, lang === 'es' && styles.langBtnTextActive]}>
+              Español
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* App info */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>App</Text>
-        <InfoRow icon="information-circle" label="Version" value="1.0.0" />
+        <Text style={styles.sectionTitle}>{t('profile.app')}</Text>
+        <InfoRow icon="information-circle" label={t('profile.version')} value="1.0.0" />
         {profile.lastLoginAt && (
           <InfoRow
             icon="time"
-            label="Last login"
+            label={t('profile.lastLogin')}
             value={new Date(profile.lastLoginAt).toLocaleString()}
           />
         )}
@@ -333,7 +358,7 @@ export default function ProfileScreen() {
       {/* Sign out */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Ionicons name="log-out" size={20} color={colors.status.red} />
-        <Text style={styles.logoutText}>Sign Out</Text>
+        <Text style={styles.logoutText}>{t('profile.signOut')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -431,6 +456,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.safety[500], alignItems: 'center',
   },
   saveBtnText: { fontSize: 14, fontWeight: '700', color: colors.white },
+  langRow: { flexDirection: 'row', gap: 10 },
+  langBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1.5, borderColor: colors.steel[200],
+    alignItems: 'center', backgroundColor: colors.white,
+  },
+  langBtnActive: {
+    borderColor: colors.safety[500],
+    backgroundColor: colors.safety[500] + '12',
+  },
+  langBtnText: { fontSize: 15, fontWeight: '600', color: colors.steel[500] },
+  langBtnTextActive: { color: colors.safety[500] },
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, marginTop: 24, marginHorizontal: 20,
