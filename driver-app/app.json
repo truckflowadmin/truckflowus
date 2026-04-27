@@ -18,10 +18,14 @@
       "bundleIdentifier": "com.truckflowus.driver",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "TruckFlowUS needs your location to track deliveries while a job is in progress.",
+        "NSLocationAlwaysUsageDescription": "TruckFlowUS needs background location access to track deliveries even when the app is in the background.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "TruckFlowUS needs background location access to track deliveries even when the app is in the background.",
         "NSCameraUsageDescription": "TruckFlowUS needs camera access to take proof-of-delivery photos.",
         "NSPhotoLibraryUsageDescription": "TruckFlowUS needs photo library access to upload proof-of-delivery images.",
-        "UIBackgroundModes": ["location", "fetch"]
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -63,7 +67,8 @@
         {
           "photosPermission": "TruckFlowUS needs photo library access for proof-of-delivery images."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "router": {

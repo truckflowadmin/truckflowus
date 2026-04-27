@@ -68,11 +68,16 @@ async function sendLocations(locations: Location.LocationObject[]) {
  * Request location permissions (foreground + background).
  */
 export async function requestLocationPermissions(): Promise<boolean> {
-  const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
-  if (fgStatus !== 'granted') return false;
+  try {
+    const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+    if (fgStatus !== 'granted') return false;
 
-  const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
-  return bgStatus === 'granted';
+    const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+    return bgStatus === 'granted';
+  } catch (err) {
+    console.error('[Location] Permission request failed:', err);
+    return false;
+  }
 }
 
 /**
