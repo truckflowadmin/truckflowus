@@ -188,23 +188,26 @@ export async function extractTicketData(
 
       console.log('[ai-extract] Successfully extracted fields:', Object.keys(parsed).filter(k => parsed[k] !== null).join(', '));
 
+      // Coerce all values to strings — the AI sometimes returns numbers
+      const s = (v: any): string | null => (v == null ? null : String(v));
+
       return {
-        tons: parsed.tons ?? null,
-        yards: parsed.yards ?? null,
-        ticketNumber: parsed.ticketNumber ?? null,
-        date: parsed.date ?? null,
-        rawText: parsed.rawText ?? null,
-        hauledFrom: parsed.hauledFrom ?? null,
-        hauledTo: parsed.hauledTo ?? null,
-        material: parsed.material ?? null,
-        customerName: parsed.customerName ?? null,
-        driverName: parsed.driverName ?? null,
-        truckNumber: parsed.truckNumber ?? null,
-        grossWeight: parsed.grossWeight ?? null,
-        tareWeight: parsed.tareWeight ?? null,
-        netWeight: parsed.netWeight ?? null,
-        orderNumber: parsed.orderNumber ?? null,
-        notes: parsed.notes ?? null,
+        tons: s(parsed.tons),
+        yards: s(parsed.yards),
+        ticketNumber: s(parsed.ticketNumber),
+        date: s(parsed.date),
+        rawText: s(parsed.rawText),
+        hauledFrom: s(parsed.hauledFrom),
+        hauledTo: s(parsed.hauledTo),
+        material: s(parsed.material),
+        customerName: s(parsed.customerName),
+        driverName: s(parsed.driverName),
+        truckNumber: s(parsed.truckNumber),
+        grossWeight: s(parsed.grossWeight),
+        tareWeight: s(parsed.tareWeight),
+        netWeight: s(parsed.netWeight),
+        orderNumber: s(parsed.orderNumber),
+        notes: s(parsed.notes),
       };
     } catch (err: any) {
       console.error(`[ai-extract] Network/runtime error with ${model}:`, err.message);
@@ -305,15 +308,18 @@ export async function extractTicketDataLite(
 
       console.log('[ai-extract-lite] Extracted:', Object.keys(parsed).filter(k => parsed[k] !== null).join(', '));
 
+      // Coerce all values to strings — the AI sometimes returns numbers
+      const s = (v: any): string | null => (v == null ? null : String(v));
+
       return {
         ...EMPTY_RESULT,
-        tons: parsed.tons ?? null,
-        yards: parsed.yards ?? null,
-        ticketNumber: parsed.ticketNumber ?? null,
-        grossWeight: parsed.grossWeight ?? null,
-        tareWeight: parsed.tareWeight ?? null,
-        netWeight: parsed.netWeight ?? null,
-        rawText: parsed.rawText ?? null,
+        tons: s(parsed.tons),
+        yards: s(parsed.yards),
+        ticketNumber: s(parsed.ticketNumber),
+        grossWeight: s(parsed.grossWeight),
+        tareWeight: s(parsed.tareWeight),
+        netWeight: s(parsed.netWeight),
+        rawText: s(parsed.rawText),
       };
     } catch (err: any) {
       console.error(`[ai-extract-lite] Error with ${model}:`, err.message);

@@ -768,12 +768,12 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
               driverNotes: item.driverNotes?.trim() || null,
               photoUrl: item.photoUrl,
               completedAt: new Date(),
-              // Preserve original AI-scanned data
-              scannedTons: item.scannedTons ?? null,
-              scannedYards: item.scannedYards ?? null,
-              scannedTicketNumber: item.scannedTicketNumber ?? null,
-              scannedDate: item.scannedDate ?? null,
-              scannedRawText: item.scannedRawText ?? null,
+              // Preserve original AI-scanned data (coerce to string for Prisma)
+              scannedTons: item.scannedTons != null ? String(item.scannedTons) : null,
+              scannedYards: item.scannedYards != null ? String(item.scannedYards) : null,
+              scannedTicketNumber: item.scannedTicketNumber != null ? String(item.scannedTicketNumber) : null,
+              scannedDate: item.scannedDate != null ? String(item.scannedDate) : null,
+              scannedRawText: item.scannedRawText != null ? String(item.scannedRawText) : null,
             },
           });
           results.push({ ticketId: ticket.id, ticketNumber, photoUrl: item.photoUrl });
