@@ -326,7 +326,7 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
       doc.rect(M, y, tableW, ROW_H).fillAndStroke('#e8e8e8', '#000000');
       doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8);
       for (const col of cols) {
-        doc.text(col.label, col.x + 3, y + 5, { width: col.w - 6, align: col.align || 'left' });
+        doc.text(col.label, col.x + 3, y + 5, { width: col.w - 6, align: col.align || 'left', lineBreak: false });
       }
       y += ROW_H;
 
@@ -344,26 +344,28 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
           const rate = t.ratePerUnit;
           const dateStr = t.date ? format(t.date, 'MM/dd') : t.completedAt ? format(t.completedAt, 'MM/dd') : '';
           doc.font('Helvetica').fontSize(8).fillColor('#000000');
-          doc.text(dateStr,                        cols[0].x + 3, y + 5, { width: cols[0].w - 6 });
-          doc.text(t.customer ?? '',               cols[1].x + 3, y + 5, { width: cols[1].w - 6, ellipsis: true });
-          doc.text(t.hauledFrom,                   cols[2].x + 3, y + 5, { width: cols[2].w - 6, ellipsis: true });
-          doc.text(t.hauledTo,                     cols[3].x + 3, y + 5, { width: cols[3].w - 6, ellipsis: true });
-          doc.text(t.ticketRef ?? String(t.ticketNumber), cols[4].x + 3, y + 5, { width: cols[4].w - 6 });
-          doc.text(t.quantityType === 'TONS' ? String(Number(t.quantity)) : String(Math.round(Number(t.quantity))), cols[5].x + 3, y + 5, { width: cols[5].w - 6, align: 'right' });
-          doc.text(rate > 0 ? `$${rate.toFixed(2)}` : '', cols[6].x + 3, y + 5, { width: cols[6].w - 6, align: 'right' });
-          doc.text(driverDispatcherName,                  cols[7].x + 3, y + 5, { width: cols[7].w - 6, ellipsis: true });
+          doc.text(dateStr,                        cols[0].x + 3, y + 5, { width: cols[0].w - 6, lineBreak: false });
+          doc.text(t.customer ?? '',               cols[1].x + 3, y + 5, { width: cols[1].w - 6, ellipsis: true, lineBreak: false });
+          doc.text(t.hauledFrom,                   cols[2].x + 3, y + 5, { width: cols[2].w - 6, ellipsis: true, lineBreak: false });
+          doc.text(t.hauledTo,                     cols[3].x + 3, y + 5, { width: cols[3].w - 6, ellipsis: true, lineBreak: false });
+          doc.text(t.ticketRef ?? String(t.ticketNumber), cols[4].x + 3, y + 5, { width: cols[4].w - 6, lineBreak: false });
+          doc.text(t.quantityType === 'TONS' ? String(Number(t.quantity)) : String(Math.round(Number(t.quantity))), cols[5].x + 3, y + 5, { width: cols[5].w - 6, align: 'right', lineBreak: false });
+          doc.text(rate > 0 ? `$${rate.toFixed(2)}` : '', cols[6].x + 3, y + 5, { width: cols[6].w - 6, align: 'right', lineBreak: false });
+          doc.text(driverDispatcherName,                  cols[7].x + 3, y + 5, { width: cols[7].w - 6, ellipsis: true, lineBreak: false });
         }
         y += ROW_H;
       }
 
       // =================================================================
       // FOOTER — page-specific total
+      // All text here uses lineBreak:false to prevent PDFKit from
+      // auto-creating an empty overflow page.
       // =================================================================
       y += 6;
       doc.font('Helvetica').fontSize(8).fillColor('#000000');
       doc.text(
         'All Trip Sheets and Tickets must be received by Monday (11am) to be paid Friday. Thank you!',
-        M, y, { width: tableW - 120 },
+        M, y, { width: tableW - 120, lineBreak: false },
       );
 
       // Total Due — only for the tickets on THIS page
@@ -372,16 +374,16 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
       }, 0);
       doc.font('Helvetica-Bold').fontSize(10);
       const tdLabelX = M + tableW - 120;
-      doc.text('Total Due:', tdLabelX, y);
+      doc.text('Total Due:', tdLabelX, y, { lineBreak: false });
       const tdBoxX = tdLabelX + 62;
       doc.rect(tdBoxX, y - 2, 58, 16).stroke('#000000');
       doc.font('Helvetica').fontSize(10);
-      doc.text(`$${pageTotalDue.toFixed(2)}`, tdBoxX + 3, y, { width: 52, align: 'right' });
+      doc.text(`$${pageTotalDue.toFixed(2)}`, tdBoxX + 3, y, { width: 52, align: 'right', lineBreak: false });
 
       // Page label (e.g. "Page 2 of 3") at bottom center
       if (pageLabel) {
         doc.font('Helvetica').fontSize(7).fillColor('#666666');
-        doc.text(pageLabel, M, PAGE_H - M + 10, { width: W, align: 'center' });
+        doc.text(pageLabel, M, PAGE_H - M + 10, { width: W, align: 'center', lineBreak: false });
       }
     };
 
