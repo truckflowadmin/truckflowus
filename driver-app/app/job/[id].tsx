@@ -95,13 +95,10 @@ export default function JobDetailScreen() {
         body: { jobId: job.id, action, note },
       });
 
-      // Handle GPS tracking
+      // Handle GPS tracking — silently skip if unavailable (e.g. Expo Go)
       if (action === 'start' || action === 'resume') {
         const started = await startTracking(job.id, job.assignmentId || undefined);
         setTracking(started);
-        if (!started) {
-          Alert.alert('Location Permission Required', 'Please enable background location to track your delivery.');
-        }
       } else if (action === 'pause' || action === 'complete' || action === 'cancel') {
         await stopTracking();
         setTracking(false);

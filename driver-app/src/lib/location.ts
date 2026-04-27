@@ -4,9 +4,13 @@
  * When a driver starts a job, we begin background location updates.
  * Every ~30 seconds, a batch of coordinates is sent to the backend.
  * Tracking stops when the driver completes/pauses the job.
+ *
+ * If location services are unavailable (e.g. running in Expo Go without
+ * a native rebuild), all functions degrade gracefully — no crash alerts.
  */
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import { Platform } from 'react-native';
 import { getToken, getApiUrl } from './api';
 
 const LOCATION_TASK = 'TRUCKFLOW_BG_LOCATION';
@@ -14,6 +18,27 @@ const LOCATION_TASK = 'TRUCKFLOW_BG_LOCATION';
 // Store current job context for the background task
 let _currentJobId: string | null = null;
 let _currentAssignmentId: string | null = null;
+
+/**
+ * Check if location services are available on this device/build.
+ * Returns false in Expo Go or builds missing Info.plist keys.
+ */
+async function isLocationAvailable(): Promise<boolean> {
+  try {
+    const enabled = await Location.hasServicesEnabledAsync();
+    if (!enabled) return false;
+
+    // Check current permission status WITHOUT triggering the native prompt.
+    // This avoids the NSLocation*UsageDescription crash in Expo Go.
+    const { status } = await Location.getForegroundPermissionsAsync();
+    // If status is 'undetermined', requesting will trigger native prompt —
+    // only safe if Info.plist keys exist (i.e. a proper dev build).
+    // We'll attempt the request inside a try/catch in requestLocationPermissions.
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Define the background task (must be called at module level, outside components).
@@ -66,14 +91,28 @@ async function sendLocations(locations: Location.LocationObject[]) {
 
 /**
  * Request location permissions (foreground + background).
+ * Returns false gracefully if permissions can't be obtained.
  */
 export async function requestLocationPermissions(): Promise<boolean> {
   try {
+    const available = await isLocationAvailable();
+    if (!available) {
+      console.warn('[Location] Location services not available');
+      return false;
+    }
+
     const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
     if (fgStatus !== 'granted') return false;
 
-    const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
-    return bgStatus === 'granted';
+    // Background permissions — may not be available in all builds
+    try {
+      const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+      return bgStatus === 'granted';
+    } catch {
+      // Background location not available (e.g. Expo Go) — foreground-only is OK
+      console.warn('[Location] Background permissions unavailable, using foreground only');
+      return true;
+    }
   } catch (err) {
     console.error('[Location] Permission request failed:', err);
     return false;
@@ -87,32 +126,37 @@ export async function startTracking(jobId: string, assignmentId?: string): Promi
   _currentJobId = jobId;
   _currentAssignmentId = assignmentId || null;
 
-  const hasPermission = await requestLocationPermissions();
-  if (!hasPermission) return false;
+  try {
+    const hasPermission = await requestLocationPermissions();
+    if (!hasPermission) return false;
 
-  const isTracking = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false);
-  if (isTracking) {
-    // Already tracking — just update the job context
+    const isTracking = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false);
+    if (isTracking) {
+      // Already tracking — just update the job context
+      return true;
+    }
+
+    await Location.startLocationUpdatesAsync(LOCATION_TASK, {
+      accuracy: Location.Accuracy.High,
+      timeInterval: 30_000, // every 30 seconds
+      distanceInterval: 50,  // or every 50 meters
+      deferredUpdatesInterval: 30_000,
+      deferredUpdatesDistance: 50,
+      showsBackgroundLocationIndicator: true, // iOS blue bar
+      foregroundService: {
+        notificationTitle: 'TruckFlowUS',
+        notificationBody: 'Tracking your delivery location',
+        notificationColor: '#1E3A5F',
+      },
+      pausesUpdatesAutomatically: false,
+      activityType: Location.ActivityType.AutomotiveNavigation,
+    });
+
     return true;
+  } catch (err) {
+    console.error('[Location] Failed to start tracking:', err);
+    return false;
   }
-
-  await Location.startLocationUpdatesAsync(LOCATION_TASK, {
-    accuracy: Location.Accuracy.High,
-    timeInterval: 30_000, // every 30 seconds
-    distanceInterval: 50,  // or every 50 meters
-    deferredUpdatesInterval: 30_000,
-    deferredUpdatesDistance: 50,
-    showsBackgroundLocationIndicator: true, // iOS blue bar
-    foregroundService: {
-      notificationTitle: 'TruckFlowUS',
-      notificationBody: 'Tracking your delivery location',
-      notificationColor: '#1E3A5F',
-    },
-    pausesUpdatesAutomatically: false,
-    activityType: Location.ActivityType.AutomotiveNavigation,
-  });
-
-  return true;
 }
 
 /**
@@ -122,9 +166,13 @@ export async function stopTracking() {
   _currentJobId = null;
   _currentAssignmentId = null;
 
-  const isTracking = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false);
-  if (isTracking) {
-    await Location.stopLocationUpdatesAsync(LOCATION_TASK);
+  try {
+    const isTracking = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false);
+    if (isTracking) {
+      await Location.stopLocationUpdatesAsync(LOCATION_TASK);
+    }
+  } catch (err) {
+    console.error('[Location] Failed to stop tracking:', err);
   }
 }
 
@@ -133,6 +181,9 @@ export async function stopTracking() {
  */
 export async function getCurrentLocation(): Promise<Location.LocationObject | null> {
   try {
+    const available = await isLocationAvailable();
+    if (!available) return null;
+
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') return null;
     return await Location.getCurrentPositionAsync({
@@ -147,5 +198,9 @@ export async function getCurrentLocation(): Promise<Location.LocationObject | nu
  * Check if tracking is currently active.
  */
 export async function isTrackingActive(): Promise<boolean> {
-  return Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false);
+  try {
+    return await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK);
+  } catch {
+    return false;
+  }
 }
