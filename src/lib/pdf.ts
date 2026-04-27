@@ -204,7 +204,9 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
   }
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'LETTER', layout: 'landscape', margin: 40 });
+    // margin: 0 prevents PDFKit from auto-creating pages when it thinks
+    // text is outside the "safe" margin area. We position everything manually.
+    const doc = new PDFDocument({ size: 'LETTER', layout: 'landscape', margin: 0 });
     const chunks: Buffer[] = [];
     doc.on('data', (c: Buffer) => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -273,41 +275,41 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
 
       // --- LEFT COLUMN ---
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000');
-      doc.text('Pay To:', M, y);
+      doc.text('Pay To:', M, y, { lineBreak: false });
       const payToLabelW = doc.widthOfString('Pay To:  ');
       doc.font('Helvetica').fontSize(12);
-      doc.text(payToValue, M + payToLabelW, y);
+      doc.text(payToValue, M + payToLabelW, y, { lineBreak: false });
       doc.moveTo(M + payToLabelW, y + 16).lineTo(M + 260, y + 16)
         .strokeColor('#000000').lineWidth(0.5).stroke();
 
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000');
-      doc.text('Truck Number:', M, y + 30);
+      doc.text('Truck Number:', M, y + 30, { lineBreak: false });
       const truckLabelW = doc.widthOfString('Truck Number:  ');
       doc.font('Helvetica').fontSize(12);
-      doc.text(driverGroup.truckNumber || '—', M + truckLabelW, y + 30);
+      doc.text(driverGroup.truckNumber || '—', M + truckLabelW, y + 30, { lineBreak: false });
       doc.moveTo(M + truckLabelW, y + 46).lineTo(M + 260, y + 46)
         .strokeColor('#000000').lineWidth(0.5).stroke();
 
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000');
-      doc.text('Week Ending:', M, y + 60);
+      doc.text('Week Ending:', M, y + 60, { lineBreak: false });
       const weekLabelW = doc.widthOfString('Week Ending:  ');
       doc.font('Helvetica').fontSize(12);
-      doc.text(weekEndStr, M + weekLabelW, y + 60);
+      doc.text(weekEndStr, M + weekLabelW, y + 60, { lineBreak: false });
       doc.moveTo(M + weekLabelW, y + 76).lineTo(M + 260, y + 76)
         .strokeColor('#000000').lineWidth(0.5).stroke();
 
       // --- RIGHT COLUMN: Mail To + Logo ---
       const mailX = 340;
       doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000');
-      doc.text('Mail To:', mailX, y);
+      doc.text('Mail To:', mailX, y, { lineBreak: false });
       doc.font('Helvetica-Bold').fontSize(13);
-      doc.text(data.broker.name, mailX, y + 16);
+      doc.text(data.broker.name, mailX, y + 16, { lineBreak: false });
       if (data.broker.mailingAddress) {
         doc.font('Helvetica').fontSize(11);
         const addrLines = data.broker.mailingAddress.split('\n');
         let addrY = y + 34;
         for (const line of addrLines) {
-          doc.text(line.trim(), mailX, addrY);
+          doc.text(line.trim(), mailX, addrY, { lineBreak: false });
           addrY += 15;
         }
       }
