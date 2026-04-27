@@ -238,26 +238,40 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
     const dispatcherFullName = dispatcherContact?.name ?? data.company.name;
     const dispatcherName = dispatcherFullName.split(/\s+/)[0];
 
-    let isFirstPage = true;
-    for (const [, driverGroup] of byDriver) {
-      if (!isFirstPage) doc.addPage();
-      isFirstPage = false;
+    // Layout constants for the table
+    const ROW_H = 20;
+    const MAX_ROWS = 16; // Max data rows per page (fits with header + footer)
+    const cols = [
+      { label: 'Date',            x: M,       w: 62 },
+      { label: 'Customer Name',   x: M + 62,  w: 120 },
+      { label: 'Hauled From',     x: M + 182, w: 120 },
+      { label: 'Hauled To',       x: M + 302, w: 120 },
+      { label: 'Ticket Number',   x: M + 422, w: 80 },
+      { label: 'Quantity',        x: M + 502, w: 56, align: 'right' as const },
+      { label: 'Rate',            x: M + 558, w: 62, align: 'right' as const },
+      { label: 'Dispatcher',      x: M + 620, w: 92 },
+    ];
+    const tableW = cols[cols.length - 1].x + cols[cols.length - 1].w - M;
 
-      // Per-truck overrides: use first ticket's payToName/dispatcherName if set
-      const firstTicket = driverGroup.tickets[0];
-      const payToValue = firstTicket?.payToName?.trim() || data.company.name;
-      const dispatcherOverride = firstTicket?.dispatcherName?.trim() || null;
-      const driverDispatcherName = dispatcherOverride || dispatcherName;
-
-      // =====================================================================
-      // HEADER — left side: Pay To / Truck / Week Ending
-      //          right side: Mail To (large) + Logo
-      // =====================================================================
+    // -----------------------------------------------------------------
+    // Helper: render a complete form page (header + table + footer)
+    // with the given subset of tickets and its own page total.
+    // -----------------------------------------------------------------
+    const renderFormPage = (
+      pageTickets: typeof data.tickets,
+      driverGroup: { truckNumber: string },
+      payToValue: string,
+      driverDispatcherName: string,
+      pageLabel: string | null, // e.g. "Page 2 of 3" — null for single-page
+    ) => {
       let y = M;
 
-      // --- LEFT COLUMN ---
+      // =================================================================
+      // HEADER — left side: Pay To / Truck / Week Ending
+      //          right side: Mail To (large) + Logo
+      // =================================================================
 
-      // "Pay To:" line
+      // --- LEFT COLUMN ---
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000');
       doc.text('Pay To:', M, y);
       const payToLabelW = doc.widthOfString('Pay To:  ');
@@ -266,7 +280,6 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
       doc.moveTo(M + payToLabelW, y + 16).lineTo(M + 260, y + 16)
         .strokeColor('#000000').lineWidth(0.5).stroke();
 
-      // "Truck Number:"
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000');
       doc.text('Truck Number:', M, y + 30);
       const truckLabelW = doc.widthOfString('Truck Number:  ');
@@ -275,7 +288,6 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
       doc.moveTo(M + truckLabelW, y + 46).lineTo(M + 260, y + 46)
         .strokeColor('#000000').lineWidth(0.5).stroke();
 
-      // "Week Ending:"
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000');
       doc.text('Week Ending:', M, y + 60);
       const weekLabelW = doc.widthOfString('Week Ending:  ');
@@ -284,8 +296,7 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
       doc.moveTo(M + weekLabelW, y + 76).lineTo(M + 260, y + 76)
         .strokeColor('#000000').lineWidth(0.5).stroke();
 
-      // --- RIGHT COLUMN: Mail To (spans full header height) + Logo ---
-
+      // --- RIGHT COLUMN: Mail To + Logo ---
       const mailX = 340;
       doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000');
       doc.text('Mail To:', mailX, y);
@@ -301,7 +312,6 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
         }
       }
 
-      // Broker logo — top right (large, spanning full header height)
       if (logoImageBuf) {
         const logoW = 280;
         const logoH = 90;
@@ -310,24 +320,9 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
 
       y += 90;
 
-      // =====================================================================
-      // TABLE — matching columns: Date | Customer Name | Hauled From |
-      //         Hauled To | Ticket Number | Quantity | Rate | Dispatcher
-      // =====================================================================
-      const ROW_H = 20;
-      const cols = [
-        { label: 'Date',            x: M,       w: 62 },
-        { label: 'Customer Name',   x: M + 62,  w: 120 },
-        { label: 'Hauled From',     x: M + 182, w: 120 },
-        { label: 'Hauled To',       x: M + 302, w: 120 },
-        { label: 'Ticket Number',   x: M + 422, w: 80 },
-        { label: 'Quantity',        x: M + 502, w: 56, align: 'right' as const },
-        { label: 'Rate',            x: M + 558, w: 62, align: 'right' as const },
-        { label: 'Dispatcher',      x: M + 620, w: 92 },
-      ];
-      const tableW = cols[cols.length - 1].x + cols[cols.length - 1].w - M;
-
-      // Header row
+      // =================================================================
+      // TABLE
+      // =================================================================
       doc.rect(M, y, tableW, ROW_H).fillAndStroke('#e8e8e8', '#000000');
       doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8);
       for (const col of cols) {
@@ -335,23 +330,17 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
       }
       y += ROW_H;
 
-      // Data rows — draw enough empty rows to fill the page (min 20)
-      const MAX_ROWS = 16;
-      const tix = driverGroup.tickets;
-      for (let r = 0; r < Math.max(MAX_ROWS, tix.length); r++) {
-        if (y + ROW_H > PAGE_H - 60) { doc.addPage(); y = M; }
-
-        // Draw row border
+      // Draw rows — fill empty rows up to MAX_ROWS so form looks complete
+      const rowCount = Math.max(MAX_ROWS, pageTickets.length);
+      for (let r = 0; r < rowCount; r++) {
         doc.rect(M, y, tableW, ROW_H).stroke('#000000');
-        // Draw vertical cell borders
         for (const col of cols) {
           doc.moveTo(col.x, y).lineTo(col.x, y + ROW_H).stroke('#000000');
         }
-        // Right edge
         doc.moveTo(M + tableW, y).lineTo(M + tableW, y + ROW_H).stroke('#000000');
 
-        if (r < tix.length) {
-          const t = tix[r];
+        if (r < pageTickets.length) {
+          const t = pageTickets[r];
           const rate = t.ratePerUnit;
           const dateStr = t.date ? format(t.date, 'MM/dd') : t.completedAt ? format(t.completedAt, 'MM/dd') : '';
           doc.font('Helvetica').fontSize(8).fillColor('#000000');
@@ -367,9 +356,9 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
         y += ROW_H;
       }
 
-      // =====================================================================
-      // FOOTER
-      // =====================================================================
+      // =================================================================
+      // FOOTER — page-specific total
+      // =================================================================
       y += 6;
       doc.font('Helvetica').fontSize(8).fillColor('#000000');
       doc.text(
@@ -377,19 +366,54 @@ export async function generateBrokerInvoicePdf(data: BrokerInvoiceForPdf): Promi
         M, y, { width: tableW - 120 },
       );
 
-      // Total Due box
-      const totalDue = tix.reduce((sum, t) => {
-        const rate = t.ratePerUnit;
-        return sum + rate * Number(t.quantity);
+      // Total Due — only for the tickets on THIS page
+      const pageTotalDue = pageTickets.reduce((sum, t) => {
+        return sum + t.ratePerUnit * Number(t.quantity);
       }, 0);
       doc.font('Helvetica-Bold').fontSize(10);
       const tdLabelX = M + tableW - 120;
       doc.text('Total Due:', tdLabelX, y);
-      // Box for total
       const tdBoxX = tdLabelX + 62;
       doc.rect(tdBoxX, y - 2, 58, 16).stroke('#000000');
       doc.font('Helvetica').fontSize(10);
-      doc.text(`$${totalDue.toFixed(2)}`, tdBoxX + 3, y, { width: 52, align: 'right' });
+      doc.text(`$${pageTotalDue.toFixed(2)}`, tdBoxX + 3, y, { width: 52, align: 'right' });
+
+      // Page label (e.g. "Page 2 of 3") at bottom center
+      if (pageLabel) {
+        doc.font('Helvetica').fontSize(7).fillColor('#666666');
+        doc.text(pageLabel, M, PAGE_H - M + 10, { width: W, align: 'center' });
+      }
+    };
+
+    // -----------------------------------------------------------------
+    // Main loop: iterate driver groups, chunk tickets into pages
+    // -----------------------------------------------------------------
+    let isFirstPage = true;
+    for (const [, driverGroup] of byDriver) {
+      const firstTicket = driverGroup.tickets[0];
+      const payToValue = firstTicket?.payToName?.trim() || data.company.name;
+      const dispatcherOverride = firstTicket?.dispatcherName?.trim() || null;
+      const driverDispatcherName = dispatcherOverride || dispatcherName;
+      const tix = driverGroup.tickets;
+
+      // Split tickets into page-sized chunks
+      const chunks: (typeof tix)[] = [];
+      if (tix.length === 0) {
+        chunks.push([]); // Produce one blank form
+      } else {
+        for (let i = 0; i < tix.length; i += MAX_ROWS) {
+          chunks.push(tix.slice(i, i + MAX_ROWS));
+        }
+      }
+
+      const totalPages = chunks.length;
+      for (let p = 0; p < totalPages; p++) {
+        if (!isFirstPage) doc.addPage();
+        isFirstPage = false;
+
+        const pageLabel = totalPages > 1 ? `Page ${p + 1} of ${totalPages}` : null;
+        renderFormPage(chunks[p], driverGroup, payToValue, driverDispatcherName, pageLabel);
+      }
     }
 
     doc.end();
