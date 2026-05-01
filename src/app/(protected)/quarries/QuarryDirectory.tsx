@@ -679,12 +679,16 @@ export default function QuarryDirectory({
   companyState,
   companyAddress,
   companyZip,
+  companyLat,
+  companyLng,
 }: {
   quarries: QuarryRow[];
   companyCity: string | null;
   companyState: string | null;
   companyAddress: string | null;
   companyZip: string | null;
+  companyLat: number | null;
+  companyLng: number | null;
 }) {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'list' | 'map'>('list');
@@ -702,30 +706,32 @@ export default function QuarryDirectory({
   const [nameSearch, setNameSearch] = useState('');
   const [searchMode, setSearchMode] = useState<'nearby' | 'name'>('nearby');
 
-  // Resolve company coordinates (from lookup table or geocode)
-  const [companyCoords, setCompanyCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [coordsResolved, setCoordsResolved] = useState(false);
+  // Use server-provided coordinates (geocoded on the server for reliability)
+  const [companyCoords, setCompanyCoords] = useState<{ lat: number; lng: number } | null>(
+    companyLat != null && companyLng != null ? { lat: companyLat, lng: companyLng } : null
+  );
+  const [coordsResolved, setCoordsResolved] = useState(companyLat != null && companyLng != null);
 
   useEffect(() => {
-    // Always prefer Nominatim geocoding with full address for accuracy
+    // If server already provided coords, we're done
+    if (companyLat != null && companyLng != null) return;
+
+    // Fallback: try city lookup table, then client-side geocoding
+    const lookup = getCompanyCoords(companyCity, companyState);
+    if (lookup) {
+      setCompanyCoords(lookup);
+      setCoordsResolved(true);
+      return;
+    }
     if (companyAddress || companyCity) {
       geocodeAddress(companyAddress || '', companyCity, companyState, companyZip).then((coords) => {
-        if (coords) {
-          setCompanyCoords(coords);
-        } else {
-          // Fall back to city lookup table if geocoding fails
-          const lookup = getCompanyCoords(companyCity, companyState);
-          if (lookup) setCompanyCoords(lookup);
-        }
+        if (coords) setCompanyCoords(coords);
         setCoordsResolved(true);
       });
     } else {
-      // No address at all — try city lookup as last resort
-      const lookup = getCompanyCoords(companyCity, companyState);
-      if (lookup) setCompanyCoords(lookup);
       setCoordsResolved(true);
     }
-  }, [companyCity, companyState, companyAddress, companyZip]);
+  }, [companyCity, companyState, companyAddress, companyZip, companyLat, companyLng]);
 
   // All unique materials
   const allMaterials = useMemo(() => {
