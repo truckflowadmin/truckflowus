@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { updateQuarry } from './actions';
 
 /* ── Types ──────────────────────────────────────────── */
-interface MaterialInfo {
+interface MaterialEntry {
   name: string;
-  unit?: string;
+  pricePerUnit: number | null;
+  unit: string;
+  notes: string;
 }
 
-interface QuarryEntry {
+interface QuarryRow {
   id: string;
   name: string;
   phone: string | null;
@@ -17,338 +20,22 @@ interface QuarryEntry {
   website: string | null;
   pricingUrl: string | null;
   address: string | null;
-  city: string;
-  state: string;
+  city: string | null;
+  state: string | null;
   zip: string | null;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   hoursOfOp: string | null;
-  materials: MaterialInfo[];
+  materials: MaterialEntry[];
   notes: string | null;
 }
 
-/* ── Pre-seeded SW Florida quarry/mine directory ──── */
-const QUARRIES: QuarryEntry[] = [
-  {
-    id: 'vulcan-naples',
-    name: 'Vulcan Materials - Naples',
-    phone: '(239) 455-4550',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.vulcanmaterials.com',
-    pricingUrl: null,
-    address: '3825 White Lake Blvd',
-    city: 'Naples',
-    state: 'FL',
-    zip: '34117',
-    lat: 26.1475,
-    lng: -81.6200,
-    hoursOfOp: 'Mon-Fri 6:00am - 4:30pm',
-    materials: [
-      { name: 'Base Rock' }, { name: '57 Stone' }, { name: 'Rip Rap' },
-      { name: 'Screenings' }, { name: 'Limerock' }, { name: 'Crush & Run' },
-      { name: 'Asphalt' },
-    ],
-    notes: 'Major regional supplier. Call for current pricing.',
-  },
-  {
-    id: 'bonness-naples',
-    name: 'Bonness Company',
-    phone: '(239) 597-6221',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.bonness.com',
-    pricingUrl: null,
-    address: '1990 Seward Ave',
-    city: 'Naples',
-    state: 'FL',
-    zip: '34109',
-    lat: 26.2280,
-    lng: -81.7660,
-    hoursOfOp: 'Mon-Fri 7:00am - 5:00pm',
-    materials: [
-      { name: 'Fill Dirt' }, { name: 'Shell Rock' }, { name: 'Limerock' },
-      { name: 'Sand' }, { name: 'Screenings' }, { name: 'Base Rock' },
-    ],
-    notes: 'Also provides site work & paving.',
-  },
-  {
-    id: 'florida-rock-ftmyers',
-    name: 'Florida Rock Industries - Ft. Myers',
-    phone: '(239) 334-0773',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.patriottrans.com',
-    pricingUrl: null,
-    address: '2301 Widman Way',
-    city: 'Fort Myers',
-    state: 'FL',
-    zip: '33901',
-    lat: 26.6337,
-    lng: -81.8546,
-    hoursOfOp: 'Mon-Fri 6:30am - 4:30pm',
-    materials: [
-      { name: '57 Stone' }, { name: 'Base Rock' }, { name: 'Rip Rap' },
-      { name: 'Concrete' }, { name: 'Sand' }, { name: 'Shell Rock' },
-    ],
-    notes: null,
-  },
-  {
-    id: 'titan-america-medley',
-    name: 'Titan America - Pennsuco',
-    phone: '(305) 364-2200',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.titanamerica.com',
-    pricingUrl: null,
-    address: '11600 NW South River Dr',
-    city: 'Medley',
-    state: 'FL',
-    zip: '33178',
-    lat: 25.8580,
-    lng: -80.3500,
-    hoursOfOp: 'Mon-Fri 6:00am - 5:00pm, Sat 6:00am - 12:00pm',
-    materials: [
-      { name: 'Base Rock' }, { name: '57 Stone' }, { name: 'Rip Rap' },
-      { name: 'Limerock' }, { name: 'Concrete' }, { name: 'Screenings' },
-      { name: 'Fill Dirt' },
-    ],
-    notes: 'Large mining operation with on-site concrete batch plant.',
-  },
-  {
-    id: 'white-rock-quarries',
-    name: 'White Rock Quarries',
-    phone: '(305) 821-8402',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.whiterockquarries.com',
-    pricingUrl: null,
-    address: '8500 NW 166th St',
-    city: 'Miami Lakes',
-    state: 'FL',
-    zip: '33016',
-    lat: 25.9230,
-    lng: -80.3310,
-    hoursOfOp: 'Mon-Fri 6:00am - 5:00pm',
-    materials: [
-      { name: 'Base Rock' }, { name: 'Fill Dirt' }, { name: 'Limerock' },
-      { name: 'Crush & Run' }, { name: 'Screenings' }, { name: 'Rip Rap' },
-      { name: '57 Stone' },
-    ],
-    notes: null,
-  },
-  {
-    id: 'apac-lehigh',
-    name: 'APAC Southeast - Lehigh Acres',
-    phone: '(239) 369-1161',
-    email: null,
-    contactPerson: null,
-    website: null,
-    pricingUrl: null,
-    address: '901 Leeland Heights Blvd',
-    city: 'Lehigh Acres',
-    state: 'FL',
-    zip: '33936',
-    lat: 26.5980,
-    lng: -81.6270,
-    hoursOfOp: 'Mon-Fri 6:00am - 4:00pm',
-    materials: [
-      { name: 'Asphalt Millings' }, { name: 'Base Rock' },
-      { name: 'Crush & Run' }, { name: 'Fill Dirt' },
-    ],
-    notes: 'Specializes in asphalt & road base materials.',
-  },
-  {
-    id: 'cemex-ftmyers',
-    name: 'CEMEX - Fort Myers',
-    phone: '(239) 332-1440',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.cemexusa.com',
-    pricingUrl: null,
-    address: '3350 Metro Pkwy',
-    city: 'Fort Myers',
-    state: 'FL',
-    zip: '33916',
-    lat: 26.5920,
-    lng: -81.8350,
-    hoursOfOp: 'Mon-Fri 6:00am - 5:00pm, Sat 7:00am - 12:00pm',
-    materials: [
-      { name: 'Concrete' }, { name: 'Sand' }, { name: 'Gravel' },
-      { name: '57 Stone' }, { name: 'Base Rock' },
-    ],
-    notes: 'Ready-mix concrete plant. Aggregates available.',
-  },
-  {
-    id: 'vulcan-ftmyers',
-    name: 'Vulcan Materials - Fort Myers',
-    phone: '(239) 337-2202',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.vulcanmaterials.com',
-    pricingUrl: null,
-    address: '5600 Division Dr',
-    city: 'Fort Myers',
-    state: 'FL',
-    zip: '33905',
-    lat: 26.6510,
-    lng: -81.7950,
-    hoursOfOp: 'Mon-Fri 6:00am - 4:30pm',
-    materials: [
-      { name: 'Base Rock' }, { name: '57 Stone' }, { name: 'Rip Rap' },
-      { name: 'Screenings' }, { name: 'Limerock' }, { name: 'Granite' },
-      { name: 'Asphalt' }, { name: 'Sand' },
-    ],
-    notes: null,
-  },
-  {
-    id: 'quality-enterprises-naples',
-    name: 'Quality Enterprises USA',
-    phone: '(239) 435-7200',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.qualityenterprises.net',
-    pricingUrl: null,
-    address: '3894 Mannix Dr Suite 216',
-    city: 'Naples',
-    state: 'FL',
-    zip: '34114',
-    lat: 26.1100,
-    lng: -81.7480,
-    hoursOfOp: 'Mon-Fri 7:00am - 5:00pm',
-    materials: [
-      { name: 'Limerock' }, { name: 'Fill Dirt' }, { name: 'Shell Rock' },
-      { name: 'Base Rock' }, { name: 'Sand' },
-    ],
-    notes: 'Utility & site work contractor with quarry operations.',
-  },
-  {
-    id: 'ranger-construction-palmbeach',
-    name: 'Ranger Construction - Palm Beach',
-    phone: '(561) 793-9400',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.rangerconstruction.com',
-    pricingUrl: null,
-    address: '230 S State Rd 7',
-    city: 'West Palm Beach',
-    state: 'FL',
-    zip: '33413',
-    lat: 26.6640,
-    lng: -80.1520,
-    hoursOfOp: 'Mon-Fri 6:00am - 5:00pm',
-    materials: [
-      { name: 'Asphalt' }, { name: 'Base Rock' }, { name: 'Asphalt Millings' },
-      { name: '57 Stone' }, { name: 'Screenings' },
-    ],
-    notes: 'Asphalt production & aggregate supply.',
-  },
-  {
-    id: 'martin-marietta-clewiston',
-    name: 'Martin Marietta Materials - Clewiston',
-    phone: '(863) 983-6161',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.martinmarietta.com',
-    pricingUrl: null,
-    address: 'Hwy 27',
-    city: 'Clewiston',
-    state: 'FL',
-    zip: '33440',
-    lat: 26.7540,
-    lng: -80.9340,
-    hoursOfOp: 'Mon-Fri 6:00am - 4:00pm',
-    materials: [
-      { name: 'Base Rock' }, { name: '57 Stone' }, { name: 'Rip Rap' },
-      { name: 'Screenings' }, { name: 'Fill Dirt' }, { name: 'Limerock' },
-      { name: 'Crush & Run' },
-    ],
-    notes: 'Large inland quarry. Delivery available.',
-  },
-  {
-    id: 'bergeron-land-development',
-    name: 'Bergeron Land Development',
-    phone: '(954) 584-0192',
-    email: null,
-    contactPerson: null,
-    website: null,
-    pricingUrl: null,
-    address: '4455 SW 64th Ave',
-    city: 'Davie',
-    state: 'FL',
-    zip: '33314',
-    lat: 26.0630,
-    lng: -80.2300,
-    hoursOfOp: 'Mon-Fri 6:30am - 4:30pm',
-    materials: [
-      { name: 'Fill Dirt' }, { name: 'Limerock' }, { name: 'Shell Rock' },
-      { name: 'Sand' }, { name: 'Base Rock' },
-    ],
-    notes: 'Active rock mine in Broward County.',
-  },
-  {
-    id: 'preferred-materials-pompano',
-    name: 'Preferred Materials - Pompano',
-    phone: '(954) 917-2217',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.preferredmaterials.com',
-    pricingUrl: null,
-    address: '1300 NW 23rd Ave',
-    city: 'Pompano Beach',
-    state: 'FL',
-    zip: '33069',
-    lat: 26.2450,
-    lng: -80.1440,
-    hoursOfOp: 'Mon-Fri 6:00am - 4:00pm',
-    materials: [
-      { name: 'Asphalt' }, { name: 'Asphalt Millings' },
-      { name: 'Base Rock' }, { name: 'Limerock' },
-    ],
-    notes: 'Hot-mix asphalt plant with aggregate pickup.',
-  },
-  {
-    id: 'rinker-materials-miami',
-    name: 'Rinker Materials - Miami',
-    phone: '(305) 633-0344',
-    email: null,
-    contactPerson: null,
-    website: null,
-    pricingUrl: null,
-    address: '2201 NW 36th St',
-    city: 'Miami',
-    state: 'FL',
-    zip: '33142',
-    lat: 25.8080,
-    lng: -80.2390,
-    hoursOfOp: 'Mon-Fri 6:00am - 5:00pm',
-    materials: [
-      { name: 'Concrete' }, { name: '57 Stone' }, { name: 'Sand' },
-      { name: 'Gravel' }, { name: 'Pea Gravel' },
-    ],
-    notes: 'Ready-mix concrete & aggregate supplier.',
-  },
-  {
-    id: 'collier-paving',
-    name: 'Collier Paving & Concrete',
-    phone: '(239) 597-7676',
-    email: null,
-    contactPerson: null,
-    website: 'https://www.collierpaving.com',
-    pricingUrl: null,
-    address: '3600 White Lake Blvd',
-    city: 'Naples',
-    state: 'FL',
-    zip: '34117',
-    lat: 26.1460,
-    lng: -81.6180,
-    hoursOfOp: 'Mon-Fri 6:00am - 5:00pm',
-    materials: [
-      { name: 'Concrete' }, { name: 'Base Rock' }, { name: 'Limerock' },
-      { name: 'Sand' }, { name: 'Fill Dirt' },
-    ],
-    notes: 'Concrete & base material. Good for Collier County jobs.',
-  },
+/* ── Common materials for quick-add chips ────────────── */
+const COMMON_MATERIALS = [
+  'Base Rock', '57 Stone', 'Rip Rap', 'Crush & Run', 'Screenings',
+  'Fill Dirt', 'Top Soil', 'Sand', 'Gravel', 'Limestone',
+  'Granite', 'Shell Rock', 'Asphalt Millings', 'Concrete',
+  'Limerock', 'Pea Gravel', 'River Rock', 'ABC Stone', 'Asphalt',
 ];
 
 /* ── Distance helper (Haversine) ─────────────────── */
@@ -382,7 +69,7 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
 };
 
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 3959; // miles
+  const R = 3959;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a =
@@ -430,7 +117,7 @@ function DirectoryMap({
   companyCoords,
   onSelect,
 }: {
-  quarries: QuarryEntry[];
+  quarries: QuarryRow[];
   companyCoords: { lat: number; lng: number } | null;
   onSelect: (id: string) => void;
 }) {
@@ -454,7 +141,6 @@ function DirectoryMap({
       maxZoom: 19,
     }).addTo(map);
 
-    // Company marker
     if (companyCoords) {
       const companyIcon = L.divIcon({
         html: '<div style="background:#0d9488;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3)">You</div>',
@@ -479,8 +165,9 @@ function DirectoryMap({
     markersRef.current.forEach((m) => map.removeLayer(m));
     markersRef.current = [];
 
-    quarries.forEach((q) => {
-      const materialList = q.materials.map((m) => m.name).join(', ');
+    const withCoords = quarries.filter((q) => q.lat != null && q.lng != null);
+    withCoords.forEach((q) => {
+      const materialList = (q.materials || []).map((m: any) => m.name).join(', ');
       const marker = L.marker([q.lat, q.lng])
         .addTo(map)
         .bindPopup(`
@@ -494,8 +181,7 @@ function DirectoryMap({
       markersRef.current.push(marker);
     });
 
-    // Fit bounds to include all markers + company
-    const allPoints: [number, number][] = quarries.map((q) => [q.lat, q.lng]);
+    const allPoints: [number, number][] = withCoords.map((q) => [q.lat!, q.lng!]);
     if (companyCoords) allPoints.push([companyCoords.lat, companyCoords.lng]);
     if (allPoints.length > 1) {
       const bounds = L.latLngBounds(allPoints);
@@ -517,18 +203,249 @@ function DirectoryMap({
   return <div ref={mapRef} className="w-full h-[350px] bg-steel-100 rounded-lg" style={{ zIndex: 0 }} />;
 }
 
-/* ── Quarry card (read-only) ─────────────────────────── */
+/* ── Edit form modal ─────────────────────────────────── */
+function EditQuarryForm({
+  quarry,
+  onClose,
+}: {
+  quarry: QuarryRow;
+  onClose: () => void;
+}) {
+  const [materials, setMaterials] = useState<MaterialEntry[]>(
+    (quarry.materials || []).map((m: any) => ({
+      name: m.name || '',
+      pricePerUnit: m.pricePerUnit ?? null,
+      unit: m.unit || 'TON',
+      notes: m.notes || '',
+    }))
+  );
+  const [newMaterial, setNewMaterial] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  function addMaterial(name: string) {
+    if (!name.trim()) return;
+    if (materials.some((m) => m.name.toLowerCase() === name.trim().toLowerCase())) return;
+    setMaterials([...materials, { name: name.trim(), pricePerUnit: null, unit: 'TON', notes: '' }]);
+    setNewMaterial('');
+  }
+
+  function removeMaterial(idx: number) {
+    setMaterials(materials.filter((_, i) => i !== idx));
+  }
+
+  function updateMaterial(idx: number, field: keyof MaterialEntry, value: any) {
+    setMaterials(materials.map((m, i) => (i === idx ? { ...m, [field]: value } : m)));
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    const fd = new FormData(e.currentTarget);
+    fd.set('id', quarry.id);
+    fd.set('materials', JSON.stringify(materials));
+
+    const res = await updateQuarry(fd);
+    if (res.success) {
+      onClose();
+      window.location.reload();
+    } else {
+      setError(res.error || 'Failed to save');
+    }
+    setSaving(false);
+  }
+
+  const unusedMaterials = COMMON_MATERIALS.filter(
+    (m) => !materials.some((mat) => mat.name.toLowerCase() === m.toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-steel-200 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold">Edit Quarry Info</h2>
+          <button onClick={onClose} className="text-steel-400 hover:text-steel-700 text-xl">&times;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
+          )}
+
+          <div>
+            <label className="label">Name *</label>
+            <input name="name" required className="input" defaultValue={quarry.name} />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Phone</label>
+              <input name="phone" type="tel" className="input" defaultValue={quarry.phone ?? ''} />
+            </div>
+            <div>
+              <label className="label">Email</label>
+              <input name="email" type="email" className="input" defaultValue={quarry.email ?? ''} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Contact Person</label>
+              <input name="contactPerson" className="input" defaultValue={quarry.contactPerson ?? ''} />
+            </div>
+            <div>
+              <label className="label">Hours of Operation</label>
+              <input name="hoursOfOp" className="input" defaultValue={quarry.hoursOfOp ?? ''} placeholder="Mon-Fri 6am-4pm" />
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-steel-200">
+            <h3 className="text-sm font-semibold text-steel-700 mb-3">Address & Location</h3>
+            <div>
+              <label className="label">Street Address</label>
+              <input name="address" className="input" defaultValue={quarry.address ?? ''} />
+            </div>
+            <div className="grid grid-cols-3 gap-3 mt-3">
+              <div>
+                <label className="label">City</label>
+                <input name="city" className="input" defaultValue={quarry.city ?? ''} />
+              </div>
+              <div>
+                <label className="label">State</label>
+                <input name="state" className="input" maxLength={2} defaultValue={quarry.state ?? ''} />
+              </div>
+              <div>
+                <label className="label">ZIP</label>
+                <input name="zip" className="input" maxLength={10} defaultValue={quarry.zip ?? ''} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="label">Latitude</label>
+                <input name="lat" type="number" step="any" className="input" defaultValue={quarry.lat ?? ''} />
+              </div>
+              <div>
+                <label className="label">Longitude</label>
+                <input name="lng" type="number" step="any" className="input" defaultValue={quarry.lng ?? ''} />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-steel-200">
+            <h3 className="text-sm font-semibold text-steel-700 mb-3">Website & Pricing</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Website</label>
+                <input name="website" type="url" className="input" defaultValue={quarry.website ?? ''} placeholder="https://..." />
+              </div>
+              <div>
+                <label className="label">Pricing Page URL</label>
+                <input name="pricingUrl" type="url" className="input" defaultValue={quarry.pricingUrl ?? ''} placeholder="Direct link to pricing" />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-steel-200">
+            <h3 className="text-sm font-semibold text-steel-700 mb-3">Materials Available</h3>
+
+            {unusedMaterials.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {unusedMaterials.slice(0, 12).map((m) => (
+                  <button key={m} type="button" onClick={() => addMaterial(m)}
+                    className="text-xs px-2.5 py-1 rounded-full bg-steel-100 text-steel-600 hover:bg-steel-200 transition-colors">
+                    + {m}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2 mb-3">
+              <input
+                value={newMaterial}
+                onChange={(e) => setNewMaterial(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMaterial(newMaterial); } }}
+                className="input flex-1 text-sm"
+                placeholder="Add custom material..."
+              />
+              <button type="button" onClick={() => addMaterial(newMaterial)} className="btn-ghost text-sm px-3">
+                Add
+              </button>
+            </div>
+
+            {materials.length > 0 && (
+              <div className="space-y-2">
+                {materials.map((m, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-steel-50 rounded-lg px-3 py-2">
+                    <span className="text-sm font-medium flex-1 min-w-[120px]">{m.name}</span>
+                    <input
+                      type="number" step="0.01" min="0"
+                      value={m.pricePerUnit ?? ''}
+                      onChange={(e) => updateMaterial(idx, 'pricePerUnit', e.target.value ? parseFloat(e.target.value) : null)}
+                      className="w-24 text-sm border border-steel-200 rounded px-2 py-1 bg-white text-right"
+                      placeholder="Price"
+                    />
+                    <select
+                      value={m.unit}
+                      onChange={(e) => updateMaterial(idx, 'unit', e.target.value)}
+                      className="text-xs border border-steel-200 rounded px-2 py-1 bg-white"
+                    >
+                      <option value="TON">/ton</option>
+                      <option value="YARD">/yard</option>
+                      <option value="LOAD">/load</option>
+                    </select>
+                    <input
+                      value={m.notes}
+                      onChange={(e) => updateMaterial(idx, 'notes', e.target.value)}
+                      className="w-28 text-xs border border-steel-200 rounded px-2 py-1 bg-white"
+                      placeholder="Notes"
+                    />
+                    <button type="button" onClick={() => removeMaterial(idx)}
+                      className="text-red-400 hover:text-red-600 text-sm px-1">&times;</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="label">Internal Notes</label>
+            <textarea name="notes" className="input" rows={2} defaultValue={quarry.notes ?? ''} />
+          </div>
+
+          <div className="flex items-center gap-3 pt-2 border-t border-steel-200">
+            <button type="submit" disabled={saving} className="btn-accent">
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+            <button type="button" onClick={onClose} className="btn-ghost">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ── Quarry card ─────────────────────────────────────── */
 function QuarryCard({
   quarry,
   distance,
   highlight,
+  onEdit,
 }: {
-  quarry: QuarryEntry;
+  quarry: QuarryRow;
   distance: number | null;
   highlight: boolean;
+  onEdit: () => void;
 }) {
   const fullAddress = [quarry.address, quarry.city, quarry.state, quarry.zip].filter(Boolean).join(', ');
-  const mapsUrl = `https://www.google.com/maps?q=${quarry.lat},${quarry.lng}`;
+  const mapsUrl =
+    quarry.lat && quarry.lng
+      ? `https://www.google.com/maps?q=${quarry.lat},${quarry.lng}`
+      : fullAddress
+        ? `https://www.google.com/maps/search/${encodeURIComponent(fullAddress)}`
+        : null;
+
+  const materials: MaterialEntry[] = Array.isArray(quarry.materials) ? quarry.materials : [];
 
   return (
     <div className={`panel p-5 transition-all ${highlight ? 'ring-2 ring-safety' : ''}`}>
@@ -536,14 +453,23 @@ function QuarryCard({
         <div>
           <h3 className="font-bold text-lg">{quarry.name}</h3>
           <p className="text-sm text-steel-500">
-            {quarry.city}, {quarry.state}
+            {[quarry.city, quarry.state].filter(Boolean).join(', ')}
             {distance != null && (
               <span className="ml-2 text-xs font-medium text-steel-400">
                 ~{Math.round(distance)} mi away
               </span>
             )}
           </p>
+          {quarry.contactPerson && (
+            <p className="text-xs text-steel-500">Contact: {quarry.contactPerson}</p>
+          )}
         </div>
+        <button
+          onClick={onEdit}
+          className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+        >
+          Edit
+        </button>
       </div>
 
       {/* Contact info */}
@@ -558,9 +484,11 @@ function QuarryCard({
             ✉ {quarry.email}
           </a>
         )}
-        <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-          📍 {fullAddress || 'View on Map'}
-        </a>
+        {mapsUrl && (
+          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
+            📍 {fullAddress || 'View on Map'}
+          </a>
+        )}
       </div>
 
       {quarry.hoursOfOp && (
@@ -570,22 +498,14 @@ function QuarryCard({
       {/* Pricing / Website links */}
       <div className="flex flex-wrap gap-2 mb-3">
         {quarry.pricingUrl && (
-          <a
-            href={quarry.pricingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-medium px-3 py-1.5 rounded-full bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
-          >
+          <a href={quarry.pricingUrl} target="_blank" rel="noopener noreferrer"
+            className="text-xs font-medium px-3 py-1.5 rounded-full bg-green-100 text-green-800 hover:bg-green-200 transition-colors">
             💲 View Pricing Online
           </a>
         )}
         {quarry.website && (
-          <a
-            href={quarry.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-medium px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
-          >
+          <a href={quarry.website} target="_blank" rel="noopener noreferrer"
+            className="text-xs font-medium px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors">
             🌐 Website
           </a>
         )}
@@ -595,16 +515,21 @@ function QuarryCard({
       </div>
 
       {/* Materials */}
-      {quarry.materials.length > 0 && (
+      {materials.length > 0 && (
         <div>
           <div className="text-xs font-semibold text-steel-500 uppercase tracking-wide mb-1.5">Materials</div>
           <div className="flex flex-wrap gap-1.5">
-            {quarry.materials.map((m, i) => (
+            {materials.map((m, i) => (
               <span
                 key={i}
-                className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200"
+                className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200"
               >
                 {m.name}
+                {m.pricePerUnit != null && (
+                  <span className="font-semibold">
+                    ${m.pricePerUnit.toFixed(2)}/{m.unit === 'TON' ? 'tn' : m.unit === 'YARD' ? 'yd' : 'ld'}
+                  </span>
+                )}
               </span>
             ))}
           </div>
@@ -620,9 +545,11 @@ function QuarryCard({
 
 /* ── Main directory component ────────────────────────── */
 export default function QuarryDirectory({
+  quarries: initialQuarries,
   companyCity,
   companyState,
 }: {
+  quarries: QuarryRow[];
   companyCity: string | null;
   companyState: string | null;
 }) {
@@ -630,6 +557,7 @@ export default function QuarryDirectory({
   const [view, setView] = useState<'list' | 'map'>('list');
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [materialFilter, setMaterialFilter] = useState<string | null>(null);
+  const [editQuarry, setEditQuarry] = useState<QuarryRow | null>(null);
 
   const companyCoords = useMemo(
     () => getCompanyCoords(companyCity, companyState),
@@ -639,83 +567,83 @@ export default function QuarryDirectory({
   // All unique materials across the directory
   const allMaterials = useMemo(() => {
     const set = new Set<string>();
-    QUARRIES.forEach((q) => q.materials.forEach((m) => set.add(m.name)));
+    initialQuarries.forEach((q) => {
+      const mats: any[] = Array.isArray(q.materials) ? q.materials : [];
+      mats.forEach((m: any) => set.add(m.name));
+    });
     return [...set].sort();
-  }, []);
+  }, [initialQuarries]);
 
   // Filter + sort by distance
   const quarries = useMemo(() => {
-    let list = [...QUARRIES];
+    let list = [...initialQuarries];
 
     // Text search
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((quarry) => {
         if (quarry.name.toLowerCase().includes(q)) return true;
-        if (quarry.city.toLowerCase().includes(q)) return true;
-        if (quarry.state.toLowerCase().includes(q)) return true;
-        if (quarry.materials.some((m) => m.name.toLowerCase().includes(q))) return true;
+        if (quarry.city?.toLowerCase().includes(q)) return true;
+        if (quarry.state?.toLowerCase().includes(q)) return true;
+        const mats: any[] = Array.isArray(quarry.materials) ? quarry.materials : [];
+        if (mats.some((m: any) => m.name.toLowerCase().includes(q))) return true;
+        if (quarry.contactPerson?.toLowerCase().includes(q)) return true;
         return false;
       });
     }
 
     // Material filter chip
     if (materialFilter) {
-      list = list.filter((quarry) =>
-        quarry.materials.some((m) => m.name.toLowerCase() === materialFilter.toLowerCase())
-      );
+      list = list.filter((quarry) => {
+        const mats: any[] = Array.isArray(quarry.materials) ? quarry.materials : [];
+        return mats.some((m: any) => m.name.toLowerCase() === materialFilter.toLowerCase());
+      });
     }
 
     // Sort by distance if we have company coords
     if (companyCoords) {
       list.sort((a, b) => {
-        const distA = haversine(companyCoords.lat, companyCoords.lng, a.lat, a.lng);
-        const distB = haversine(companyCoords.lat, companyCoords.lng, b.lat, b.lng);
+        const distA = a.lat && a.lng ? haversine(companyCoords.lat, companyCoords.lng, a.lat, a.lng) : 99999;
+        const distB = b.lat && b.lng ? haversine(companyCoords.lat, companyCoords.lng, b.lat, b.lng) : 99999;
         return distA - distB;
       });
     }
 
     return list;
-  }, [search, materialFilter, companyCoords]);
+  }, [initialQuarries, search, materialFilter, companyCoords]);
 
   // Distance for each quarry
   const distanceMap = useMemo(() => {
     if (!companyCoords) return new Map<string, number>();
     const map = new Map<string, number>();
-    QUARRIES.forEach((q) => {
-      map.set(q.id, haversine(companyCoords.lat, companyCoords.lng, q.lat, q.lng));
+    initialQuarries.forEach((q) => {
+      if (q.lat && q.lng) {
+        map.set(q.id, haversine(companyCoords.lat, companyCoords.lng, q.lat, q.lng));
+      }
     });
     return map;
-  }, [companyCoords]);
+  }, [initialQuarries, companyCoords]);
 
   return (
     <>
       {/* Stats row */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="panel p-4">
-          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">
-            Quarries Listed
-          </div>
-          <div className="text-2xl font-bold mt-1 tabular-nums">{QUARRIES.length}</div>
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">Quarries Listed</div>
+          <div className="text-2xl font-bold mt-1 tabular-nums">{initialQuarries.length}</div>
         </div>
         <div className="panel p-4">
-          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">
-            Showing
-          </div>
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">Showing</div>
           <div className="text-2xl font-bold mt-1 tabular-nums">{quarries.length}</div>
         </div>
         <div className="panel p-4">
-          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">
-            With Websites
-          </div>
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">With Websites</div>
           <div className="text-2xl font-bold mt-1 tabular-nums">
-            {QUARRIES.filter((q) => q.website).length}
+            {initialQuarries.filter((q) => q.website).length}
           </div>
         </div>
         <div className="panel p-4">
-          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">
-            Materials Tracked
-          </div>
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">Materials Tracked</div>
           <div className="text-2xl font-bold mt-1 tabular-nums">{allMaterials.length}</div>
         </div>
       </section>
@@ -740,9 +668,7 @@ export default function QuarryDirectory({
               type="button"
               onClick={() => setView('list')}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                view === 'list'
-                  ? 'bg-white shadow-sm text-steel-900'
-                  : 'text-steel-500 hover:text-steel-700'
+                view === 'list' ? 'bg-white shadow-sm text-steel-900' : 'text-steel-500 hover:text-steel-700'
               }`}
             >
               List
@@ -751,9 +677,7 @@ export default function QuarryDirectory({
               type="button"
               onClick={() => setView('map')}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                view === 'map'
-                  ? 'bg-white shadow-sm text-steel-900'
-                  : 'text-steel-500 hover:text-steel-700'
+                view === 'map' ? 'bg-white shadow-sm text-steel-900' : 'text-steel-500 hover:text-steel-700'
               }`}
             >
               Map
@@ -762,25 +686,27 @@ export default function QuarryDirectory({
         </div>
 
         {/* Material quick-filter chips */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {allMaterials.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => {
-                setMaterialFilter(materialFilter === m ? null : m);
-                setSearch('');
-              }}
-              className={`text-xs px-2.5 py-1 rounded-full transition-colors ${
-                materialFilter === m
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-              }`}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
+        {allMaterials.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {allMaterials.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  setMaterialFilter(materialFilter === m ? null : m);
+                  setSearch('');
+                }}
+                className={`text-xs px-2.5 py-1 rounded-full transition-colors ${
+                  materialFilter === m
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Map view */}
@@ -817,9 +743,18 @@ export default function QuarryDirectory({
               quarry={q}
               distance={distanceMap.get(q.id) ?? null}
               highlight={highlightId === q.id}
+              onEdit={() => setEditQuarry(q)}
             />
           ))}
         </div>
+      )}
+
+      {/* Edit modal */}
+      {editQuarry && (
+        <EditQuarryForm
+          quarry={editQuarry}
+          onClose={() => setEditQuarry(null)}
+        />
       )}
     </>
   );

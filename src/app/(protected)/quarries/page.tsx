@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { getServerLang } from '@/lib/i18n';
 import QuarryDirectory from './QuarryDirectory';
+import { seedDefaultQuarries } from './actions';
 
 export default async function QuarriesPage() {
   const session = await requireSession();
@@ -14,6 +15,20 @@ export default async function QuarriesPage() {
   const company = await prisma.company.findUnique({
     where: { id: session.companyId },
     select: { address: true, city: true, state: true, zip: true },
+  });
+
+  // Auto-seed default quarries on first visit
+  const quarryCount = await prisma.quarry.count({
+    where: { companyId: session.companyId },
+  });
+  if (quarryCount === 0) {
+    await seedDefaultQuarries();
+  }
+
+  // Fetch quarries from DB
+  const quarries = await prisma.quarry.findMany({
+    where: { companyId: session.companyId, active: true },
+    orderBy: { name: 'asc' },
   });
 
   return (
@@ -33,6 +48,7 @@ export default async function QuarriesPage() {
       </header>
 
       <QuarryDirectory
+        quarries={quarries as any}
         companyCity={company?.city ?? null}
         companyState={company?.state ?? null}
       />
