@@ -1228,6 +1228,7 @@ function CompletedJobCard({
   const [expanded, setExpanded] = useState(forceExpand && hasMissingPhotos ? true : false);
   const [items, setItems] = useState<ScannedTicketItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [submitResult, setSubmitResult] = useState<{ count: number; tickets: any[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1333,11 +1334,14 @@ function CompletedJobCard({
   }
 
   async function handleSubmit() {
+    // Ref-based guard: prevents double-submit even if React state hasn't re-rendered
+    if (submittingRef.current) return;
     const valid = items.filter(
       (i) => i.status === 'scanned' && i.hauledFrom.trim() && i.hauledTo.trim(),
     );
     if (!valid.length) return;
 
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
 
@@ -1376,6 +1380,7 @@ function CompletedJobCard({
     } catch (err: any) {
       setError(err.message || 'Submit failed');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }

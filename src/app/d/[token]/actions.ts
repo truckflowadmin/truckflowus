@@ -683,7 +683,33 @@ export async function driverSubmitReviewedTickets(formData: FormData) {
       return { success: false, error: limitErr.message || 'Monthly ticket limit reached. Contact your dispatcher.' };
     }
 
-    // Check for duplicate ticketRefs within this job before creating any tickets
+    // ── Guard: duplicate photoUrl (same photo submitted twice) ──
+    const photoUrls = items.map(i => i.photoUrl).filter(Boolean);
+    if (photoUrls.length > 0) {
+      const existingPhotos = await prisma.ticket.findMany({
+        where: {
+          jobId: job.id,
+          photoUrl: { in: photoUrls },
+          deletedAt: null,
+        },
+        select: { photoUrl: true, ticketNumber: true },
+      });
+      if (existingPhotos.length > 0) {
+        // Silently skip already-submitted photos instead of erroring
+        const alreadyUploaded = new Set(existingPhotos.map(e => e.photoUrl));
+        items = items.filter(i => !alreadyUploaded.has(i.photoUrl));
+        if (items.length === 0) {
+          return {
+            success: true,
+            count: 0,
+            tickets: [],
+            message: 'These tickets were already submitted.',
+          };
+        }
+      }
+    }
+
+    // ── Guard: duplicate ticketRefs within this job ──
     const ticketRefs = items
       .filter(i => i.ticketRef?.trim())
       .map(i => i.ticketRef.trim());
