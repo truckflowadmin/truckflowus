@@ -200,6 +200,18 @@ export default async function TicketsPage({
     };
   });
 
+  // ── Compute ticket stats from already-fetched data ──
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const weekStartDate = startOfWeek(new Date(), { weekStartsOn: 1 });
+
+  const ticketStats = {
+    pending: allTickets.filter(t => t.status === 'PENDING').length,
+    inProgress: allTickets.filter(t => ['DISPATCHED', 'IN_PROGRESS'].includes(t.status)).length,
+    completedToday: allTickets.filter(t => t.status === 'COMPLETED' && t.completedAt && new Date(t.completedAt) >= todayStart).length,
+    completedWeek: allTickets.filter(t => t.status === 'COMPLETED' && t.completedAt && new Date(t.completedAt) >= weekStartDate).length,
+  };
+
   return (
     <div className="p-4 md:p-8 max-w-7xl">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -216,6 +228,25 @@ export default async function TicketsPage({
           </Link>
         </div>
       </header>
+
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="panel p-4 ring-2 ring-safety">
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">{lang === 'es' ? 'Pendientes' : 'Pending'}</div>
+          <div className="text-2xl font-bold mt-1 tabular-nums">{ticketStats.pending}</div>
+        </div>
+        <div className="panel p-4">
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">{lang === 'es' ? 'En Progreso' : 'In Progress'}</div>
+          <div className="text-2xl font-bold mt-1 tabular-nums">{ticketStats.inProgress}</div>
+        </div>
+        <div className="panel p-4">
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">{lang === 'es' ? 'Completados Hoy' : 'Done Today'}</div>
+          <div className="text-2xl font-bold mt-1 tabular-nums">{ticketStats.completedToday}</div>
+        </div>
+        <div className="panel p-4">
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">{lang === 'es' ? 'Completados esta Semana' : 'Done This Week'}</div>
+          <div className="text-2xl font-bold mt-1 tabular-nums">{ticketStats.completedWeek}</div>
+        </div>
+      </section>
 
       <TicketDashboard
         tickets={serializedTickets}

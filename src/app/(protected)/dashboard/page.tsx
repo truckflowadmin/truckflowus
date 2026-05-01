@@ -4,7 +4,6 @@ import { requirePlan } from '@/lib/plan-gate';
 import InspectionAlerts from '../fleet/InspectionAlerts';
 import { getServerLang, t, statusLabel } from '@/lib/i18n';
 import { safePage } from '@/lib/server-error';
-import DashboardStats from '@/components/DashboardStats';
 import DriverTrackingMap from '@/components/DriverTrackingMap';
 
 export const dynamic = 'force-dynamic';
@@ -53,17 +52,6 @@ export default async function DashboardPage() {
     truck: t('dashboard.trackingTruck', lang),
   };
 
-  const statsLabels = {
-    pending: t('dashboard.pending', lang),
-    inProgress: t('dashboard.inProgress', lang),
-    doneToday: t('dashboard.doneToday', lang),
-    doneThisWeek: t('dashboard.doneThisWeek', lang),
-    activeDrivers: t('dashboard.activeDrivers', lang),
-    openAR: t('dashboard.openAR', lang),
-    invoice: lang === 'es' ? t('dashboard.invoice', lang) : 'invoice',
-    invoices: lang === 'es' ? t('dashboard.invoices', lang) : 'invoices',
-  };
-
   return (
     <div className="p-4 md:p-8 max-w-7xl">
       <header className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 mb-6 md:mb-8">
@@ -75,8 +63,6 @@ export default async function DashboardPage() {
       </header>
 
       <InspectionAlerts />
-
-      <DashboardStats labels={statsLabels} />
 
       <DriverTrackingMap labels={trackingLabels} />
 

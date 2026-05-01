@@ -73,6 +73,14 @@ export default async function JobsPage() {
     invoiced: invoicedJobIds.has(j.id),
   }));
 
+  // ── Compute job stats from already-fetched data ──
+  const jobStats = {
+    created: allJobs.filter(j => j.status === 'CREATED').length,
+    assigned: allJobs.filter(j => j.status === 'ASSIGNED').length,
+    inProgress: allJobs.filter(j => j.status === 'IN_PROGRESS').length,
+    completed: allJobs.filter(j => j.status === 'COMPLETED').length,
+  };
+
   return (
     <div className="p-4 md:p-8 max-w-7xl">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -84,6 +92,25 @@ export default async function JobsPage() {
           <Link href="/jobs/new" className="btn-accent">{t('jobs.newJob', lang)}</Link>
         </div>
       </header>
+
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="panel p-4 ring-2 ring-safety">
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">{lang === 'es' ? 'Creados' : 'Created'}</div>
+          <div className="text-2xl font-bold mt-1 tabular-nums">{jobStats.created}</div>
+        </div>
+        <div className="panel p-4">
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">{lang === 'es' ? 'Asignados' : 'Assigned'}</div>
+          <div className="text-2xl font-bold mt-1 tabular-nums">{jobStats.assigned}</div>
+        </div>
+        <div className="panel p-4">
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">{lang === 'es' ? 'En Progreso' : 'In Progress'}</div>
+          <div className="text-2xl font-bold mt-1 tabular-nums">{jobStats.inProgress}</div>
+        </div>
+        <div className="panel p-4">
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">{lang === 'es' ? 'Completados' : 'Completed'}</div>
+          <div className="text-2xl font-bold mt-1 tabular-nums">{jobStats.completed}</div>
+        </div>
+      </section>
 
       <JobDashboard
         jobs={serializedJobs}
