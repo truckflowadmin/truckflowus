@@ -560,8 +560,12 @@ function UpcomingJobCard({
   const [issueSent, setIssueSent] = useState(false);
 
   // Browser geolocation tracking — send pings when job is IN_PROGRESS
+  // Uses watchPosition (not setInterval) so it works on iOS/Android when
+  // the screen locks or the browser is backgrounded.
   const geoWatchRef = useRef<number | null>(null);
-  const geoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastPingRef = useRef<number>(0);
+  const GEO_THROTTLE_MS = 25_000; // send at most one ping every 25 seconds
+
   useEffect(() => {
     if (jobStatus !== 'IN_PROGRESS' || typeof navigator === 'undefined' || !navigator.geolocation) {
       // Stop tracking when not in progress
@@ -569,45 +573,61 @@ function UpcomingJobCard({
         navigator.geolocation.clearWatch(geoWatchRef.current);
         geoWatchRef.current = null;
       }
-      if (geoIntervalRef.current) {
-        clearInterval(geoIntervalRef.current);
-        geoIntervalRef.current = null;
-      }
       return;
     }
 
-    // Send a location ping
-    const sendPing = () => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const fd = new FormData();
-          fd.set('token', token);
-          fd.set('jobId', job.id);
-          fd.set('latitude', String(pos.coords.latitude));
-          fd.set('longitude', String(pos.coords.longitude));
-          if (pos.coords.speed != null) fd.set('speed', String(pos.coords.speed));
-          if (pos.coords.heading != null) fd.set('heading', String(pos.coords.heading));
-          if (pos.coords.accuracy != null) fd.set('accuracy', String(pos.coords.accuracy));
-          sendDriverLocation(fd).catch(() => {}); // fire-and-forget
-        },
-        () => {}, // silently ignore errors
-        { enableHighAccuracy: true, timeout: 10000 },
-      );
+    const doSendPing = (pos: GeolocationPosition) => {
+      const fd = new FormData();
+      fd.set('token', token);
+      fd.set('jobId', job.id);
+      fd.set('latitude', String(pos.coords.latitude));
+      fd.set('longitude', String(pos.coords.longitude));
+      if (pos.coords.speed != null) fd.set('speed', String(pos.coords.speed));
+      if (pos.coords.heading != null) fd.set('heading', String(pos.coords.heading));
+      if (pos.coords.accuracy != null) fd.set('accuracy', String(pos.coords.accuracy));
+      sendDriverLocation(fd).catch(() => {}); // fire-and-forget
+      lastPingRef.current = Date.now();
     };
 
-    // Send initial ping immediately, then every 30 seconds
-    sendPing();
-    geoIntervalRef.current = setInterval(sendPing, 30_000);
+    // Send an immediate ping on start
+    navigator.geolocation.getCurrentPosition(
+      (pos) => doSendPing(pos),
+      () => {}, // silently ignore initial error
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+
+    // watchPosition hooks into the OS location services — works on
+    // iOS Safari + Android Chrome even when the tab is backgrounded.
+    // Throttle to avoid flooding the server (mobile GPS fires frequently).
+    geoWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (Date.now() - lastPingRef.current >= GEO_THROTTLE_MS) {
+          doSendPing(pos);
+        }
+      },
+      () => {}, // silently ignore errors
+      { enableHighAccuracy: true, maximumAge: 20000, timeout: 15000 },
+    );
+
+    // When the driver returns to the tab (unlocks phone, switches back),
+    // send a fresh ping immediately so the dispatcher map updates.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => doSendPing(pos),
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000 },
+        );
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       if (geoWatchRef.current !== null) {
         navigator.geolocation.clearWatch(geoWatchRef.current);
         geoWatchRef.current = null;
       }
-      if (geoIntervalRef.current) {
-        clearInterval(geoIntervalRef.current);
-        geoIntervalRef.current = null;
-      }
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [jobStatus, token, job.id]);
 
