@@ -101,24 +101,7 @@ export default async function EditDriverPage({ params }: { params: { id: string 
     <div className="p-8 max-w-3xl">
       <header className="mb-6">
         <Link href="/drivers" className="text-sm text-steel-500 hover:text-steel-800">← Drivers</Link>
-        <div className="flex items-center gap-4 mt-1">
-          <h1 className="text-3xl font-bold tracking-tight">Edit Driver</h1>
-          {driver.truckNumber && (
-            <span className="text-sm bg-steel-100 text-steel-600 px-2 py-0.5 rounded">{driver.truckNumber}</span>
-          )}
-        </div>
-        {/* Sub-nav: Profile / Tracking */}
-        <div className="flex items-center gap-1 mt-4 border-b border-steel-200">
-          <span className="px-4 py-2.5 text-sm font-medium border-b-2 border-safety text-steel-900 -mb-px">
-            Profile
-          </span>
-          <Link
-            href={`/drivers/${driver.id}/tracking`}
-            className="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-steel-500 hover:text-steel-700 hover:border-steel-300 -mb-px"
-          >
-            📍 Tracking
-          </Link>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight mt-1">Edit Driver</h1>
       </header>
 
       <form action={updateDriverAction} className="panel p-6 space-y-4">
