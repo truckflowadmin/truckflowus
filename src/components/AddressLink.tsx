@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * Renders an address string as a clickable Google Maps link.
+ * Renders an address string as a clickable OpenStreetMap link.
  *
  * Supports three input formats:
- *   1. Full Google Maps URL  → renders as-is link
- *   2. Lat,Lng coordinates   → builds a Maps link from coords
- *   3. Plain text address    → builds a Maps search link
+ *   1. Full Maps URL (Google or OSM) → renders as-is link
+ *   2. Lat,Lng coordinates → builds an OSM link from coords
+ *   3. Plain text address → builds an OSM search link
  *
  * Falls back to plain text when value is empty/null.
  */
@@ -21,23 +21,23 @@ interface AddressLinkProps {
 // Match numeric coordinates like "30.2672,-97.7431" or "30.2672, -97.7431"
 const COORD_RE = /^-?\d{1,3}\.\d+,\s*-?\d{1,3}\.\d+$/;
 
-// Match Google Maps URLs
-const MAPS_URL_RE = /^https?:\/\/(www\.)?(google\.\w+\/maps|maps\.google|maps\.app\.goo\.gl|goo\.gl\/maps)/i;
+// Match Google Maps URLs (still support opening them)
+const MAPS_URL_RE = /^https?:\/\/(www\.)?(google\.\w+\/maps|maps\.google|maps\.app\.goo\.gl|goo\.gl\/maps|openstreetmap\.org)/i;
 
 function buildMapsUrl(value: string): string {
   const trimmed = value.trim();
 
-  // Already a Maps link
+  // Already a Maps link (Google or OSM) — open as-is
   if (MAPS_URL_RE.test(trimmed)) return trimmed;
 
-  // Coordinates
+  // Coordinates → OpenStreetMap
   if (COORD_RE.test(trimmed)) {
     const [lat, lng] = trimmed.split(',').map((s) => s.trim());
-    return `https://www.google.com/maps?q=${lat},${lng}`;
+    return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`;
   }
 
-  // Plain address → search
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trimmed)}`;
+  // Plain address → OpenStreetMap search
+  return `https://www.openstreetmap.org/search?query=${encodeURIComponent(trimmed)}`;
 }
 
 export default function AddressLink({ value, className, label }: AddressLinkProps) {
@@ -49,7 +49,7 @@ export default function AddressLink({ value, className, label }: AddressLinkProp
 
   // Display text: show coords or truncated address, not the raw URL
   const displayText = isUrl
-    ? 'View on Google Maps'
+    ? 'View on Map'
     : isCoords
       ? value.trim()
       : value.trim();
@@ -60,7 +60,7 @@ export default function AddressLink({ value, className, label }: AddressLinkProp
       target="_blank"
       rel="noopener noreferrer"
       className={className ?? 'text-xs text-blue-500 hover:text-blue-400 hover:underline inline-flex items-center gap-1'}
-      title={`Open in Google Maps: ${value.trim()}`}
+      title={`Open in OpenStreetMap: ${value.trim()}`}
     >
       {/* Maps pin icon */}
       <svg

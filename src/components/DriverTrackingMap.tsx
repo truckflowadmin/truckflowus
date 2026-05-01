@@ -19,9 +19,41 @@ interface DriverPin {
 
 /**
  * Live map showing active driver locations.
- * Uses Google Maps JavaScript API.
+ * Uses Leaflet + OpenStreetMap (free, no API key needed).
  * Polls /api/tracking every 15 seconds.
  */
+
+// Leaflet script/style loader — shared across instances
+let leafletLoadPromise: Promise<void> | null = null;
+
+function loadLeaflet(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.reject(new Error('SSR'));
+  if ((window as any).L) return Promise.resolve();
+
+  if (!leafletLoadPromise) {
+    leafletLoadPromise = new Promise<void>((resolve, reject) => {
+      // Load CSS
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+      link.crossOrigin = '';
+      document.head.appendChild(link);
+
+      // Load JS
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+      script.crossOrigin = '';
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load Leaflet'));
+      document.head.appendChild(script);
+    });
+  }
+  return leafletLoadPromise;
+}
+
 export default function DriverTrackingMap({ labels }: { labels: {
   title: string;
   noDrivers: string;
@@ -34,8 +66,9 @@ export default function DriverTrackingMap({ labels }: { labels: {
   const [drivers, setDrivers] = useState<DriverPin[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState<DriverPin | null>(null);
+  const [leafletReady, setLeafletReady] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<any>(null);
+  const leafletMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
 
   const load = useCallback(async () => {
@@ -51,90 +84,96 @@ export default function DriverTrackingMap({ labels }: { labels: {
     }
   }, []);
 
-  // Initialize Google Map
+  // Load Leaflet
   useEffect(() => {
-    if (!mapRef.current) return;
-
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      // Fallback: show a list view instead of map
-      return;
-    }
-
-    const g = (window as any).google;
-    // Load Google Maps script if not already loaded
-    if (!g?.maps) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
-      script.async = true;
-      script.onload = () => initMap();
-      document.head.appendChild(script);
-    } else {
-      initMap();
-    }
-
-    function initMap() {
-      if (!mapRef.current) return;
-      const gm = (window as any).google.maps;
-      googleMapRef.current = new gm.Map(mapRef.current, {
-        center: { lat: 26.14, lng: -81.79 }, // SW Florida default
-        zoom: 10,
-        mapTypeControl: false,
-        streetViewControl: false,
-      });
-    }
+    loadLeaflet()
+      .then(() => setLeafletReady(true))
+      .catch(() => console.warn('[Map] Failed to load Leaflet'));
   }, []);
+
+  // Initialize map once Leaflet is loaded
+  useEffect(() => {
+    if (!leafletReady || !mapRef.current || leafletMapRef.current) return;
+
+    const L = (window as any).L;
+    const map = L.map(mapRef.current, {
+      center: [26.14, -81.79], // SW Florida default
+      zoom: 10,
+      zoomControl: true,
+      attributionControl: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    leafletMapRef.current = map;
+
+    // Fix Leaflet container size issue when rendered in hidden/dynamic containers
+    setTimeout(() => map.invalidateSize(), 200);
+  }, [leafletReady]);
 
   // Update markers when drivers change
   useEffect(() => {
-    if (!googleMapRef.current) return;
+    if (!leafletMapRef.current || !leafletReady) return;
+
+    const L = (window as any).L;
+    const map = leafletMapRef.current;
 
     // Clear old markers
-    markersRef.current.forEach((m: any) => m.setMap(null));
+    markersRef.current.forEach((m: any) => map.removeLayer(m));
     markersRef.current = [];
 
     if (drivers.length === 0) return;
 
-    const gm = (window as any).google?.maps;
-    if (!gm) return;
-
-    const bounds = new gm.LatLngBounds();
+    const bounds: [number, number][] = [];
 
     drivers.forEach((driver) => {
-      const pos = { lat: driver.latitude, lng: driver.longitude };
-      bounds.extend(pos);
+      const pos: [number, number] = [driver.latitude, driver.longitude];
+      bounds.push(pos);
 
-      const marker = new gm.Marker({
-        position: pos,
-        map: googleMapRef.current!,
-        title: driver.driverName,
-        label: {
-          text: driver.driverName.split(' ')[0][0] + (driver.driverName.split(' ')[1]?.[0] || ''),
-          color: '#FFFFFF',
-          fontWeight: '700',
-          fontSize: '11px',
-        },
-        icon: {
-          path: gm.SymbolPath.CIRCLE,
-          scale: 16,
-          fillColor: '#FF8C00',
-          fillOpacity: 1,
-          strokeColor: '#1E3A5F',
-          strokeWeight: 2,
-        },
+      // Create a custom circle marker with initials
+      const initials = driver.driverName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      const icon = L.divIcon({
+        className: 'leaflet-driver-marker',
+        html: `<div style="
+          width: 32px; height: 32px; border-radius: 50%;
+          background: #FF8C00; border: 2px solid #1E3A5F;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-weight: 700; font-size: 11px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        ">${initials}</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
       });
 
-      marker.addListener('click', () => setSelectedDriver(driver));
+      const marker = L.marker(pos, { icon }).addTo(map);
+
+      // Popup with driver info
+      marker.bindPopup(`
+        <div style="font-family: system-ui; min-width: 160px;">
+          <div style="font-weight: 700; font-size: 14px;">${driver.driverName}</div>
+          ${driver.truckNumber ? `<div style="color: #666; font-size: 12px;">${labels.truck}: ${driver.truckNumber}</div>` : ''}
+          <div style="margin-top: 6px; font-size: 12px;">
+            <div><strong>${labels.job}:</strong> #${driver.jobNumber} — ${driver.jobName}</div>
+            <div><strong>${labels.destination}:</strong> ${driver.destination}</div>
+            <div><strong>${labels.speed}:</strong> ${formatSpeed(driver.speed)}</div>
+            <div><strong>${labels.lastUpdate}:</strong> ${formatTime(driver.lastUpdate)}</div>
+          </div>
+        </div>
+      `);
+
+      marker.on('click', () => setSelectedDriver(driver));
       markersRef.current.push(marker);
     });
 
-    if (drivers.length > 1) {
-      googleMapRef.current.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
+    if (bounds.length > 1) {
+      map.fitBounds(bounds, { padding: [50, 50] });
     } else {
-      googleMapRef.current.setCenter({ lat: drivers[0].latitude, lng: drivers[0].longitude });
-      googleMapRef.current.setZoom(14);
+      map.setView(bounds[0], 14);
     }
-  }, [drivers]);
+  }, [drivers, leafletReady, labels]);
 
   // Poll every 15 seconds
   useEffect(() => {
@@ -151,6 +190,16 @@ export default function DriverTrackingMap({ labels }: { labels: {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [load]);
+
+  // Cleanup map on unmount
+  useEffect(() => {
+    return () => {
+      if (leafletMapRef.current) {
+        leafletMapRef.current.remove();
+        leafletMapRef.current = null;
+      }
+    };
+  }, []);
 
   const formatTime = (iso: string) => {
     const d = new Date(iso);
@@ -176,7 +225,7 @@ export default function DriverTrackingMap({ labels }: { labels: {
       </div>
 
       {/* Map */}
-      <div ref={mapRef} className="w-full h-[400px] bg-steel-100" />
+      <div ref={mapRef} className="w-full h-[400px] bg-steel-100" style={{ zIndex: 0 }} />
 
       {/* Driver info card */}
       {selectedDriver && (
@@ -236,9 +285,9 @@ export default function DriverTrackingMap({ labels }: { labels: {
               key={d.driverId}
               onClick={() => {
                 setSelectedDriver(d);
-                if (googleMapRef.current) {
-                  googleMapRef.current.panTo({ lat: d.latitude, lng: d.longitude });
-                  googleMapRef.current.setZoom(14);
+                if (leafletMapRef.current) {
+                  leafletMapRef.current.panTo([d.latitude, d.longitude]);
+                  leafletMapRef.current.setZoom(14);
                 }
               }}
               className={`w-full text-left px-4 py-3 border-b border-steel-50 hover:bg-steel-50 transition-colors ${

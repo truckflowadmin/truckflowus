@@ -77,11 +77,11 @@ const SECURITY_HEADERS: Record<string, string> = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com", // Next.js + Google Maps
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Tailwind + Google Fonts
-    "img-src 'self' blob: https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com https://*.google.com https://*.googleusercontent.com",
+    "script-src 'self' 'unsafe-inline' https://unpkg.com", // Next.js + Leaflet
+    "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com", // Tailwind + Leaflet CSS + Google Fonts
+    "img-src 'self' blob: data: https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://*.tile.openstreetmap.org https://unpkg.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://*.googleapis.com https://*.google.com",
+    "connect-src 'self' https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://nominatim.openstreetmap.org",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

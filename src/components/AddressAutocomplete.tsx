@@ -1,65 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
- * Google Places Autocomplete input for address fields.
+ * Address autocomplete input using OpenStreetMap Nominatim (free, no API key).
  *
- * Loads the Google Maps JS API once (idempotent) and attaches Places
- * Autocomplete to the input. When a place is selected the full formatted
- * address is written into the input's value (and fires onChange).
- *
- * Falls back to a plain text input when the API key is missing or invalid.
- *
- * Set NEXT_PUBLIC_GOOGLE_MAPS_ENABLED="true" to activate autocomplete.
- * Without it, the component renders a normal text input (safe default).
+ * Debounces keystrokes by 400ms, queries Nominatim, and shows a dropdown
+ * of suggestions. Falls back to a plain text input if fetch fails.
  */
 
-// ---------------------------------------------------------------------------
-// Script loader — shared across all instances
-// ---------------------------------------------------------------------------
-let loadPromise: Promise<void> | null = null;
-
-function loadGoogleMaps(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.reject(new Error('SSR'));
-
-  // Opt-in flag — must be explicitly enabled
-  if (process.env.NEXT_PUBLIC_GOOGLE_MAPS_ENABLED !== 'true') {
-    return Promise.reject(new Error('Google Maps not enabled'));
-  }
-
-  if ((window as any).google?.maps?.places) return Promise.resolve();
-
-  if (!loadPromise) {
-    loadPromise = new Promise<void>((resolve, reject) => {
-      const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      if (!key) {
-        reject(new Error('No API key'));
-        return;
-      }
-
-      const existing = document.querySelector('script[src*="maps.googleapis.com"]');
-      if (existing) {
-        existing.addEventListener('load', () => resolve());
-        existing.addEventListener('error', () => reject(new Error('Script failed')));
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Google Maps'));
-      document.head.appendChild(script);
-    });
-  }
-  return loadPromise;
+interface NominatimResult {
+  display_name: string;
+  lat: string;
+  lon: string;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 interface AddressAutocompleteProps {
   name: string;
   defaultValue?: string;
@@ -76,86 +31,129 @@ export default function AddressAutocomplete({
   name,
   defaultValue = '',
   externalValue,
-  placeholder = 'Address, coordinates, or Maps link',
+  placeholder = 'Address, coordinates, or location',
   className = 'input mt-1.5',
   required,
   onPlaceSelect,
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [inputValue, setInputValue] = useState(defaultValue);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handlePlaceChanged = useCallback(() => {
-    const ac = autocompleteRef.current;
-    if (!ac || !inputRef.current) return;
-
-    const place = ac.getPlace();
-    if (!place?.formatted_address && !place?.name) return;
-
-    const formatted = place.formatted_address || place.name || '';
-    inputRef.current.value = formatted;
-
-    // Fire native input event so React / form data picks it up
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      'value',
-    )?.set;
-    nativeInputValueSetter?.call(inputRef.current, formatted);
-    inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
-
-    if (onPlaceSelect && place.geometry?.location) {
-      onPlaceSelect(
-        formatted,
-        place.geometry.location.lat(),
-        place.geometry.location.lng(),
-      );
-    }
-  }, [onPlaceSelect]);
-
-  // Sync externalValue (e.g. from scan) into the uncontrolled input
+  // Sync externalValue (e.g. from scan) into the input
   useEffect(() => {
-    if (externalValue !== undefined && inputRef.current && inputRef.current.value !== externalValue) {
-      inputRef.current.value = externalValue;
+    if (externalValue !== undefined && externalValue !== inputValue) {
+      setInputValue(externalValue);
+      if (inputRef.current) inputRef.current.value = externalValue;
     }
   }, [externalValue]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const searchAddress = useCallback(async (query: string) => {
+    if (query.length < 3) {
+      setSuggestions([]);
+      return;
+    }
 
-    loadGoogleMaps()
-      .then(() => {
-        if (cancelled || !inputRef.current) return;
-        if (autocompleteRef.current) return;
-
-        try {
-          const ac = new google.maps.places.Autocomplete(inputRef.current, {
-            types: ['geocode', 'establishment'],
-            fields: ['formatted_address', 'name', 'geometry'],
-          });
-          ac.addListener('place_changed', handlePlaceChanged);
-          autocompleteRef.current = ac;
-        } catch {
-          console.warn('[AddressAutocomplete] Places API init failed, using plain input');
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=us`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            // Nominatim requires a User-Agent to identify the app
+            'User-Agent': 'TruckFlowUS/1.0',
+          },
         }
-      })
-      .catch(() => {
-        // Not enabled, no API key, or script failed — plain text input
-      });
+      );
+      if (!res.ok) return;
+      const results: NominatimResult[] = await res.json();
+      setSuggestions(results);
+      setShowDropdown(results.length > 0);
+    } catch {
+      setSuggestions([]);
+    }
+  }, []);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [handlePlaceChanged]);
+  const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchAddress(val), 400);
+  }, [searchAddress]);
+
+  const selectSuggestion = useCallback((result: NominatimResult) => {
+    const formatted = result.display_name;
+    setInputValue(formatted);
+    setSuggestions([]);
+    setShowDropdown(false);
+
+    if (inputRef.current) {
+      inputRef.current.value = formatted;
+      // Fire native input event so React / form data picks it up
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value',
+      )?.set;
+      nativeInputValueSetter?.call(inputRef.current, formatted);
+      inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    if (onPlaceSelect) {
+      onPlaceSelect(formatted, parseFloat(result.lat), parseFloat(result.lon));
+    }
+  }, [onPlaceSelect]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+          inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   return (
-    <input
-      ref={inputRef}
-      type="text"
-      name={name}
-      defaultValue={defaultValue}
-      placeholder={placeholder}
-      className={className}
-      required={required}
-      autoComplete="off"
-    />
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        name={name}
+        defaultValue={defaultValue}
+        placeholder={placeholder}
+        className={className}
+        required={required}
+        autoComplete="off"
+        onChange={handleInput}
+        onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+      />
+      {showDropdown && suggestions.length > 0 && (
+        <div
+          ref={dropdownRef}
+          className="absolute z-50 mt-1 w-full bg-white border border-steel-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+        >
+          {suggestions.map((result, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => selectSuggestion(result)}
+              className="w-full text-left px-3 py-2 text-sm text-steel-800 hover:bg-steel-50 border-b border-steel-50 last:border-b-0 transition-colors"
+            >
+              <span className="text-steel-400 mr-1.5">📍</span>
+              {result.display_name}
+            </button>
+          ))}
+          <div className="px-3 py-1 text-[10px] text-steel-300 text-right">
+            © OpenStreetMap contributors
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
