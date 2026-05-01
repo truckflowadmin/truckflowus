@@ -4,8 +4,8 @@ import { requireSession } from '@/lib/auth';
 /**
  * GET /api/quarries/suggest?lat=26.14&lng=-81.79&radius=50
  *
- * Searches Google Places for quarries, mines, and aggregate suppliers
- * near the given coordinates. Returns up to 20 results.
+ * Searches OpenStreetMap (Overpass API) for quarries, mines, and
+ * aggregate suppliers near the given coordinates. Free, no API key needed.
  */
 export async function GET(req: NextRequest) {
   await requireSession();
@@ -19,131 +19,228 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'lat and lng are required' }, { status: 400 });
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({
-      error: 'Google Maps API key not configured',
-      suggestions: [],
-    });
-  }
-
-  const radiusMeters = Math.min(radiusMiles * 1609, 50000); // max 50km per request
+  const radiusMeters = radiusMiles * 1609;
 
   try {
-    // Search for quarries/mines/aggregate using multiple queries for best coverage
-    const queries = [
-      'quarry rock mine aggregate',
-      'sand gravel stone supplier',
-      'concrete asphalt materials',
-    ];
+    // Overpass QL: find quarries, mines, and related industrial sites
+    // Tags: landuse=quarry, man_made=mineshaft, industrial=mine,
+    //        shop=aggregate, building=industrial with quarry/mine in name
+    const overpassQuery = `
+      [out:json][timeout:30];
+      (
+        node["landuse"="quarry"](around:${radiusMeters},${lat},${lng});
+        way["landuse"="quarry"](around:${radiusMeters},${lat},${lng});
+        node["man_made"="mineshaft"](around:${radiusMeters},${lat},${lng});
+        way["man_made"="mineshaft"](around:${radiusMeters},${lat},${lng});
+        node["industrial"="mine"](around:${radiusMeters},${lat},${lng});
+        way["industrial"="mine"](around:${radiusMeters},${lat},${lng});
+        node["craft"="stonemason"](around:${radiusMeters},${lat},${lng});
+        way["craft"="stonemason"](around:${radiusMeters},${lat},${lng});
+        node["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["landuse"](around:${radiusMeters},${lat},${lng});
+        way["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["landuse"](around:${radiusMeters},${lat},${lng});
+        node["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["industrial"](around:${radiusMeters},${lat},${lng});
+        way["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["industrial"](around:${radiusMeters},${lat},${lng});
+        node["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["shop"](around:${radiusMeters},${lat},${lng});
+        way["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["shop"](around:${radiusMeters},${lat},${lng});
+        node["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["office"](around:${radiusMeters},${lat},${lng});
+        way["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["office"](around:${radiusMeters},${lat},${lng});
+        node["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["amenity"](around:${radiusMeters},${lat},${lng});
+        way["name"~"quarr|mine|gravel|aggregate|rock|sand|stone|asphalt|concrete|cement|limerock|crushed",i]["amenity"](around:${radiusMeters},${lat},${lng});
+        node["name"~"vulcan|cemex|martin marietta|titan|rinker|preferred material|apac|ranger construct|florida rock",i](around:${radiusMeters},${lat},${lng});
+        way["name"~"vulcan|cemex|martin marietta|titan|rinker|preferred material|apac|ranger construct|florida rock",i](around:${radiusMeters},${lat},${lng});
+      );
+      out center body;
+    `;
 
-    const allPlaces = new Map<string, any>();
-    let lastApiError = '';
+    const overpassRes = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(overpassQuery)}`,
+    });
 
-    for (const query of queries) {
-      const url = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json');
-      url.searchParams.set('query', query);
-      url.searchParams.set('location', `${lat},${lng}`);
-      url.searchParams.set('radius', String(radiusMeters));
-      url.searchParams.set('type', 'establishment');
-      url.searchParams.set('key', apiKey);
-
-      const res = await fetch(url.toString());
-      if (!res.ok) {
-        lastApiError = `Google API returned HTTP ${res.status}`;
-        continue;
-      }
-
-      const data = await res.json();
-      if (data.status === 'REQUEST_DENIED') {
-        lastApiError = data.error_message || 'Places API not enabled. Enable "Places API" in Google Cloud Console for your API key.';
-        continue;
-      }
-      if (data.status === 'OVER_QUERY_LIMIT') {
-        lastApiError = 'Google Places API quota exceeded. Try again later.';
-        continue;
-      }
-      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-        lastApiError = `Google API error: ${data.status} — ${data.error_message || ''}`;
-        continue;
-      }
-
-      for (const place of data.results || []) {
-        if (!allPlaces.has(place.place_id)) {
-          allPlaces.set(place.place_id, place);
-        }
-      }
-    }
-
-    // If no results and we had API errors, report them
-    if (allPlaces.size === 0 && lastApiError) {
-      return NextResponse.json({ error: lastApiError, suggestions: [] });
-    }
-
-    // Get details for each place (phone, website, hours)
-    const suggestions = [];
-
-    for (const place of allPlaces.values()) {
-      // Get place details for phone/website/hours
-      let phone = null;
-      let website = null;
-      let hoursOfOp = null;
-
-      try {
-        const detailUrl = new URL('https://maps.googleapis.com/maps/api/place/details/json');
-        detailUrl.searchParams.set('place_id', place.place_id);
-        detailUrl.searchParams.set('fields', 'formatted_phone_number,website,opening_hours,url');
-        detailUrl.searchParams.set('key', apiKey);
-
-        const detailRes = await fetch(detailUrl.toString());
-        if (detailRes.ok) {
-          const detailData = await detailRes.json();
-          if (detailData.result) {
-            phone = detailData.result.formatted_phone_number || null;
-            website = detailData.result.website || null;
-            if (detailData.result.opening_hours?.weekday_text) {
-              // Compress to a short string like "Mon-Fri 6am-5pm"
-              hoursOfOp = detailData.result.opening_hours.weekday_text.join(', ');
-            }
-          }
-        }
-      } catch {
-        // Skip details if they fail
-      }
-
-      const loc = place.geometry?.location;
-      const addressParts = (place.formatted_address || '').split(',').map((s: string) => s.trim());
-
-      suggestions.push({
-        placeId: place.place_id,
-        name: place.name,
-        address: addressParts[0] || null,
-        city: addressParts[1] || null,
-        state: addressParts[2]?.split(' ')[0] || null,
-        zip: addressParts[2]?.split(' ')[1] || null,
-        lat: loc?.lat || null,
-        lng: loc?.lng || null,
-        phone,
-        website,
-        hoursOfOp,
-        rating: place.rating || null,
-        totalRatings: place.user_ratings_total || 0,
-        types: place.types || [],
-        mapsUrl: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`,
+    if (!overpassRes.ok) {
+      const text = await overpassRes.text();
+      console.error('Overpass API error:', overpassRes.status, text);
+      return NextResponse.json({
+        error: `Map search returned an error (${overpassRes.status}). Try again in a moment.`,
+        suggestions: [],
       });
     }
 
-    // Sort by distance from search point
+    const data = await overpassRes.json();
+    const elements: any[] = data.elements || [];
+
+    // Deduplicate by name (ways and nodes can overlap)
+    const seen = new Map<string, any>();
+    for (const el of elements) {
+      const name = el.tags?.name;
+      if (!name) continue; // skip unnamed features
+
+      const key = name.toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.set(key, el);
+      }
+    }
+
+    // Also search Nominatim for businesses (better at finding named businesses)
+    const nominatimResults = await searchNominatim(lat, lng, radiusMiles);
+    for (const nr of nominatimResults) {
+      const key = nr.name.toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.set(key, nr);
+      }
+    }
+
+    const suggestions = [];
+
+    for (const el of seen.values()) {
+      // Handle both Overpass elements and Nominatim results
+      if (el._source === 'nominatim') {
+        suggestions.push(el);
+        continue;
+      }
+
+      const elLat = el.lat ?? el.center?.lat;
+      const elLng = el.lon ?? el.center?.lon;
+      if (!elLat || !elLng) continue;
+
+      const tags = el.tags || {};
+      const addr = parseOsmAddress(tags);
+
+      suggestions.push({
+        placeId: `osm-${el.type}-${el.id}`,
+        name: tags.name,
+        address: addr.street,
+        city: addr.city,
+        state: addr.state,
+        zip: addr.zip,
+        lat: elLat,
+        lng: elLng,
+        phone: tags.phone || tags['contact:phone'] || null,
+        website: tags.website || tags['contact:website'] || null,
+        hoursOfOp: tags.opening_hours || null,
+        rating: null,
+        totalRatings: 0,
+        mapsUrl: `https://www.openstreetmap.org/${el.type}/${el.id}`,
+      });
+    }
+
+    // Sort by distance
     suggestions.sort((a, b) => {
       if (!a.lat || !b.lat) return 0;
-      const distA = Math.sqrt((a.lat - lat) ** 2 + (a.lng - lng) ** 2);
-      const distB = Math.sqrt((b.lat - lat) ** 2 + (b.lng - lng) ** 2);
+      const distA = Math.sqrt((a.lat - lat) ** 2 + ((a.lng ?? 0) - lng) ** 2);
+      const distB = Math.sqrt((b.lat - lat) ** 2 + ((b.lng ?? 0) - lng) ** 2);
       return distA - distB;
     });
 
-    return NextResponse.json({ suggestions: suggestions.slice(0, 20) });
+    return NextResponse.json({ suggestions: suggestions.slice(0, 30) });
   } catch (err) {
     console.error('Quarry suggestion error:', err);
-    return NextResponse.json({ error: 'Failed to search for quarries', suggestions: [] });
+    return NextResponse.json({
+      error: 'Failed to search for quarries. Try again in a moment.',
+      suggestions: [],
+    });
   }
+}
+
+/* ── Nominatim search (better for named businesses) ── */
+async function searchNominatim(lat: number, lng: number, radiusMiles: number): Promise<any[]> {
+  const queries = [
+    'quarry',
+    'rock mine',
+    'gravel sand aggregate',
+    'concrete asphalt plant',
+  ];
+
+  const results: any[] = [];
+  const seen = new Set<string>();
+
+  // Calculate bounding box from center + radius
+  const latDelta = radiusMiles / 69;
+  const lngDelta = radiusMiles / (69 * Math.cos((lat * Math.PI) / 180));
+  const viewbox = `${lng - lngDelta},${lat + latDelta},${lng + lngDelta},${lat - latDelta}`;
+
+  for (const query of queries) {
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('q', query);
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('addressdetails', '1');
+      url.searchParams.set('extratags', '1');
+      url.searchParams.set('limit', '20');
+      url.searchParams.set('viewbox', viewbox);
+      url.searchParams.set('bounded', '1');
+      url.searchParams.set('countrycodes', 'us');
+
+      const res = await fetch(url.toString(), {
+        headers: { 'User-Agent': 'TruckFlowUS/1.0 (dispatch@truckflowus.com)' },
+      });
+
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      for (const place of data) {
+        const name = place.name || place.display_name?.split(',')[0];
+        if (!name) continue;
+        const key = name.toLowerCase().trim();
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        const addr = place.address || {};
+        results.push({
+          _source: 'nominatim',
+          placeId: `nom-${place.osm_type}-${place.osm_id}`,
+          name,
+          address: addr.road ? `${addr.house_number || ''} ${addr.road}`.trim() : null,
+          city: addr.city || addr.town || addr.village || addr.county || null,
+          state: addr.state ? stateAbbrev(addr.state) : null,
+          zip: addr.postcode || null,
+          lat: parseFloat(place.lat),
+          lng: parseFloat(place.lon),
+          phone: place.extratags?.phone || place.extratags?.['contact:phone'] || null,
+          website: place.extratags?.website || place.extratags?.['contact:website'] || null,
+          hoursOfOp: place.extratags?.opening_hours || null,
+          rating: null,
+          totalRatings: 0,
+          mapsUrl: `https://www.openstreetmap.org/${place.osm_type}/${place.osm_id}`,
+        });
+      }
+    } catch {
+      // Skip failed queries
+    }
+  }
+
+  return results;
+}
+
+/* ── Helpers ─────────────────────────────────────────── */
+function parseOsmAddress(tags: Record<string, string>) {
+  return {
+    street: tags['addr:street']
+      ? `${tags['addr:housenumber'] || ''} ${tags['addr:street']}`.trim()
+      : null,
+    city: tags['addr:city'] || null,
+    state: tags['addr:state'] ? stateAbbrev(tags['addr:state']) : null,
+    zip: tags['addr:postcode'] || null,
+  };
+}
+
+const STATE_MAP: Record<string, string> = {
+  alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA',
+  colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA',
+  hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA',
+  kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD',
+  massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS',
+  missouri: 'MO', montana: 'MT', nebraska: 'NE', nevada: 'NV',
+  'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+  'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH', oklahoma: 'OK',
+  oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT',
+  virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI',
+  wyoming: 'WY', 'district of columbia': 'DC',
+};
+
+function stateAbbrev(state: string): string {
+  if (state.length === 2) return state.toUpperCase();
+  return STATE_MAP[state.toLowerCase()] || state;
 }

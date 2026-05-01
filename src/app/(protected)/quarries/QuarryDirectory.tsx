@@ -121,20 +121,22 @@ function getCompanyCoords(city: string | null, state: string | null): { lat: num
   return CITY_COORDS[key] || null;
 }
 
-/* ── Geocode via Google ──────────────────────────────── */
+/* ── Geocode via Nominatim (OpenStreetMap, free) ───── */
 async function geocodeAddress(address: string, city: string | null, state: string | null, zip: string | null): Promise<{ lat: number; lng: number } | null> {
-  const apiKey = (typeof window !== 'undefined' && (window as any).__NEXT_DATA__?.runtimeConfig?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
-    || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!apiKey) return null;
-
   const query = [address, city, state, zip].filter(Boolean).join(', ');
+  if (!query.trim()) return null;
   try {
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`
-    );
+    const url = new URL('https://nominatim.openstreetmap.org/search');
+    url.searchParams.set('q', query);
+    url.searchParams.set('format', 'json');
+    url.searchParams.set('limit', '1');
+    url.searchParams.set('countrycodes', 'us');
+    const res = await fetch(url.toString(), {
+      headers: { 'User-Agent': 'TruckFlowUS/1.0' },
+    });
     const data = await res.json();
-    if (data.results?.[0]?.geometry?.location) {
-      return data.results[0].geometry.location;
+    if (data?.[0]) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
     }
   } catch { /* ignore */ }
   return null;
