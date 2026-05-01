@@ -689,6 +689,8 @@ export default function QuarryDirectory({
   const [suggestionError, setSuggestionError] = useState('');
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const [nameSearch, setNameSearch] = useState('');
+  const [searchMode, setSearchMode] = useState<'nearby' | 'name'>('nearby');
 
   // Resolve company coordinates (from lookup table or geocode)
   const [companyCoords, setCompanyCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -778,6 +780,7 @@ export default function QuarryDirectory({
     setSuggestionError('');
     setSuggestions([]);
     setAddedIds(new Set());
+    setSearchMode('nearby');
 
     try {
       const res = await fetch(`/api/quarries/suggest?lat=${companyCoords.lat}&lng=${companyCoords.lng}&radius=50`);
@@ -785,7 +788,6 @@ export default function QuarryDirectory({
       if (data.error && !data.suggestions?.length) {
         setSuggestionError(data.error);
       } else {
-        // Filter out quarries already in the directory (match by name)
         const existingNames = new Set(initialQuarries.map((q) => q.name.toLowerCase()));
         const filtered = (data.suggestions || []).filter(
           (s: Suggestion) => !existingNames.has(s.name.toLowerCase())
@@ -797,6 +799,42 @@ export default function QuarryDirectory({
       }
     } catch {
       setSuggestionError('Failed to fetch suggestions. Check your internet connection.');
+    }
+    setLoadingSuggestions(false);
+  }
+
+  async function searchByName() {
+    if (!nameSearch.trim()) return;
+    setLoadingSuggestions(true);
+    setSuggestionError('');
+    setSuggestions([]);
+    setAddedIds(new Set());
+    setSearchMode('name');
+
+    try {
+      const params = new URLSearchParams({ q: nameSearch.trim() });
+      if (companyCoords) {
+        params.set('lat', String(companyCoords.lat));
+        params.set('lng', String(companyCoords.lng));
+      }
+      const res = await fetch(`/api/quarries/suggest?${params}`);
+      const data = await res.json();
+      if (data.error && !data.suggestions?.length) {
+        setSuggestionError(data.error);
+      } else {
+        const existingNames = new Set(initialQuarries.map((q) => q.name.toLowerCase()));
+        const filtered = (data.suggestions || []).filter(
+          (s: Suggestion) => !existingNames.has(s.name.toLowerCase())
+        );
+        setSuggestions(filtered);
+        if (filtered.length === 0 && (data.suggestions || []).length > 0) {
+          setSuggestionError('All suggestions are already in your directory.');
+        } else if (filtered.length === 0) {
+          setSuggestionError(`No results found for "${nameSearch.trim()}". Try a different name or keyword.`);
+        }
+      }
+    } catch {
+      setSuggestionError('Search failed. Check your internet connection.');
     }
     setLoadingSuggestions(false);
   }
@@ -931,27 +969,50 @@ export default function QuarryDirectory({
         <div className="panel p-4 mb-4 border-2 border-safety/30">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="font-bold text-sm">Nearby Quarries & Mines</h3>
+              <h3 className="font-bold text-sm">Find Quarries & Mines</h3>
               <p className="text-xs text-steel-500">
-                {companyCoords
-                  ? `Showing quarries near ${companyCity || 'your location'}, ${companyState || ''}`
-                  : 'Resolving your location...'}
+                {searchMode === 'name'
+                  ? `Showing results for "${nameSearch}"`
+                  : companyCoords
+                    ? `Showing quarries near ${companyCity || 'your location'}, ${companyState || ''}`
+                    : 'Resolving your location...'}
               </p>
             </div>
             <div className="flex gap-2">
               <button onClick={fetchSuggestions} disabled={loadingSuggestions}
                 className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1">
-                {loadingSuggestions ? 'Searching...' : 'Refresh'}
+                {loadingSuggestions ? 'Searching...' : '📍 Nearby'}
               </button>
               <button onClick={() => setShowSuggestions(false)}
                 className="text-steel-400 hover:text-steel-700 text-lg leading-none">&times;</button>
             </div>
           </div>
 
+          {/* Name search input */}
+          <div className="flex gap-2 mb-3">
+            <input
+              type="text"
+              value={nameSearch}
+              onChange={(e) => setNameSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchByName(); } }}
+              placeholder="Search by name (e.g. Vulcan Materials, CEMEX)..."
+              className="input text-sm flex-1"
+            />
+            <button
+              onClick={searchByName}
+              disabled={loadingSuggestions || !nameSearch.trim()}
+              className="text-sm px-4 py-1.5 rounded font-medium bg-steel-800 text-white hover:bg-steel-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Search
+            </button>
+          </div>
+
           {loadingSuggestions && (
             <div className="flex items-center gap-2 text-sm text-steel-500 py-8 justify-center">
               <span className="animate-spin text-lg">⏳</span>
-              Searching Google Maps for quarries, mines, and aggregate suppliers near you...
+              {searchMode === 'name'
+                ? `Searching for "${nameSearch}"...`
+                : 'Searching for quarries, mines, and aggregate suppliers near you...'}
             </div>
           )}
 
