@@ -111,6 +111,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'dashboard.activeDrivers': { en: 'Active Drivers', es: 'Conductores Activos' },
   'dashboard.openAR': { en: 'Open A/R', es: 'Cuentas por Cobrar' },
   'dashboard.recentTickets': { en: 'Recent Tickets', es: 'Boletas Recientes' },
+  'dashboard.thisWeeksJobs': { en: "This Week's Jobs", es: 'Trabajos de la Semana' },
   'dashboard.newTicket': { en: '+ New Ticket', es: '+ Nueva Boleta' },
   'dashboard.noTickets': { en: 'No tickets yet.', es: 'Aún no hay boletas.' },
   'dashboard.createFirst': { en: 'Create your first', es: 'Crea tu primera' },
