@@ -186,6 +186,7 @@ async function DriversListContent() {
                   </td>
                   <td className="px-3 md:px-5 py-3 text-right">
                     <a href={`/drivers/${d.id}/edit`} className="text-xs text-steel-600 hover:text-steel-900 px-2">Edit</a>
+                    <a href={`/drivers/${d.id}/tracking`} className="text-xs text-steel-600 hover:text-steel-900 px-2">📍 Tracking</a>
                     <form action={rotateTokenAction} className="inline">
                       <input type="hidden" name="id" value={d.id} />
                       <button className="text-xs text-steel-600 hover:text-steel-900 px-2">Rotate Token</button>
