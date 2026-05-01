@@ -173,9 +173,10 @@ export default function DriverTrackingMap({ labels }: { labels: {
 
     if (bounds.length > 1) {
       map.fitBounds(bounds, { padding: [50, 50] });
-    } else {
+    } else if (bounds.length === 1) {
       map.setView(bounds[0], 14);
     }
+    // bounds.length === 0: all drivers have no GPS yet — keep default map center
   }, [drivers, leafletReady, labels]);
 
   // Poll every 15 seconds
