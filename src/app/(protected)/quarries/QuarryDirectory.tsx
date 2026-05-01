@@ -191,8 +191,9 @@ function DirectoryMap({
     if (!ready || !mapRef.current) return;
     if (leafletMap.current) return;
     const L = (window as any).L;
-    const center = companyCoords || { lat: 26.14, lng: -81.79 };
-    const map = L.map(mapRef.current, { center: [center.lat, center.lng], zoom: 9, zoomControl: true });
+    const center = companyCoords || { lat: 39.5, lng: -98.35 }; // Center of US if no address
+    const zoom = companyCoords ? 9 : 4;
+    const map = L.map(mapRef.current, { center: [center.lat, center.lng], zoom, zoomControl: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
@@ -706,19 +707,22 @@ export default function QuarryDirectory({
   const [coordsResolved, setCoordsResolved] = useState(false);
 
   useEffect(() => {
-    const lookup = getCompanyCoords(companyCity, companyState);
-    if (lookup) {
-      setCompanyCoords(lookup);
-      setCoordsResolved(true);
-      return;
-    }
-    // Try geocoding
-    if (companyCity || companyAddress) {
+    // Always prefer Nominatim geocoding with full address for accuracy
+    if (companyAddress || companyCity) {
       geocodeAddress(companyAddress || '', companyCity, companyState, companyZip).then((coords) => {
-        if (coords) setCompanyCoords(coords);
+        if (coords) {
+          setCompanyCoords(coords);
+        } else {
+          // Fall back to city lookup table if geocoding fails
+          const lookup = getCompanyCoords(companyCity, companyState);
+          if (lookup) setCompanyCoords(lookup);
+        }
         setCoordsResolved(true);
       });
     } else {
+      // No address at all — try city lookup as last resort
+      const lookup = getCompanyCoords(companyCity, companyState);
+      if (lookup) setCompanyCoords(lookup);
       setCoordsResolved(true);
     }
   }, [companyCity, companyState, companyAddress, companyZip]);
