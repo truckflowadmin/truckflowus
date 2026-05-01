@@ -214,6 +214,25 @@ export default function TicketDashboard({
     return c;
   }, [tickets]);
 
+  // Detect duplicate tickets: same ticketRef + same date + same driver
+  const duplicateIds = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    for (const t of tickets) {
+      if (!t.ticketRef?.trim()) continue; // skip tickets without a ticket #
+      const key = `${t.ticketRef.trim().toLowerCase()}|${t.dateRaw ?? ''}|${(t.driverName ?? '').toLowerCase()}`;
+      const ids = groups.get(key) || [];
+      ids.push(t.id);
+      groups.set(key, ids);
+    }
+    const dupes = new Set<string>();
+    for (const ids of groups.values()) {
+      if (ids.length > 1) ids.forEach(id => dupes.add(id));
+    }
+    return dupes;
+  }, [tickets]);
+
+  const duplicateCount = duplicateIds.size;
+
   function handleShift(delta: number) { setAnchor(prev => shiftAnchor(periodMode, prev, delta)); }
 
   function toggleSelect(id: string) {
@@ -840,6 +859,16 @@ export default function TicketDashboard({
         </div>
       )}
 
+      {/* Duplicate warning banner */}
+      {duplicateCount > 0 && (
+        <div className="mx-5 mt-3 flex items-center gap-2 rounded border border-red-300 bg-red-50 px-3 py-2">
+          <span className="text-red-500 text-sm font-bold">⚠</span>
+          <span className="text-sm text-red-700 flex-1">
+            {duplicateCount} ticket{duplicateCount !== 1 ? 's' : ''} flagged as potential duplicate{duplicateCount !== 1 ? 's' : ''} (same ticket #, date, and driver). Highlighted in red below.
+          </span>
+        </div>
+      )}
+
       {/* Table */}
       {filtered.length === 0 ? (
         <div className="p-10 text-center text-steel-500">
@@ -876,10 +905,11 @@ export default function TicketDashboard({
             {filtered.map((t) => {
               const isCancelled = t.status === 'CANCELLED';
               const isSelected = activeSelected.has(t.id);
+              const isDuplicate = duplicateIds.has(t.id);
               return (
                 <tr
                   key={t.id}
-                  className={`border-b border-steel-100 hover:bg-steel-50 ${isCancelled ? 'opacity-60' : ''} ${isSelected ? 'bg-blue-50/50' : ''}`}
+                  className={`border-b ${isDuplicate ? 'bg-red-50 border-red-200 hover:bg-red-100' : 'border-steel-100 hover:bg-steel-50'} ${isCancelled ? 'opacity-60' : ''} ${isSelected ? 'bg-blue-50/50' : ''}`}
                 >
                   <td className="px-3 py-3">
                     <input
@@ -890,9 +920,16 @@ export default function TicketDashboard({
                     />
                   </td>
                   <td className="px-3 py-3 font-mono">
-                    <Link href={`/tickets/${t.id}`} className="text-steel-900 hover:text-safety-dark">
-                      #{String(t.ticketNumber).padStart(4, '0')}
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      <Link href={`/tickets/${t.id}`} className="text-steel-900 hover:text-safety-dark">
+                        #{String(t.ticketNumber).padStart(4, '0')}
+                      </Link>
+                      {isDuplicate && (
+                        <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-red-600 text-white leading-none">
+                          DUP
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-3">
                     {(t.invoiced || t.reviewed) ? (
