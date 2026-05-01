@@ -6,7 +6,6 @@ import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/auth';
 import { getServerLang } from '@/lib/i18n';
 import QuarryDirectory from './QuarryDirectory';
-import { seedDefaultQuarries } from './actions';
 
 export default async function QuarriesPage() {
   const session = await requireSession();
@@ -16,14 +15,6 @@ export default async function QuarriesPage() {
     where: { id: session.companyId },
     select: { address: true, city: true, state: true, zip: true },
   });
-
-  // Auto-seed default quarries on first visit
-  const quarryCount = await prisma.quarry.count({
-    where: { companyId: session.companyId },
-  });
-  if (quarryCount === 0) {
-    await seedDefaultQuarries();
-  }
 
   // Fetch quarries from DB
   const quarries = await prisma.quarry.findMany({
@@ -42,8 +33,8 @@ export default async function QuarriesPage() {
         </h1>
         <p className="text-sm text-steel-500 mt-1">
           {lang === 'es'
-            ? 'Directorio de canteras y minas cercanas. Contacta para precios actualizados.'
-            : 'Directory of nearby quarries and mines. Contact for current pricing.'}
+            ? 'Encuentra canteras y minas cercanas. Busca sugerencias o agrega manualmente.'
+            : 'Find nearby quarries and mines. Search for suggestions or add manually.'}
         </p>
       </header>
 
@@ -51,6 +42,8 @@ export default async function QuarriesPage() {
         quarries={quarries as any}
         companyCity={company?.city ?? null}
         companyState={company?.state ?? null}
+        companyAddress={company?.address ?? null}
+        companyZip={company?.zip ?? null}
       />
     </div>
   );

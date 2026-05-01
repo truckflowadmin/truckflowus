@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { updateQuarry } from './actions';
+import { updateQuarry, createQuarry, deleteQuarry } from './actions';
 
 /* ── Types ──────────────────────────────────────────── */
 interface MaterialEntry {
@@ -30,7 +30,24 @@ interface QuarryRow {
   notes: string | null;
 }
 
-/* ── Common materials for quick-add chips ────────────── */
+interface Suggestion {
+  placeId: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  lat: number | null;
+  lng: number | null;
+  phone: string | null;
+  website: string | null;
+  hoursOfOp: string | null;
+  rating: number | null;
+  totalRatings: number;
+  mapsUrl: string;
+}
+
+/* ── Common materials ────────────────────────────────── */
 const COMMON_MATERIALS = [
   'Base Rock', '57 Stone', 'Rip Rap', 'Crush & Run', 'Screenings',
   'Fill Dirt', 'Top Soil', 'Sand', 'Gravel', 'Limestone',
@@ -66,6 +83,25 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   'miami lakes,fl': { lat: 25.9087, lng: -80.3187 },
   'tampa,fl': { lat: 27.9506, lng: -82.4572 },
   'orlando,fl': { lat: 28.5383, lng: -81.3792 },
+  'jacksonville,fl': { lat: 30.3322, lng: -81.6557 },
+  'tallahassee,fl': { lat: 30.4383, lng: -84.2807 },
+  'charleston,sc': { lat: 32.7765, lng: -79.9311 },
+  'columbia,sc': { lat: 34.0007, lng: -81.0348 },
+  'greenville,sc': { lat: 34.8526, lng: -82.3940 },
+  'charlotte,nc': { lat: 35.2271, lng: -80.8431 },
+  'raleigh,nc': { lat: 35.7796, lng: -78.6382 },
+  'atlanta,ga': { lat: 33.7490, lng: -84.3880 },
+  'savannah,ga': { lat: 32.0809, lng: -81.0912 },
+  'houston,tx': { lat: 29.7604, lng: -95.3698 },
+  'dallas,tx': { lat: 32.7767, lng: -96.7970 },
+  'san antonio,tx': { lat: 29.4241, lng: -98.4936 },
+  'austin,tx': { lat: 30.2672, lng: -97.7431 },
+  'nashville,tn': { lat: 36.1627, lng: -86.7816 },
+  'memphis,tn': { lat: 35.1495, lng: -90.0490 },
+  'birmingham,al': { lat: 33.5207, lng: -86.8025 },
+  'mobile,al': { lat: 30.6954, lng: -88.0399 },
+  'new orleans,la': { lat: 29.9511, lng: -90.0715 },
+  'baton rouge,la': { lat: 30.4515, lng: -91.1871 },
 };
 
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -81,8 +117,27 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
 
 function getCompanyCoords(city: string | null, state: string | null): { lat: number; lng: number } | null {
   if (!city) return null;
-  const key = `${city.toLowerCase().trim()},${(state || 'fl').toLowerCase().trim()}`;
+  const key = `${city.toLowerCase().trim()},${(state || '').toLowerCase().trim()}`;
   return CITY_COORDS[key] || null;
+}
+
+/* ── Geocode via Google ──────────────────────────────── */
+async function geocodeAddress(address: string, city: string | null, state: string | null, zip: string | null): Promise<{ lat: number; lng: number } | null> {
+  const apiKey = (typeof window !== 'undefined' && (window as any).__NEXT_DATA__?.runtimeConfig?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
+    || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return null;
+
+  const query = [address, city, state, zip].filter(Boolean).join(', ');
+  try {
+    const res = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`
+    );
+    const data = await res.json();
+    if (data.results?.[0]?.geometry?.location) {
+      return data.results[0].geometry.location;
+    }
+  } catch { /* ignore */ }
+  return null;
 }
 
 /* ── Leaflet loader ──────────────────────────────────── */
@@ -425,17 +480,80 @@ function EditQuarryForm({
   );
 }
 
+/* ── Suggestion card ─────────────────────────────────── */
+function SuggestionCard({
+  suggestion,
+  alreadyAdded,
+  onAdd,
+  distance,
+}: {
+  suggestion: Suggestion;
+  alreadyAdded: boolean;
+  onAdd: () => void;
+  distance: number | null;
+}) {
+  return (
+    <div className={`panel p-4 ${alreadyAdded ? 'opacity-60' : ''}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-sm truncate">{suggestion.name}</h4>
+          <p className="text-xs text-steel-500 mt-0.5">
+            {[suggestion.address, suggestion.city, suggestion.state].filter(Boolean).join(', ')}
+            {distance != null && (
+              <span className="ml-1 text-steel-400">~{Math.round(distance)} mi</span>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1.5 text-xs">
+            {suggestion.phone && (
+              <a href={`tel:${suggestion.phone}`} className="text-blue-600 hover:text-blue-800">
+                📞 {suggestion.phone}
+              </a>
+            )}
+            {suggestion.website && (
+              <a href={suggestion.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 truncate max-w-[180px]">
+                🌐 Website
+              </a>
+            )}
+            {suggestion.rating && (
+              <span className="text-amber-600">
+                {'★'.repeat(Math.round(suggestion.rating))} {suggestion.rating.toFixed(1)} ({suggestion.totalRatings})
+              </span>
+            )}
+          </div>
+          {suggestion.hoursOfOp && (
+            <p className="text-[11px] text-steel-400 mt-1 truncate">🕐 {suggestion.hoursOfOp}</p>
+          )}
+        </div>
+        <div className="flex-shrink-0">
+          {alreadyAdded ? (
+            <span className="text-xs text-green-600 font-medium px-2 py-1 rounded bg-green-50">Added</span>
+          ) : (
+            <button
+              onClick={onAdd}
+              className="text-xs font-medium px-3 py-1.5 rounded bg-safety text-diesel hover:bg-safety/90 transition-colors"
+            >
+              + Add
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Quarry card ─────────────────────────────────────── */
 function QuarryCard({
   quarry,
   distance,
   highlight,
   onEdit,
+  onDelete,
 }: {
   quarry: QuarryRow;
   distance: number | null;
   highlight: boolean;
   onEdit: () => void;
+  onDelete: () => void;
 }) {
   const fullAddress = [quarry.address, quarry.city, quarry.state, quarry.zip].filter(Boolean).join(', ');
   const mapsUrl =
@@ -464,15 +582,18 @@ function QuarryCard({
             <p className="text-xs text-steel-500">Contact: {quarry.contactPerson}</p>
           )}
         </div>
-        <button
-          onClick={onEdit}
-          className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
-        >
-          Edit
-        </button>
+        <div className="flex gap-1">
+          <button onClick={onEdit}
+            className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50">
+            Edit
+          </button>
+          <button onClick={onDelete}
+            className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50">
+            Remove
+          </button>
+        </div>
       </div>
 
-      {/* Contact info */}
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm mb-3">
         {quarry.phone && (
           <a href={`tel:${quarry.phone}`} className="text-blue-600 hover:text-blue-800">
@@ -495,7 +616,6 @@ function QuarryCard({
         <p className="text-xs text-steel-500 mb-3">🕐 {quarry.hoursOfOp}</p>
       )}
 
-      {/* Pricing / Website links */}
       <div className="flex flex-wrap gap-2 mb-3">
         {quarry.pricingUrl && (
           <a href={quarry.pricingUrl} target="_blank" rel="noopener noreferrer"
@@ -514,16 +634,13 @@ function QuarryCard({
         )}
       </div>
 
-      {/* Materials */}
       {materials.length > 0 && (
         <div>
           <div className="text-xs font-semibold text-steel-500 uppercase tracking-wide mb-1.5">Materials</div>
           <div className="flex flex-wrap gap-1.5">
             {materials.map((m, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200"
-              >
+              <span key={i}
+                className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                 {m.name}
                 {m.pricePerUnit != null && (
                   <span className="font-semibold">
@@ -548,10 +665,14 @@ export default function QuarryDirectory({
   quarries: initialQuarries,
   companyCity,
   companyState,
+  companyAddress,
+  companyZip,
 }: {
   quarries: QuarryRow[];
   companyCity: string | null;
   companyState: string | null;
+  companyAddress: string | null;
+  companyZip: string | null;
 }) {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'list' | 'map'>('list');
@@ -559,12 +680,37 @@ export default function QuarryDirectory({
   const [materialFilter, setMaterialFilter] = useState<string | null>(null);
   const [editQuarry, setEditQuarry] = useState<QuarryRow | null>(null);
 
-  const companyCoords = useMemo(
-    () => getCompanyCoords(companyCity, companyState),
-    [companyCity, companyState]
-  );
+  // Suggestions state
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [suggestionError, setSuggestionError] = useState('');
+  const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
-  // All unique materials across the directory
+  // Resolve company coordinates (from lookup table or geocode)
+  const [companyCoords, setCompanyCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [coordsResolved, setCoordsResolved] = useState(false);
+
+  useEffect(() => {
+    const lookup = getCompanyCoords(companyCity, companyState);
+    if (lookup) {
+      setCompanyCoords(lookup);
+      setCoordsResolved(true);
+      return;
+    }
+    // Try geocoding
+    if (companyCity || companyAddress) {
+      geocodeAddress(companyAddress || '', companyCity, companyState, companyZip).then((coords) => {
+        if (coords) setCompanyCoords(coords);
+        setCoordsResolved(true);
+      });
+    } else {
+      setCoordsResolved(true);
+    }
+  }, [companyCity, companyState, companyAddress, companyZip]);
+
+  // All unique materials
   const allMaterials = useMemo(() => {
     const set = new Set<string>();
     initialQuarries.forEach((q) => {
@@ -578,7 +724,6 @@ export default function QuarryDirectory({
   const quarries = useMemo(() => {
     let list = [...initialQuarries];
 
-    // Text search
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((quarry) => {
@@ -592,7 +737,6 @@ export default function QuarryDirectory({
       });
     }
 
-    // Material filter chip
     if (materialFilter) {
       list = list.filter((quarry) => {
         const mats: any[] = Array.isArray(quarry.materials) ? quarry.materials : [];
@@ -600,7 +744,6 @@ export default function QuarryDirectory({
       });
     }
 
-    // Sort by distance if we have company coords
     if (companyCoords) {
       list.sort((a, b) => {
         const distA = a.lat && a.lng ? haversine(companyCoords.lat, companyCoords.lng, a.lat, a.lng) : 99999;
@@ -612,7 +755,6 @@ export default function QuarryDirectory({
     return list;
   }, [initialQuarries, search, materialFilter, companyCoords]);
 
-  // Distance for each quarry
   const distanceMap = useMemo(() => {
     if (!companyCoords) return new Map<string, number>();
     const map = new Map<string, number>();
@@ -624,12 +766,79 @@ export default function QuarryDirectory({
     return map;
   }, [initialQuarries, companyCoords]);
 
+  // ── Suggestion functions ──
+  async function fetchSuggestions() {
+    if (!companyCoords) {
+      setSuggestionError('Could not determine your location. Please update your company address in Settings.');
+      return;
+    }
+    setLoadingSuggestions(true);
+    setSuggestionError('');
+    setSuggestions([]);
+    setAddedIds(new Set());
+
+    try {
+      const res = await fetch(`/api/quarries/suggest?lat=${companyCoords.lat}&lng=${companyCoords.lng}&radius=50`);
+      const data = await res.json();
+      if (data.error && !data.suggestions?.length) {
+        setSuggestionError(data.error);
+      } else {
+        // Filter out quarries already in the directory (match by name)
+        const existingNames = new Set(initialQuarries.map((q) => q.name.toLowerCase()));
+        const filtered = (data.suggestions || []).filter(
+          (s: Suggestion) => !existingNames.has(s.name.toLowerCase())
+        );
+        setSuggestions(filtered);
+        if (filtered.length === 0 && (data.suggestions || []).length > 0) {
+          setSuggestionError('All suggestions are already in your directory.');
+        }
+      }
+    } catch {
+      setSuggestionError('Failed to fetch suggestions. Check your internet connection.');
+    }
+    setLoadingSuggestions(false);
+  }
+
+  async function addSuggestion(suggestion: Suggestion) {
+    setAddingIds((prev) => new Set(prev).add(suggestion.placeId));
+    const res = await createQuarry({
+      name: suggestion.name,
+      phone: suggestion.phone,
+      website: suggestion.website,
+      address: suggestion.address,
+      city: suggestion.city,
+      state: suggestion.state,
+      zip: suggestion.zip,
+      lat: suggestion.lat,
+      lng: suggestion.lng,
+      hoursOfOp: suggestion.hoursOfOp,
+      materials: [],
+      notes: null,
+    });
+
+    setAddingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(suggestion.placeId);
+      return next;
+    });
+
+    if (res.success) {
+      setAddedIds((prev) => new Set(prev).add(suggestion.placeId));
+    }
+  }
+
+  async function handleDelete(quarry: QuarryRow) {
+    if (!confirm(`Remove "${quarry.name}" from your directory?`)) return;
+    await deleteQuarry(quarry.id);
+    window.location.reload();
+  }
+
   return (
     <>
       {/* Stats row */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="panel p-4">
-          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">Quarries Listed</div>
+          <div className="text-[10px] uppercase tracking-widest text-steel-500 font-semibold">In Directory</div>
           <div className="text-2xl font-bold mt-1 tabular-nums">{initialQuarries.length}</div>
         </div>
         <div className="panel p-4">
@@ -659,28 +868,37 @@ export default function QuarryDirectory({
                 setSearch(e.target.value);
                 setMaterialFilter(null);
               }}
-              placeholder="Search by name, city, or material (e.g. 57 stone, rip rap)..."
+              placeholder="Search by name, city, or material..."
               className="input text-sm w-full"
             />
           </div>
-          <div className="flex bg-steel-50 rounded-md p-0.5 border border-steel-200">
+          <div className="flex gap-2">
+            <div className="flex bg-steel-50 rounded-md p-0.5 border border-steel-200">
+              <button type="button" onClick={() => setView('list')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  view === 'list' ? 'bg-white shadow-sm text-steel-900' : 'text-steel-500 hover:text-steel-700'
+                }`}>
+                List
+              </button>
+              <button type="button" onClick={() => setView('map')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  view === 'map' ? 'bg-white shadow-sm text-steel-900' : 'text-steel-500 hover:text-steel-700'
+                }`}>
+                Map
+              </button>
+            </div>
             <button
-              type="button"
-              onClick={() => setView('list')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                view === 'list' ? 'bg-white shadow-sm text-steel-900' : 'text-steel-500 hover:text-steel-700'
+              onClick={() => {
+                setShowSuggestions(!showSuggestions);
+                if (!showSuggestions && suggestions.length === 0) fetchSuggestions();
+              }}
+              className={`text-sm px-3 py-1.5 rounded font-medium transition-colors ${
+                showSuggestions
+                  ? 'bg-safety text-diesel'
+                  : 'bg-steel-100 text-steel-700 hover:bg-steel-200'
               }`}
             >
-              List
-            </button>
-            <button
-              type="button"
-              onClick={() => setView('map')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                view === 'map' ? 'bg-white shadow-sm text-steel-900' : 'text-steel-500 hover:text-steel-700'
-              }`}
-            >
-              Map
+              📍 Find Nearby
             </button>
           </div>
         </div>
@@ -689,9 +907,7 @@ export default function QuarryDirectory({
         {allMaterials.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {allMaterials.map((m) => (
-              <button
-                key={m}
-                type="button"
+              <button key={m} type="button"
                 onClick={() => {
                   setMaterialFilter(materialFilter === m ? null : m);
                   setSearch('');
@@ -700,14 +916,78 @@ export default function QuarryDirectory({
                   materialFilter === m
                     ? 'bg-amber-500 text-white'
                     : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                }`}
-              >
+                }`}>
                 {m}
               </button>
             ))}
           </div>
         )}
       </div>
+
+      {/* ── Suggestions panel ── */}
+      {showSuggestions && (
+        <div className="panel p-4 mb-4 border-2 border-safety/30">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-bold text-sm">Nearby Quarries & Mines</h3>
+              <p className="text-xs text-steel-500">
+                {companyCoords
+                  ? `Showing quarries near ${companyCity || 'your location'}, ${companyState || ''}`
+                  : 'Resolving your location...'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={fetchSuggestions} disabled={loadingSuggestions}
+                className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1">
+                {loadingSuggestions ? 'Searching...' : 'Refresh'}
+              </button>
+              <button onClick={() => setShowSuggestions(false)}
+                className="text-steel-400 hover:text-steel-700 text-lg leading-none">&times;</button>
+            </div>
+          </div>
+
+          {loadingSuggestions && (
+            <div className="flex items-center gap-2 text-sm text-steel-500 py-8 justify-center">
+              <span className="animate-spin text-lg">⏳</span>
+              Searching Google Maps for quarries, mines, and aggregate suppliers near you...
+            </div>
+          )}
+
+          {suggestionError && !loadingSuggestions && (
+            <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              {suggestionError}
+            </div>
+          )}
+
+          {!loadingSuggestions && suggestions.length > 0 && (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {suggestions.map((s) => (
+                <SuggestionCard
+                  key={s.placeId}
+                  suggestion={s}
+                  alreadyAdded={addedIds.has(s.placeId)}
+                  distance={s.lat && companyCoords ? haversine(companyCoords.lat, companyCoords.lng, s.lat, s.lng!) : null}
+                  onAdd={() => addSuggestion(s)}
+                />
+              ))}
+              {addedIds.size > 0 && (
+                <div className="text-center pt-2">
+                  <button onClick={() => window.location.reload()}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    Reload to see added quarries in your directory
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!loadingSuggestions && suggestions.length === 0 && !suggestionError && (
+            <div className="text-center text-sm text-steel-500 py-4">
+              No new suggestions found. All nearby quarries may already be in your directory.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Map view */}
       {view === 'map' && (
@@ -724,16 +1004,34 @@ export default function QuarryDirectory({
       )}
 
       {/* Proximity note */}
-      {companyCoords && (
+      {companyCoords && quarries.length > 0 && (
         <p className="text-xs text-steel-400 mb-3 px-1">
-          Sorted by distance from {companyCity}, {companyState}. Distances are approximate.
+          Sorted by distance from {companyCity || 'your location'}{companyState ? `, ${companyState}` : ''}. Distances are approximate.
         </p>
       )}
 
       {/* List view */}
       {quarries.length === 0 ? (
         <div className="panel p-10 text-center text-steel-500">
-          <p>No quarries match your search. Try a different material or location.</p>
+          {initialQuarries.length === 0 ? (
+            <div>
+              <div className="text-3xl mb-2">⛏</div>
+              <p className="font-medium">Your quarry directory is empty</p>
+              <p className="text-sm mt-1">
+                Click <strong>Find Nearby</strong> to search for quarries and mines near your company address, or add them manually.
+              </p>
+              {!showSuggestions && (
+                <button
+                  onClick={() => { setShowSuggestions(true); fetchSuggestions(); }}
+                  className="btn-accent mt-4 text-sm"
+                >
+                  📍 Find Nearby Quarries
+                </button>
+              )}
+            </div>
+          ) : (
+            <p>No quarries match your search. Try a different material or location.</p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -744,6 +1042,7 @@ export default function QuarryDirectory({
               distance={distanceMap.get(q.id) ?? null}
               highlight={highlightId === q.id}
               onEdit={() => setEditQuarry(q)}
+              onDelete={() => handleDelete(q)}
             />
           ))}
         </div>
