@@ -891,3 +891,40 @@ export async function driverEditTicket(formData: FormData) {
 
   return { success: true };
 }
+
+// ---------------------------------------------------------------------------
+// Browser geolocation ping — called from DriverTabs when a job is active
+// ---------------------------------------------------------------------------
+export async function sendDriverLocation(formData: FormData) {
+  const token = String(formData.get('token') || '');
+  const jobId = String(formData.get('jobId') || '');
+  const latitude = Number(formData.get('latitude'));
+  const longitude = Number(formData.get('longitude'));
+  const speed = formData.get('speed') ? Number(formData.get('speed')) : null;
+  const heading = formData.get('heading') ? Number(formData.get('heading')) : null;
+  const accuracy = formData.get('accuracy') ? Number(formData.get('accuracy')) : null;
+
+  if (!token || !jobId || isNaN(latitude) || isNaN(longitude)) {
+    throw new Error('Missing location data');
+  }
+
+  const driver = await prisma.driver.findUnique({ where: { accessToken: token } });
+  if (!driver || !driver.active) throw new Error('Invalid driver');
+
+  // Find this driver's IN_PROGRESS assignment for the job
+  const assignments: any[] = await prisma.$queryRaw`
+    SELECT id FROM "JobAssignment"
+    WHERE "jobId" = ${jobId} AND "driverId" = ${driver.id} AND status = 'IN_PROGRESS'
+    LIMIT 1
+  `;
+  const assignmentId = assignments[0]?.id || null;
+
+  const now = new Date();
+  const id = randomUUID();
+  await prisma.$executeRaw`
+    INSERT INTO "DriverLocation" (id, "companyId", "driverId", "jobId", "assignmentId", latitude, longitude, speed, heading, accuracy, "recordedAt")
+    VALUES (${id}, ${driver.companyId}, ${driver.id}, ${jobId}, ${assignmentId}, ${latitude}, ${longitude}, ${speed}, ${heading}, ${accuracy}, ${now})
+  `;
+
+  return { ok: true };
+}

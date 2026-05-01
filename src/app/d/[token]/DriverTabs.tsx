@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import RotatableImage from '@/components/RotatableImage';
-import { driverUpdateStatus, uploadTicketPhoto, claimJob, driverUpdateJobStatus, requestTimeOff, cancelTimeOff, driverSubmitReviewedTickets, driverEditTicket } from './actions';
+import { driverUpdateStatus, uploadTicketPhoto, claimJob, driverUpdateJobStatus, requestTimeOff, cancelTimeOff, driverSubmitReviewedTickets, driverEditTicket, sendDriverLocation } from './actions';
 import { useLanguage } from '@/components/LanguageProvider';
 import LanguageToggle from '@/components/LanguageToggle';
 import IdleLogout from '@/components/IdleLogout';
@@ -559,8 +559,60 @@ function UpcomingJobCard({
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [issueSent, setIssueSent] = useState(false);
 
+  // Browser geolocation tracking — send pings when job is IN_PROGRESS
+  const geoWatchRef = useRef<number | null>(null);
+  const geoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (jobStatus !== 'IN_PROGRESS' || typeof navigator === 'undefined' || !navigator.geolocation) {
+      // Stop tracking when not in progress
+      if (geoWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(geoWatchRef.current);
+        geoWatchRef.current = null;
+      }
+      if (geoIntervalRef.current) {
+        clearInterval(geoIntervalRef.current);
+        geoIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Send a location ping
+    const sendPing = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const fd = new FormData();
+          fd.set('token', token);
+          fd.set('jobId', job.id);
+          fd.set('latitude', String(pos.coords.latitude));
+          fd.set('longitude', String(pos.coords.longitude));
+          if (pos.coords.speed != null) fd.set('speed', String(pos.coords.speed));
+          if (pos.coords.heading != null) fd.set('heading', String(pos.coords.heading));
+          if (pos.coords.accuracy != null) fd.set('accuracy', String(pos.coords.accuracy));
+          sendDriverLocation(fd).catch(() => {}); // fire-and-forget
+        },
+        () => {}, // silently ignore errors
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    };
+
+    // Send initial ping immediately, then every 30 seconds
+    sendPing();
+    geoIntervalRef.current = setInterval(sendPing, 30_000);
+
+    return () => {
+      if (geoWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(geoWatchRef.current);
+        geoWatchRef.current = null;
+      }
+      if (geoIntervalRef.current) {
+        clearInterval(geoIntervalRef.current);
+        geoIntervalRef.current = null;
+      }
+    };
+  }, [jobStatus, token, job.id]);
+
   const mapsUrl = (address: string) =>
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    `https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`;
 
   const unlimitedLoads = job.totalLoads === 0;
   const STATUS_PROGRESS: Record<string, number> = { CREATED: 0, ASSIGNED: 25, IN_PROGRESS: 50, COMPLETED: 100, CANCELLED: 0 };
@@ -2183,7 +2235,7 @@ function AvailableJobCard({
   }
 
   const mapsUrl = (address: string) =>
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    `https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`;
 
   if (claimed) {
     return (
@@ -2328,7 +2380,7 @@ function TodaysJobCard({
   const job = initialJob;
 
   const mapsUrl = (address: string) =>
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    `https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`;
 
   const unlimitedLoads = job.totalLoads === 0;
   const STATUS_PROGRESS: Record<string, number> = { CREATED: 0, ASSIGNED: 25, IN_PROGRESS: 50, COMPLETED: 100, CANCELLED: 0 };
@@ -2689,7 +2741,7 @@ function JobCard({
             </div>
             {canUseMaps ? (
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ticket.hauledFrom)}`}
+                href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(ticket.hauledFrom)}`}
                 target="_blank"
                 className="text-steel-900 hover:text-safety-dark"
               >
@@ -2705,7 +2757,7 @@ function JobCard({
             </div>
             {canUseMaps ? (
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ticket.hauledTo)}`}
+                href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(ticket.hauledTo)}`}
                 target="_blank"
                 className="text-steel-900 hover:text-safety-dark"
               >

@@ -75,8 +75,6 @@ export async function GET(req: NextRequest) {
         },
       });
 
-      if (!latestPing) return null;
-
       return {
         driverId: assignment.driverId,
         driverName: assignment.driver.name,
@@ -85,16 +83,17 @@ export async function GET(req: NextRequest) {
         jobNumber: assignment.job.jobNumber,
         jobName: assignment.job.name,
         destination: assignment.job.hauledTo,
-        latitude: latestPing.latitude,
-        longitude: latestPing.longitude,
-        speed: latestPing.speed,
-        heading: latestPing.heading,
-        lastUpdate: latestPing.recordedAt,
+        latitude: latestPing?.latitude ?? 0,
+        longitude: latestPing?.longitude ?? 0,
+        speed: latestPing?.speed ?? null,
+        heading: latestPing?.heading ?? null,
+        lastUpdate: latestPing?.recordedAt ?? new Date(),
+        hasLocation: !!latestPing,
       };
     }),
   );
 
   return NextResponse.json({
-    drivers: driverLocations.filter(Boolean),
+    drivers: driverLocations,
   });
 }

@@ -15,6 +15,7 @@ interface DriverPin {
   speed: number | null;
   heading: number | null;
   lastUpdate: string;
+  hasLocation?: boolean;
 }
 
 /**
@@ -130,6 +131,8 @@ export default function DriverTrackingMap({ labels }: { labels: {
     const bounds: [number, number][] = [];
 
     drivers.forEach((driver) => {
+      // Skip drivers without a known location (lat/lng 0,0 = no GPS ping yet)
+      if (driver.latitude === 0 && driver.longitude === 0) return;
       const pos: [number, number] = [driver.latitude, driver.longitude];
       bounds.push(pos);
 
@@ -301,7 +304,9 @@ export default function DriverTrackingMap({ labels }: { labels: {
                     <span className="ml-2 text-xs text-steel-400">({d.truckNumber})</span>
                   )}
                 </div>
-                <span className="text-xs text-steel-400">{formatTime(d.lastUpdate)}</span>
+                <span className="text-xs text-steel-400">
+                  {d.hasLocation === false ? 'No GPS' : formatTime(d.lastUpdate)}
+                </span>
               </div>
               <div className="text-sm text-steel-500 mt-0.5">
                 #{d.jobNumber} — {d.jobName} → {d.destination}
