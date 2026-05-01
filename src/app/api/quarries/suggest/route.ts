@@ -64,6 +64,9 @@ export async function GET(req: NextRequest) {
 
     const suggestions = [...seen.values()];
 
+    // Enrich OSM results missing contact info via Nominatim lookup
+    await enrichMissingContactInfo(suggestions);
+
     // Sort by distance
     suggestions.sort((a, b) => {
       const distA = a.lat ? Math.sqrt((a.lat - lat) ** 2 + ((a.lng ?? 0) - lng) ** 2) : 999;
@@ -166,6 +169,9 @@ async function searchByName(query: string, lat: number | null, lng: number | nul
 
   let results = [...seen.values()];
 
+  // Enrich results missing contact info
+  await enrichMissingContactInfo(results);
+
   // Sort by distance from company if coords provided, otherwise alphabetical
   if (lat != null && lng != null) {
     results.sort((a, b) => {
@@ -178,6 +184,65 @@ async function searchByName(query: string, lat: number | null, lng: number | nul
   }
 
   return results.slice(0, 30);
+}
+
+/* ── Enrich OSM results missing phone/website/hours ── */
+async function enrichMissingContactInfo(results: any[]): Promise<void> {
+  // Find OSM results (from Nominatim or Overpass) that are missing contact info
+  const needsEnrichment = results.filter(
+    (r) => (!r.phone || !r.website || !r.hoursOfOp) &&
+           (r.placeId?.startsWith('nom-') || r.placeId?.startsWith('osm-'))
+  );
+  if (needsEnrichment.length === 0) return;
+
+  // Build OSM IDs for batch lookup (Nominatim supports comma-separated)
+  const osmIds = needsEnrichment.slice(0, 10).map((r) => {
+    // placeId format: "nom-node-12345" or "osm-way-67890"
+    const prefix = r.placeId.startsWith('nom-') ? 'nom-' : 'osm-';
+    const rest = r.placeId.replace(prefix, '');
+    const dashIdx = rest.indexOf('-');
+    if (dashIdx === -1) return null;
+    const osmType = rest.slice(0, dashIdx); // node, way, relation
+    const osmId = rest.slice(dashIdx + 1);
+    const typeChar = osmType[0]?.toUpperCase(); // N, W, R
+    return typeChar && osmId ? `${typeChar}${osmId}` : null;
+  }).filter(Boolean);
+
+  if (osmIds.length === 0) return;
+
+  try {
+    const lookupUrl = new URL('https://nominatim.openstreetmap.org/lookup');
+    lookupUrl.searchParams.set('osm_ids', osmIds.join(','));
+    lookupUrl.searchParams.set('format', 'json');
+    lookupUrl.searchParams.set('extratags', '1');
+    lookupUrl.searchParams.set('namedetails', '1');
+
+    const res = await fetch(lookupUrl.toString(), {
+      headers: { 'User-Agent': 'TruckFlowUS/1.0 (dispatch@truckflowus.com)' },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      for (const detail of data) {
+        // Match back to our result by OSM type+id
+        const matchNom = `nom-${detail.osm_type}-${detail.osm_id}`;
+        const matchOsm = `osm-${detail.osm_type}-${detail.osm_id}`;
+        const existing = results.find((r) => r.placeId === matchNom || r.placeId === matchOsm);
+        if (existing && detail.extratags) {
+          if (!existing.phone) {
+            existing.phone = detail.extratags.phone || detail.extratags['contact:phone'] || null;
+          }
+          if (!existing.website) {
+            existing.website = detail.extratags.website || detail.extratags['contact:website'] || null;
+          }
+          if (!existing.hoursOfOp) {
+            existing.hoursOfOp = detail.extratags.opening_hours || null;
+          }
+        }
+      }
+    }
+    await new Promise((r) => setTimeout(r, 1100));
+  } catch { /* skip enrichment errors */ }
 }
 
 /* ── Nominatim search ────────────────────────────────── */

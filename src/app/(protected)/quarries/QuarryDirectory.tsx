@@ -506,15 +506,19 @@ function SuggestionCard({
             )}
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1.5 text-xs">
-            {suggestion.phone && (
+            {suggestion.phone ? (
               <a href={`tel:${suggestion.phone}`} className="text-blue-600 hover:text-blue-800">
                 📞 {suggestion.phone}
               </a>
+            ) : (
+              <span className="text-steel-400 italic">📞 No phone</span>
             )}
-            {suggestion.website && (
+            {suggestion.website ? (
               <a href={suggestion.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 truncate max-w-[180px]">
                 🌐 Website
               </a>
+            ) : (
+              <span className="text-steel-400 italic">🌐 No website</span>
             )}
             {suggestion.rating && (
               <span className="text-amber-600">
@@ -522,8 +526,13 @@ function SuggestionCard({
               </span>
             )}
           </div>
-          {suggestion.hoursOfOp && (
+          {suggestion.hoursOfOp ? (
             <p className="text-[11px] text-steel-400 mt-1 truncate">🕐 {suggestion.hoursOfOp}</p>
+          ) : (
+            <p className="text-[11px] text-steel-400 mt-1 italic">🕐 No hours listed</p>
+          )}
+          {(!suggestion.phone || !suggestion.website || !suggestion.hoursOfOp) && !alreadyAdded && (
+            <p className="text-[10px] text-amber-600 mt-0.5">Missing info can be filled in after adding</p>
           )}
         </div>
         <div className="flex-shrink-0">
