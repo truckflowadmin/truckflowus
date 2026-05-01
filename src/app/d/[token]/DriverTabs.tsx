@@ -2399,6 +2399,69 @@ function TodaysJobCard({
   const [issueSent, setIssueSent] = useState(false);
   const job = initialJob;
 
+  // Browser geolocation tracking — send pings when job is IN_PROGRESS
+  const geoWatchRef = useRef<number | null>(null);
+  const lastPingRef = useRef<number>(0);
+  const GEO_THROTTLE_MS = 25_000;
+
+  useEffect(() => {
+    if (jobStatus !== 'IN_PROGRESS' || typeof navigator === 'undefined' || !navigator.geolocation) {
+      if (geoWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(geoWatchRef.current);
+        geoWatchRef.current = null;
+      }
+      return;
+    }
+
+    const doSendPing = (pos: GeolocationPosition) => {
+      const fd = new FormData();
+      fd.set('token', token);
+      fd.set('jobId', job.id);
+      fd.set('latitude', String(pos.coords.latitude));
+      fd.set('longitude', String(pos.coords.longitude));
+      if (pos.coords.speed != null) fd.set('speed', String(pos.coords.speed));
+      if (pos.coords.heading != null) fd.set('heading', String(pos.coords.heading));
+      if (pos.coords.accuracy != null) fd.set('accuracy', String(pos.coords.accuracy));
+      sendDriverLocation(fd).catch(() => {});
+      lastPingRef.current = Date.now();
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => doSendPing(pos),
+      () => {},
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+
+    geoWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (Date.now() - lastPingRef.current >= GEO_THROTTLE_MS) {
+          doSendPing(pos);
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 20000, timeout: 15000 },
+    );
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => doSendPing(pos),
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000 },
+        );
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      if (geoWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(geoWatchRef.current);
+        geoWatchRef.current = null;
+      }
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [jobStatus, token, job.id]);
+
   const mapsUrl = (address: string) =>
     `https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`;
 
