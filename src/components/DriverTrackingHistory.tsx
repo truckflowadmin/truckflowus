@@ -545,41 +545,41 @@ export default function DriverTrackingHistory({ driverId }: { driverId: string }
       )}
 
       {/* Map view */}
-      {!loading && !error && (
-        <div style={{ display: activeView === 'map' ? 'block' : 'none' }}>
-          <div className="panel overflow-hidden">
-            <div ref={mapRef} className="w-full h-[450px] bg-steel-100" style={{ zIndex: 0 }} />
-            {data?.locations.length === 0 && (
-              <div className="p-8 text-center text-steel-400">
-                <div className="text-3xl mb-2">📍</div>
-                <p>No tracking data for the selected period.</p>
+      <div style={{ display: activeView === 'map' ? 'block' : 'none' }}>
+        <div className="panel overflow-hidden relative">
+          <div ref={mapRef} className="w-full h-[450px] bg-steel-100" style={{ zIndex: 0 }} />
+          {!loading && !error && data?.locations.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 1 }}>
+              <div className="bg-white/90 backdrop-blur-sm rounded-lg px-6 py-4 text-center shadow-sm">
+                <div className="text-2xl mb-1">📍</div>
+                <p className="text-steel-500 text-sm font-medium">No tracking data for the selected period.</p>
               </div>
-            )}
-          </div>
-
-          {/* Map legend */}
-          {data && data.locations.length > 0 && (
-            <div className="flex items-center gap-4 mt-2 text-xs text-steel-500 px-1">
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-3 rounded-full bg-green-500 border border-white" /> Start
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-3 rounded-full bg-red-500 border border-white" /> End
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-3 h-3 rounded-full bg-amber-500 border border-white" /> Speeding
-              </span>
-              <span className="flex items-center gap-1">
-                <span
-                  className="inline-block w-4 h-0.5 bg-[#1E3A5F]"
-                  style={{ marginTop: 1 }}
-                />{' '}
-                Route
-              </span>
             </div>
           )}
         </div>
-      )}
+
+        {/* Map legend */}
+        {data && data.locations.length > 0 && (
+          <div className="flex items-center gap-4 mt-2 text-xs text-steel-500 px-1">
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-3 rounded-full bg-green-500 border border-white" /> Start
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-3 rounded-full bg-red-500 border border-white" /> End
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-3 rounded-full bg-amber-500 border border-white" /> Speeding
+            </span>
+            <span className="flex items-center gap-1">
+              <span
+                className="inline-block w-4 h-0.5 bg-[#1E3A5F]"
+                style={{ marginTop: 1 }}
+              />{' '}
+              Route
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Table view */}
       {!loading && !error && activeView === 'table' && (
