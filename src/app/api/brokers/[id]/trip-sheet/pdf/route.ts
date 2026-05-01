@@ -30,6 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     where: {
       brokerId: broker.id,
       companyId: session.companyId,
+      deletedAt: null,
       OR: [
         { date: { gte: startDate, lte: endDate } },
         { date: null, createdAt: { gte: startDate, lte: endDate } },

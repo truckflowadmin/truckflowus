@@ -51,6 +51,7 @@ export default async function TripSheetPage({
     where: {
       brokerId: broker.id,
       companyId: session.companyId,
+      deletedAt: null,
       OR: [
         { date: { gte: startDate, lte: endDate } },
         { date: null, createdAt: { gte: startDate, lte: endDate } },
