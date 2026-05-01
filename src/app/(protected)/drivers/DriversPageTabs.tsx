@@ -7,21 +7,23 @@ interface Props {
   driversContent: React.ReactNode;
   timeOffContent: React.ReactNode;
   payrollContent: React.ReactNode;
+  trackingContent: React.ReactNode;
 }
 
 const TABS = [
   { key: 'drivers', label: 'Drivers', icon: '▲' },
   { key: 'payroll', label: 'Payroll', icon: '💰' },
   { key: 'timeoff', label: 'Time Off', icon: '📅' },
+  { key: 'tracking', label: 'Tracking', icon: '📍' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
 
-export default function DriversPageTabs({ driversContent, timeOffContent, payrollContent }: Props) {
+export default function DriversPageTabs({ driversContent, timeOffContent, payrollContent, trackingContent }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const paramTab = searchParams.get('tab');
-  const initialTab: TabKey = paramTab === 'timeoff' ? 'timeoff' : paramTab === 'payroll' ? 'payroll' : 'drivers';
+  const initialTab: TabKey = paramTab === 'timeoff' ? 'timeoff' : paramTab === 'payroll' ? 'payroll' : paramTab === 'tracking' ? 'tracking' : 'drivers';
   const [tab, setTab] = useState<TabKey>(initialTab);
 
   // Sync URL when tab changes
@@ -57,6 +59,7 @@ export default function DriversPageTabs({ driversContent, timeOffContent, payrol
       {tab === 'drivers' && driversContent}
       {tab === 'payroll' && payrollContent}
       {tab === 'timeoff' && timeOffContent}
+      {tab === 'tracking' && trackingContent}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { safePage } from '@/lib/server-error';
 import DriversPageTabs from './DriversPageTabs';
 import TimeOffSection from './TimeOffSection';
 import PayrollSection from './PayrollSection';
+import TrackingSection from './TrackingSection';
 
 // ---------------------------------------------------------------------------
 // Server actions
@@ -186,7 +187,6 @@ async function DriversListContent() {
                   </td>
                   <td className="px-3 md:px-5 py-3 text-right">
                     <a href={`/drivers/${d.id}/edit`} className="text-xs text-steel-600 hover:text-steel-900 px-2">Edit</a>
-                    <a href={`/drivers/${d.id}/tracking`} className="text-xs text-steel-600 hover:text-steel-900 px-2">📍 Tracking</a>
                     <form action={rotateTokenAction} className="inline">
                       <input type="hidden" name="id" value={d.id} />
                       <button className="text-xs text-steel-600 hover:text-steel-900 px-2">Rotate Token</button>
@@ -231,6 +231,19 @@ async function PayrollContent() {
 }
 
 // ---------------------------------------------------------------------------
+// Tracking content (rendered as a slot inside tabs)
+// ---------------------------------------------------------------------------
+async function TrackingContent() {
+  const session = await requireSession();
+  const drivers = await prisma.driver.findMany({
+    where: { companyId: session.companyId },
+    orderBy: [{ active: 'desc' }, { name: 'asc' }],
+    select: { id: true, name: true, truckNumber: true, active: true },
+  });
+  return <TrackingSection drivers={drivers} />;
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 export default async function DriversPage() {
@@ -256,6 +269,11 @@ export default async function DriversPage() {
         timeOffContent={
           <Suspense fallback={<div className="p-10 text-center text-steel-500">Loading time-off requests…</div>}>
             <TimeOffSection />
+          </Suspense>
+        }
+        trackingContent={
+          <Suspense fallback={<div className="p-10 text-center text-steel-500">Loading tracking…</div>}>
+            <TrackingContent />
           </Suspense>
         }
       />
