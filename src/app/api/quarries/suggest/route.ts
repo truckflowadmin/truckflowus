@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
     ];
 
     const allPlaces = new Map<string, any>();
+    let lastApiError = '';
 
     for (const query of queries) {
       const url = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json');
@@ -48,16 +49,35 @@ export async function GET(req: NextRequest) {
       url.searchParams.set('key', apiKey);
 
       const res = await fetch(url.toString());
-      if (!res.ok) continue;
+      if (!res.ok) {
+        lastApiError = `Google API returned HTTP ${res.status}`;
+        continue;
+      }
 
       const data = await res.json();
-      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') continue;
+      if (data.status === 'REQUEST_DENIED') {
+        lastApiError = data.error_message || 'Places API not enabled. Enable "Places API" in Google Cloud Console for your API key.';
+        continue;
+      }
+      if (data.status === 'OVER_QUERY_LIMIT') {
+        lastApiError = 'Google Places API quota exceeded. Try again later.';
+        continue;
+      }
+      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+        lastApiError = `Google API error: ${data.status} — ${data.error_message || ''}`;
+        continue;
+      }
 
       for (const place of data.results || []) {
         if (!allPlaces.has(place.place_id)) {
           allPlaces.set(place.place_id, place);
         }
       }
+    }
+
+    // If no results and we had API errors, report them
+    if (allPlaces.size === 0 && lastApiError) {
+      return NextResponse.json({ error: lastApiError, suggestions: [] });
     }
 
     // Get details for each place (phone, website, hours)
