@@ -11,14 +11,16 @@ export default async function DriverHome({ params }: { params: { token: string }
   });
   if (!driver || !driver.active) notFound();
 
+  // If driver has already set up their account, redirect to login.
+  // This MUST come before the expiration check — once a driver has set their
+  // PIN the setup link's expiry is irrelevant; they log in via /d/login.
+  if (driver.pinSet) {
+    redirect('/d/login');
+  }
+
   // Check token expiration (NULL expiresAt = legacy token, still allow for backward compat)
   if (driver.accessTokenExpiresAt && driver.accessTokenExpiresAt < new Date()) {
     notFound(); // Expired setup link — driver must contact dispatcher
-  }
-
-  // If driver has already set up their account, redirect to login
-  if (driver.pinSet) {
-    redirect('/d/login');
   }
 
   // First-time setup: show the setup form
