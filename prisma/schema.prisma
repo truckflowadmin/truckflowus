@@ -100,6 +100,7 @@ model Company {
   faxLogs              FaxLog[]
   driverLocations      DriverLocation[]
   proofOfDelivery      ProofOfDelivery[]
+  quarries             Quarry[]
 
   @@index([planId])
 }
@@ -348,6 +349,33 @@ model Broker {
   invoices   Invoice[]
   smsLogs    SmsLog[]
   faxLogs    FaxLog[]
+
+  @@index([companyId])
+}
+
+model Quarry {
+  id            String   @id @default(cuid())
+  companyId     String
+  name          String
+  phone         String?
+  email         String?
+  contactPerson String?
+  website       String?
+  pricingUrl    String?  @db.Text // link to online pricing page
+  address       String?
+  city          String?
+  state         String?
+  zip           String?
+  lat           Float?   // GPS latitude for map
+  lng           Float?   // GPS longitude for map
+  hoursOfOp     String?  @db.Text // e.g. "Mon-Fri 6am-4pm, Sat 7am-12pm"
+  materials     Json     @default("[]") // Array of { name, pricePerUnit, unit, notes }
+  notes         String?  @db.Text
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
 }

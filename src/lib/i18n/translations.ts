@@ -84,6 +84,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'nav.tickets': { en: 'Tickets', es: 'Boletas' },
   'nav.drivers': { en: 'Drivers', es: 'Conductores' },
   'nav.fleet': { en: 'Fleet', es: 'Flota' },
+  'nav.quarries': { en: 'Mines & Quarries', es: 'Minas y Canteras' },
   'nav.customers': { en: 'Customers', es: 'Clientes' },
   'nav.invoices': { en: 'Invoices', es: 'Facturas' },
   'nav.checks': { en: 'Checks', es: 'Cheques' },

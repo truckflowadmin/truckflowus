@@ -13,6 +13,7 @@ const NAV = [
   { href: '/tickets', labelKey: 'nav.tickets', icon: '▤' },
   { href: '/drivers', labelKey: 'nav.drivers', icon: '▲' },
   { href: '/fleet', labelKey: 'nav.fleet', icon: '🚛' },
+  { href: '/quarries', labelKey: 'nav.quarries', icon: '⛏' },
   { href: '/customers', labelKey: 'nav.customers', icon: '◉' },
   { href: '/invoices', labelKey: 'nav.invoices', icon: '$' },
   { href: '/checks', labelKey: 'nav.checks', icon: '✎' },
