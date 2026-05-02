@@ -7,10 +7,16 @@ import DismissibleBanner from '@/components/DismissibleBanner';
 import SubscribeButton from '@/components/SubscribeButton';
 
 export const metadata: Metadata = {
-  title: 'Plans & Pricing — Dump Truck Software',
+  title: 'Plans & Pricing — Dump Truck Dispatch Software',
   description:
-    'Affordable dump truck dispatch software plans for hauling companies of all sizes. Includes ticketing, dispatch, invoicing, fleet management, and driver mobile portal.',
+    'Affordable dump truck dispatch software plans for hauling companies of all sizes. Includes ticketing, dispatch, invoicing, fleet management, and driver mobile portal. Start free — no credit card required.',
   alternates: { canonical: '/subscribe' },
+  openGraph: {
+    type: 'website',
+    title: 'TruckFlowUS Plans & Pricing — Dump Truck Software',
+    description: 'Affordable plans for hauling companies of all sizes. Ticketing, dispatch, invoicing, fleet management, and driver mobile portal.',
+    siteName: 'TruckFlowUS',
+  },
 };
 
 export const dynamic = 'force-dynamic';

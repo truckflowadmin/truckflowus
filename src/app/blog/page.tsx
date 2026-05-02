@@ -8,6 +8,12 @@ export const metadata: Metadata = {
   description:
     'Expert tips and guides for dump truck operators, dispatchers, and hauling company owners. Learn how to streamline dispatch, go paperless with digital load tickets, speed up invoicing, and grow your trucking business.',
   alternates: { canonical: '/blog' },
+  openGraph: {
+    type: 'website',
+    title: 'TruckFlowUS Blog — Dump Truck Business Tips & Guides',
+    description: 'Expert tips for dump truck operators and hauling companies. Dispatch, ticketing, invoicing, and fleet management guides.',
+    siteName: 'TruckFlowUS',
+  },
 };
 
 export default function BlogIndex() {

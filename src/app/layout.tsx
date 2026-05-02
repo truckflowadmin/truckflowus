@@ -133,12 +133,28 @@ export const metadata: Metadata = {
     'material hauling software',
     'dump truck broker management',
     'dump truck compliance software',
+    'dump truck app',
+    'trucking software for small business',
+    'hauling company management',
+    'dump truck accounting software',
+    'digital ticket system trucking',
+    'dump truck route tracking',
+    'construction material hauling app',
+    'fleet dispatch software free trial',
   ],
+  verification: {
+    google: '9fdabdbe40dcc10b',
+  },
   authors: [{ name: 'TruckFlowUS' }],
   creator: 'TruckFlowUS',
   publisher: 'TruckFlowUS',
   alternates: {
     canonical: '/',
+    languages: {
+      'en-US': '/',
+      'es': '/?lang=es',
+      'x-default': '/',
+    },
   },
   openGraph: {
     type: 'website',
@@ -182,6 +198,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        {/* Performance hints — preconnect to critical external origins */}
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}

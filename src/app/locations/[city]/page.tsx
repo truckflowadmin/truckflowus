@@ -192,12 +192,26 @@ export default function CityPage({ params }: { params: { city: string } }) {
     },
   };
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl },
+      { '@type': 'ListItem', position: 2, name: 'Locations', item: `${siteUrl}/locations` },
+      { '@type': 'ListItem', position: 3, name: `${data.city}, ${data.stateCode}`, item: `${siteUrl}/locations/${data.slug}` },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-diesel text-white">
       {/* JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
       {/* Nav */}

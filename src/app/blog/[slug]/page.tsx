@@ -61,12 +61,27 @@ export default function BlogPost({ params }: { params: { slug: string } }) {
     mainEntityOfPage: `https://truckflowus.com/blog/${post.slug}`,
   };
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://truckflowus.com' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://truckflowus.com/blog' },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `https://truckflowus.com/blog/${post.slug}` },
+    ],
+  };
+
   return (
     <>
       {/* Article JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      {/* Breadcrumb JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <BlogPostContent
         post={{

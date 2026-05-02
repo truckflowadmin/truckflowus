@@ -15,7 +15,17 @@ const LOCATION_SLUGS = [
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.APP_URL || 'https://truckflowus.com';
 
-  const blogPosts = getAllPosts().map((post) => ({
+  // Include both EN and ES blog posts — deduplicate by slug
+  const enPosts = getAllPosts('en');
+  const esPosts = getAllPosts('es');
+  const seenSlugs = new Set<string>();
+  const allPosts = [...enPosts, ...esPosts].filter((p) => {
+    if (seenSlugs.has(p.slug)) return false;
+    seenSlugs.add(p.slug);
+    return true;
+  });
+
+  const blogPosts = allPosts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: new Date(post.date + 'T00:00:00'),
     changeFrequency: 'monthly' as const,
@@ -30,6 +40,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   return [
+    // ── High priority — main conversion pages ──
     {
       url: baseUrl,
       lastModified: new Date(),
@@ -40,13 +51,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${baseUrl}/signup`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/subscribe`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
       priority: 0.8,
     },
+
+    // ── Content pages ──
     {
       url: `${baseUrl}/blog`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
-      priority: 0.7,
+      priority: 0.8,
     },
     ...blogPosts,
     {
@@ -68,12 +87,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.7,
     },
+
+    // ── Auth pages ──
     {
-      url: `${baseUrl}/subscribe`,
+      url: `${baseUrl}/login`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
-      priority: 0.7,
+      priority: 0.5,
     },
+    {
+      url: `${baseUrl}/d/login`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/forgot-password`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+
+    // ── Legal pages ──
     {
       url: `${baseUrl}/terms`,
       lastModified: new Date(),
@@ -100,24 +135,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${baseUrl}/cookies`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/login`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/d/login`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/forgot-password`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.3,
