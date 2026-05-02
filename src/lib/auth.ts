@@ -112,7 +112,9 @@ export async function getSession(): Promise<SessionPayload | null> {
       const decoded = jwt.decode(token) as { iat?: number } | null;
       // Use <= so a token issued in the same second as invalidation is rejected
       if (decoded?.iat && decoded.iat <= user.sessionInvalidatedAt.getTime() / 1000) {
-        clearSessionCookie();
+        // Don't clear cookie here — this may run during Server Component render
+        // where cookies can't be modified. Just deny the session; the stale cookie
+        // will expire naturally or be cleared on next login/logout (Server Action).
         return null;
       }
     }
@@ -123,7 +125,6 @@ export async function getSession(): Promise<SessionPayload | null> {
     if (msg.includes('sessionInvalidatedAt') || msg.includes('Unknown arg')) {
       // Column missing — allow session, single-device check not available yet
     } else {
-      clearSessionCookie();
       return null;
     }
   }
