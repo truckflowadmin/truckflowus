@@ -179,13 +179,14 @@ export async function loginDriver(phone: string, pin: string): Promise<DriverSes
   if (!valid) return { wrongPin: true as const };
 
   // Track last login time AND invalidate any existing sessions on other devices.
-  // getDriverSession() already checks JWT `iat` against sessionInvalidatedAt, so
-  // setting it to "now" causes every previously-issued token to be rejected.
+  // getDriverSession() checks JWT `iat` (whole seconds) against sessionInvalidatedAt.
+  // We set invalidation to 1 second ago so the NEW token passes the check.
   const now = new Date();
+  const invalidateBefore = new Date(now.getTime() - 1000);
   try {
     await prisma.driver.update({
       where: { id: driver.id },
-      data: { lastLoginAt: now, sessionInvalidatedAt: now },
+      data: { lastLoginAt: now, sessionInvalidatedAt: invalidateBefore },
     });
   } catch {
     // Fallback: if sessionInvalidatedAt column doesn't exist yet, still track login

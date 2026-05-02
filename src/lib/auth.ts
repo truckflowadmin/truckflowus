@@ -229,13 +229,15 @@ export async function loginWithCredentials(email: string, password: string) {
   }
 
   // Track last login time AND invalidate any existing sessions on other devices.
-  // getSession() already checks JWT `iat` against sessionInvalidatedAt, so setting
-  // it to "now" causes every previously-issued token to be rejected on next request.
+  // getSession() checks JWT `iat` (whole seconds) against sessionInvalidatedAt.
+  // We set invalidation to 1 second ago so the NEW token (iat = floor(now))
+  // passes the `iat < sessionInvalidatedAt` check while all older tokens fail.
   const now = new Date();
+  const invalidateBefore = new Date(now.getTime() - 1000);
   try {
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: now, sessionInvalidatedAt: now },
+      data: { lastLoginAt: now, sessionInvalidatedAt: invalidateBefore },
     });
   } catch {
     // Fallback: if sessionInvalidatedAt column doesn't exist yet (migration pending),
