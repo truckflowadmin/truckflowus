@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
@@ -142,18 +143,18 @@ export async function requireSession(): Promise<
   SessionPayload & { companyId: string }
 > {
   const session = await getSession();
-  if (!session) throw new Error('UNAUTHENTICATED');
+  if (!session) redirect('/login?signedout=1');
   if (session.role === 'SUPERADMIN' || !session.companyId) {
-    throw new Error('TENANT_ONLY');
+    redirect('/sa/overview');
   }
   return session as SessionPayload & { companyId: string };
 }
 
-/** Require a SUPERADMIN session. Throws otherwise. */
+/** Require a SUPERADMIN session. Redirects to login otherwise. */
 export async function requireSuperadmin(): Promise<SessionPayload> {
   const session = await getSession();
-  if (!session) throw new Error('UNAUTHENTICATED');
-  if (session.role !== 'SUPERADMIN') throw new Error('SUPERADMIN_ONLY');
+  if (!session) redirect('/login?signedout=1');
+  if (session.role !== 'SUPERADMIN') redirect('/login');
   return session;
 }
 
