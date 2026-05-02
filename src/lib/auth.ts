@@ -109,15 +109,23 @@ export async function getSession(): Promise<SessionPayload | null> {
       select: { sessionInvalidatedAt: true },
     });
     if (user?.sessionInvalidatedAt) {
-      // JWT `iat` is in seconds; compare with invalidation timestamp
       const decoded = jwt.decode(token) as { iat?: number } | null;
-      if (decoded?.iat && decoded.iat < user.sessionInvalidatedAt.getTime() / 1000) {
+      // Use <= so a token issued in the same second as invalidation is rejected
+      if (decoded?.iat && decoded.iat <= user.sessionInvalidatedAt.getTime() / 1000) {
         clearSessionCookie();
         return null;
       }
     }
-  } catch {
-    // sessionInvalidatedAt column may not exist yet — skip check, allow session
+  } catch (err: any) {
+    // Only skip if the column doesn't exist yet (migration pending).
+    // For all other errors (DB down, connection timeout), fail closed — deny session.
+    const msg = err?.message || '';
+    if (msg.includes('sessionInvalidatedAt') || msg.includes('Unknown arg')) {
+      // Column missing — allow session, single-device check not available yet
+    } else {
+      clearSessionCookie();
+      return null;
+    }
   }
 
   return payload;

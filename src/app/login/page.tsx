@@ -53,7 +53,8 @@ export default async function LoginPage({
       redirect(`/login?locked=1&sq=${sq}`);
     }
     if ('notFound' in result && result.notFound) {
-      redirect(`/login?notfound=1${next ? `&next=${encodeURIComponent(next)}` : ''}`);
+      // Use generic error — don't reveal that the account doesn't exist
+      redirect(`/login?error=1${next ? `&next=${encodeURIComponent(next)}` : ''}`);
     }
     if ('failed' in result && result.failed) {
       redirect(`/login?error=1&attempts=${result.attemptsLeft}${next ? `&next=${encodeURIComponent(next)}` : ''}`);
@@ -105,16 +106,7 @@ export default async function LoginPage({
               )}
             </div>
           )}
-          {searchParams.notfound && !searchParams.locked && (
-            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-              <p>No account found with this email address.</p>
-              <p className="mt-1">
-                Don&apos;t have an account?{' '}
-                <a href="/signup" className="underline font-medium text-safety hover:text-safety-dark">Sign up here</a>
-              </p>
-            </div>
-          )}
-          {searchParams.error && !searchParams.locked && !searchParams.notfound && (
+          {searchParams.error && !searchParams.locked && (
             <div className="text-sm text-red-600">
               <p>Invalid email or password.</p>
               {searchParams.attempts && (

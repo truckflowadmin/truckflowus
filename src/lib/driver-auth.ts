@@ -55,7 +55,7 @@ export function verifyDriverSession(token: string): DriverSession | null {
   try {
     return jwt.verify(token, JWT_SECRET, { audience: 'driver' }) as DriverSession;
   } catch (err: any) {
-    console.log(`[driver-auth] JWT verify failed: ${err.message}`);
+    console.log('[driver-auth] JWT verify failed');
     return null;
   }
 }
@@ -88,13 +88,19 @@ export async function getDriverSession(): Promise<DriverSession | null> {
     });
     if (driver?.sessionInvalidatedAt) {
       const decoded = jwt.decode(token) as { iat?: number } | null;
-      if (decoded?.iat && decoded.iat < driver.sessionInvalidatedAt.getTime() / 1000) {
+      if (decoded?.iat && decoded.iat <= driver.sessionInvalidatedAt.getTime() / 1000) {
         clearDriverSessionCookie();
         return null;
       }
     }
-  } catch {
-    // sessionInvalidatedAt column may not exist yet — skip check
+  } catch (err: any) {
+    const msg = err?.message || '';
+    if (msg.includes('sessionInvalidatedAt') || msg.includes('Unknown arg')) {
+      // Column missing — allow session
+    } else {
+      clearDriverSessionCookie();
+      return null;
+    }
   }
 
   return payload;
@@ -122,12 +128,17 @@ export async function getDriverSessionFromRequest(req: Request): Promise<DriverS
         });
         if (driver?.sessionInvalidatedAt) {
           const decoded = jwt.decode(token) as { iat?: number } | null;
-          if (decoded?.iat && decoded.iat < driver.sessionInvalidatedAt.getTime() / 1000) {
+          if (decoded?.iat && decoded.iat <= driver.sessionInvalidatedAt.getTime() / 1000) {
             return null;
           }
         }
-      } catch {
-        // sessionInvalidatedAt column may not exist yet — skip check
+      } catch (err: any) {
+        const msg = err?.message || '';
+        if (msg.includes('sessionInvalidatedAt') || msg.includes('Unknown arg')) {
+          // Column missing — allow session
+        } else {
+          return null;
+        }
       }
       return payload;
     }
@@ -150,6 +161,9 @@ export async function loginDriver(phone: string, pin: string): Promise<DriverSes
     normalizedPhone.startsWith('1') ? `+${normalizedPhone}` : null,
     normalizedPhone.startsWith('1') ? normalizedPhone.slice(1) : null,
   ].filter(Boolean);
+
+  // NOTE: Rate limiting is handled by the caller (API route) which has full context
+  // for lockout UX (security questions, email reset). This function is auth-only.
 
   const driver = await prisma.driver.findFirst({
     where: {
