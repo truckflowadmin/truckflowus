@@ -87,9 +87,9 @@ export default function BrokerHistory({
                     <th className="text-left px-5 py-2">Date</th>
                     <th className="text-left px-5 py-2">Name</th>
                     <th className="text-left px-5 py-2">Customer</th>
-                    <th className="text-left px-5 py-2 hidden lg:table-cell">From → To</th>
-                    <th className="text-left px-5 py-2 hidden md:table-cell">Driver(s)</th>
-                    <th className="text-left px-5 py-2 hidden md:table-cell">Material</th>
+                    <th className="text-left px-5 py-2">From → To</th>
+                    <th className="text-left px-5 py-2">Driver(s)</th>
+                    <th className="text-left px-5 py-2">Material</th>
                     <th className="text-right px-5 py-2">Loads</th>
                     <th className="text-left px-5 py-2">Status</th>
                   </tr>
@@ -111,11 +111,11 @@ export default function BrokerHistory({
                         </td>
                         <td className="px-5 py-3 max-w-[160px] truncate">{j.name}</td>
                         <td className="px-5 py-3">{j.customer?.name ?? '—'}</td>
-                        <td className="px-5 py-3 text-steel-600 max-w-[200px] truncate hidden lg:table-cell">
+                        <td className="px-5 py-3 text-steel-600 max-w-[240px] truncate">
                           {j.hauledFrom} → {j.hauledTo}
                         </td>
-                        <td className="px-5 py-3 hidden md:table-cell">{drivers || '—'}</td>
-                        <td className="px-5 py-3 hidden md:table-cell">{j.material ?? '—'}</td>
+                        <td className="px-5 py-3">{drivers || '—'}</td>
+                        <td className="px-5 py-3">{j.material ?? '—'}</td>
                         <td className="px-5 py-3 text-right tabular-nums">
                           {j.completedLoads}/{j.totalLoads}
                         </td>
@@ -153,10 +153,10 @@ export default function BrokerHistory({
                     <th className="text-left px-5 py-2">#</th>
                     <th className="text-left px-5 py-2">Date</th>
                     <th className="text-left px-5 py-2">Customer</th>
-                    <th className="text-left px-5 py-2 hidden md:table-cell">Material</th>
+                    <th className="text-left px-5 py-2">Material</th>
                     <th className="text-right px-5 py-2">Qty</th>
-                    <th className="text-right px-5 py-2 hidden sm:table-cell">Revenue</th>
-                    <th className="text-right px-5 py-2 hidden sm:table-cell">Commission</th>
+                    <th className="text-right px-5 py-2">Revenue</th>
+                    <th className="text-right px-5 py-2">Commission</th>
                     <th className="text-left px-5 py-2">Status</th>
                   </tr>
                 </thead>
@@ -177,10 +177,10 @@ export default function BrokerHistory({
                           {t.date ? format(new Date(t.date), 'MMM d, yyyy') : format(new Date(t.createdAt), 'MMM d')}
                         </td>
                         <td className="px-5 py-3">{t.customer?.name ?? '—'}</td>
-                        <td className="px-5 py-3 hidden md:table-cell">{t.material ?? '—'}</td>
+                        <td className="px-5 py-3">{t.material ?? '—'}</td>
                         <td className="px-5 py-3 text-right tabular-nums">{fmtQty(t.quantity, t.quantityType ?? 'LOADS')} {qtyUnit(t.quantityType ?? 'LOADS')}</td>
-                        <td className="px-5 py-3 text-right tabular-nums hidden sm:table-cell">${lineTotal.toFixed(2)}</td>
-                        <td className="px-5 py-3 text-right tabular-nums text-red-700 hidden sm:table-cell">${lineComm.toFixed(2)}</td>
+                        <td className="px-5 py-3 text-right tabular-nums">${lineTotal.toFixed(2)}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-red-700">${lineComm.toFixed(2)}</td>
                         <td className="px-5 py-3">
                           <span className={`badge ${
                             t.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :

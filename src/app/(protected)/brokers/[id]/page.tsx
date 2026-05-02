@@ -38,7 +38,7 @@ export default async function BrokerDetailPage({ params }: { params: { id: strin
   const totalCommission = totalRevenue * (commissionPct / 100);
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <Link href="/brokers" className="text-sm text-steel-500 hover:text-steel-800">← Brokers</Link>
         <div className="flex items-center justify-between mt-1">
