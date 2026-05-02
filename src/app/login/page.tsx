@@ -14,10 +14,18 @@ export default async function LoginPage({
 }: {
   searchParams: { error?: string; next?: string; suspended?: string; signedout?: string; locked?: string; attempts?: string; notfound?: string; sq?: string };
 }) {
-  const session = await getSession();
-  if (session) {
-    const landing = await landingPathForUser(session.role, session.companyId);
-    redirect(landing);
+  // Wrap in try/catch — if the DB is unreachable or the session cookie is stale,
+  // we still want to render the login form rather than crashing the page.
+  try {
+    const session = await getSession();
+    if (session) {
+      const landing = await landingPathForUser(session.role, session.companyId);
+      redirect(landing);
+    }
+  } catch (e: any) {
+    // Re-throw Next.js redirect (it throws internally)
+    if (e?.digest?.startsWith('NEXT_REDIRECT')) throw e;
+    console.error('[login] getSession failed, showing login form:', e.message);
   }
 
   async function login(formData: FormData) {

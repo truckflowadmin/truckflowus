@@ -11,10 +11,15 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const session = await getSession();
-  if (session) {
-    const landing = await landingPathForUser(session.role, session.companyId);
-    redirect(landing);
+  try {
+    const session = await getSession();
+    if (session) {
+      const landing = await landingPathForUser(session.role, session.companyId);
+      redirect(landing);
+    }
+  } catch (e: any) {
+    if (e?.digest?.startsWith('NEXT_REDIRECT')) throw e;
+    console.error('[home] getSession failed, showing landing page:', e.message);
   }
   return <HomeContent />;
 }
