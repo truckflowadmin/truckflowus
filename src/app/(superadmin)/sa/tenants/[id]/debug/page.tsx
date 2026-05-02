@@ -230,7 +230,7 @@ export default async function DebugPage({
   });
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       <TenantNav tenantId={company.id} tenantName={company.name} />
 
       <header>
@@ -242,7 +242,7 @@ export default async function DebugPage({
 
       {/* ── FORCE LOGOUT ALL ────────────────────────────────────────────── */}
       <section className="panel-sa border border-red-900/50">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="font-semibold text-white">Force Logout Everyone</h2>
             <p className="text-xs text-purple-400 mt-1">
@@ -289,7 +289,7 @@ export default async function DebugPage({
                   <div className="text-xs text-purple-400">{user.email}</div>
 
                   {/* Activity stats */}
-                  <div className="grid grid-cols-3 gap-3 mt-3 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 text-xs">
                     <div>
                       <span className="text-purple-500">Last login: </span>
                       <span className="text-purple-200">
@@ -377,7 +377,7 @@ export default async function DebugPage({
                   </div>
 
                   {/* Activity stats */}
-                  <div className="grid grid-cols-3 gap-3 mt-3 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 text-xs">
                     <div>
                       <span className="text-purple-500">Last login: </span>
                       <span className="text-purple-200">

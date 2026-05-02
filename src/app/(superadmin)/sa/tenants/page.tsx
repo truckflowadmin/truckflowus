@@ -18,7 +18,7 @@ export default async function TenantsPage() {
   });
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       <header>
         <h1 className="text-xl md:text-2xl font-bold text-white">{t('sa.tenants', lang)}</h1>
         <p className="text-purple-300 text-sm">
@@ -26,7 +26,7 @@ export default async function TenantsPage() {
         </p>
       </header>
 
-      <div className="panel-sa p-0 overflow-hidden overflow-x-auto">
+      <div className="panel-sa p-0 overflow-x-auto">
         <table className="w-full text-sm min-w-[600px]">
           <thead className="text-purple-400 text-left">
             <tr className="border-b border-purple-900/40">

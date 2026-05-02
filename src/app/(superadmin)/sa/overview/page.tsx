@@ -98,7 +98,7 @@ export default async function OverviewPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       <header>
         <h1 className="text-xl md:text-2xl font-bold text-white">{t('sa.platformOverview', lang)}</h1>
         <p className="text-purple-300 text-sm">{t('sa.tenantsSubtitle', lang)}</p>
@@ -151,6 +151,7 @@ export default async function OverviewPage() {
             {t('sa.managePlans', lang)} →
           </Link>
         </header>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-purple-400 text-left">
             <tr>
@@ -169,6 +170,7 @@ export default async function OverviewPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
 
       <section className="panel-sa">

@@ -105,7 +105,7 @@ async function DriversListContent() {
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-7xl">
       <form action={createDriverAction} className="panel p-5 mb-6 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div>
@@ -154,11 +154,12 @@ async function DriversListContent() {
         </div>
       </form>
 
-      <div className="panel overflow-hidden">
+      <div className="panel">
         {drivers.length === 0 ? (
           <div className="p-10 text-center text-steel-500">No drivers yet.</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
             <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
               <tr>
                 <th className="text-left px-3 md:px-5 py-2">Name</th>
@@ -202,6 +203,7 @@ async function DriversListContent() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>
@@ -249,7 +251,7 @@ async function TrackingContent() {
 export default async function DriversPage() {
   const lang = getServerLang();
   return (
-    <div className="p-4 md:p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('drivers.people', lang)}</div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('drivers.title', lang)}</h1>

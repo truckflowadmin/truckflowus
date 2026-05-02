@@ -138,7 +138,7 @@ export default async function BillingPage({
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       <TenantNav tenantId={company.id} tenantName={company.name} />
 
       <header>
@@ -330,7 +330,7 @@ export default async function BillingPage({
           <p className="text-purple-400 text-sm">No billing events recorded yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[600px]">
               <thead className="text-purple-400 text-left">
                 <tr>
                   <th className="py-2 pr-4">Date</th>

@@ -63,7 +63,7 @@ export default async function NotificationsPage({
   const allTypes = Object.keys(TYPE_STYLE);
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Audit</div>
         <h1 className="text-3xl font-bold tracking-tight">Notification History</h1>
@@ -97,11 +97,12 @@ export default async function NotificationsPage({
       </div>
 
       {/* Notification list */}
-      <div className="panel overflow-hidden">
+      <div className="panel">
         {notifications.length === 0 ? (
           <div className="p-10 text-center text-steel-500">No notifications found.</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[500px]">
             <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
               <tr>
                 <th className="text-left px-5 py-2 w-8"></th>
@@ -141,6 +142,7 @@ export default async function NotificationsPage({
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

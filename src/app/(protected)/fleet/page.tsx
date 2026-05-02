@@ -110,7 +110,7 @@ export default async function FleetPage() {
   const truckOptions = trucks.map((t) => ({ id: t.id, truckNumber: t.truckNumber }));
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('fleet.title', lang)}</h1>
         <p className="text-steel-500 mt-1">{t('fleet.subtitle', lang)}</p>

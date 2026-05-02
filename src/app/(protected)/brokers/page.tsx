@@ -30,13 +30,13 @@ export default async function BrokersPage() {
   const statsMap = Object.fromEntries(brokerStats.map((s) => [s.id, s]));
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('brokers.partners', lang)}</div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('brokers.title', lang)}</h1>
       </header>
 
-      <div className="panel overflow-hidden">
+      <div className="panel">
         {brokers.length === 0 ? (
           <div className="p-10 text-center text-steel-500">{t('brokers.noBrokers', lang)}</div>
         ) : (

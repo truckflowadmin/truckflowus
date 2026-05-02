@@ -55,7 +55,7 @@ export default async function SuperadminEditGlobalBrokerPage({
   const existingContacts = Array.isArray(broker.contacts) ? (broker.contacts as unknown as BrokerContact[]) : [];
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-3xl">
       <header className="mb-6">
         <Link href="/sa/brokers" className="text-sm text-purple-400 hover:text-purple-200">
           ← Back to Brokers

@@ -133,7 +133,7 @@ export default async function TenantCustomersPage({ params }: { params: { id: st
   invoiceCounts.forEach((ic) => { if (ic.customerId) iMap[ic.customerId] = ic._count.id; });
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <TenantNav tenantId={company.id} tenantName={company.name} />
 
       <div className="flex items-center justify-between mb-4">
@@ -149,7 +149,7 @@ export default async function TenantCustomersPage({ params }: { params: { id: st
         </summary>
         <form action={createCustomer} className="mt-3 space-y-3">
           <input type="hidden" name="companyId" value={company.id} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="label-sa">Name</label>
               <input name="name" required className="input-sa" placeholder="ABC Construction" />
@@ -159,7 +159,7 @@ export default async function TenantCustomersPage({ params }: { params: { id: st
               <input name="contact" className="input-sa" placeholder="Optional" />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="label-sa">Phone</label>
               <input name="phone" className="input-sa" placeholder="Optional" />
@@ -179,7 +179,7 @@ export default async function TenantCustomersPage({ params }: { params: { id: st
 
       {/* Customers table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[700px]">
           <thead className="text-xs uppercase tracking-wide text-purple-400 border-b border-purple-800">
             <tr>
               <th className="text-left py-2 px-2">Name</th>

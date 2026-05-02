@@ -137,7 +137,7 @@ export default async function RequestsPage() {
   ]);
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       <header>
         <h1 className="text-xl md:text-2xl font-bold text-white">{t('sa.subscriptionRequests', lang)}</h1>
         <p className="text-purple-300 text-sm mt-1">

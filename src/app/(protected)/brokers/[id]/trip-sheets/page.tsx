@@ -99,12 +99,12 @@ export default async function TripSheetsListPage({ params }: { params: { id: str
   }));
 
   return (
-    <div className="p-8 max-w-7xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <Link href={`/brokers/${broker.id}`} className="text-sm text-steel-500 hover:text-steel-800">
           &larr; {broker.name}
         </Link>
-        <div className="flex items-center justify-between mt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-1">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Trip Sheets</h1>
             <p className="text-sm text-steel-500 mt-0.5">

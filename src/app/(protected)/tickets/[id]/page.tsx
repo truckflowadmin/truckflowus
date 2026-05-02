@@ -41,7 +41,7 @@ export default async function TicketDetail({ params }: { params: { id: string } 
   const rateLabel = RATE_LABELS[ticket.quantityType] || 'Rate / load';
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-5xl">
       {ticket.invoiceId && (
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3">
           <span className="text-purple-600 text-lg leading-none">&#128274;</span>
@@ -50,7 +50,7 @@ export default async function TicketDetail({ params }: { params: { id: string } 
           </p>
         </div>
       )}
-      <header className="flex items-center justify-between mb-6">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <Link href="/tickets" className="text-sm text-steel-500 hover:text-steel-800">← Tickets</Link>
           <div className="flex items-center gap-3 mt-1">

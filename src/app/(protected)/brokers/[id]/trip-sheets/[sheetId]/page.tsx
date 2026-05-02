@@ -86,7 +86,7 @@ export default async function TripSheetDetailPage({
   const pdfUrl = `/api/brokers/${broker.id}/trip-sheets/${sheet.id}/pdf`;
 
   return (
-    <div className="p-8 max-w-7xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <Link href={`/brokers/${broker.id}/trip-sheets`} className="text-sm text-steel-500 hover:text-steel-800">
           ← Trip Sheets for {broker.name}

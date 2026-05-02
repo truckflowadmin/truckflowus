@@ -272,14 +272,14 @@ export default async function TenantJobsPage({ params }: { params: { id: string 
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <TenantNav tenantId={company.id} tenantName={company.name} />
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-xl font-bold text-white">
           Jobs <span className="text-purple-400 font-normal">({jobs.length})</span>
         </h1>
-        <div className="flex gap-2 text-xs">
+        <div className="flex gap-2 text-xs flex-wrap">
           {Object.entries(statusCounts).map(([s, c]) => (
             <span key={s} className="badge bg-purple-900/60 text-purple-200">
               {s.replace('_', ' ')} {c}
@@ -388,7 +388,7 @@ export default async function TenantJobsPage({ params }: { params: { id: string 
       </details>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[900px]">
           <thead className="text-xs uppercase tracking-wide text-purple-400 border-b border-purple-800">
             <tr>
               <th className="text-left py-2 px-2">#</th>

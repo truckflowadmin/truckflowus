@@ -35,7 +35,7 @@ export default async function SuperadminMessagingPage({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="p-8 max-w-7xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Platform</div>
         <h1 className="text-3xl font-bold tracking-tight">SMS Log — All Tenants</h1>
@@ -54,7 +54,7 @@ export default async function SuperadminMessagingPage({
       </div>
 
       {/* SMS Table */}
-      <div className="panel overflow-hidden">
+      <div className="panel overflow-x-auto">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">

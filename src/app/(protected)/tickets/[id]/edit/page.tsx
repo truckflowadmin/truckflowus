@@ -84,7 +84,7 @@ export default async function EditTicketPage({ params }: { params: { id: string 
     : '';
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-3xl">
       <header className="mb-6">
         <Link href={`/tickets/${ticket.id}`} className="text-sm text-steel-500 hover:text-steel-800">← Back to #{num}</Link>
         <h1 className="text-3xl font-bold tracking-tight mt-1">Edit Ticket #{num}</h1>

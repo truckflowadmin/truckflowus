@@ -33,7 +33,7 @@ export default async function NewJobPage() {
   ]);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 md:p-6 max-w-3xl mx-auto">
       <Link href="/jobs" className="text-sm text-steel-500 hover:text-steel-700">
         ← Back to Jobs
       </Link>

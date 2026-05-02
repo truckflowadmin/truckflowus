@@ -103,7 +103,7 @@ export default async function TenantBrokersPage({ params }: { params: { id: stri
   const filteredAvailable = allOtherBrokers.filter((b) => !tenantBrokerIds.has(b.id));
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <TenantNav tenantId={company.id} tenantName={company.name} />
 
       <h2 className="text-xl font-bold text-white mb-4">Brokers ({brokers.length})</h2>
@@ -161,7 +161,7 @@ export default async function TenantBrokersPage({ params }: { params: { id: stri
         </details>
       </div>
 
-      <div className="panel-sa overflow-hidden">
+      <div className="panel-sa overflow-x-auto">
         {brokers.length === 0 ? (
           <div className="p-10 text-center text-purple-300">
             This tenant has no brokers.{' '}
@@ -170,7 +170,7 @@ export default async function TenantBrokersPage({ params }: { params: { id: stri
               : 'Create brokers in the Brokers tab first.'}
           </div>
         ) : (
-          <table className="w-full text-sm text-white">
+          <table className="w-full text-sm text-white min-w-[800px]">
             <thead className="text-xs uppercase tracking-wide text-purple-300 border-b border-purple-500/30">
               <tr>
                 <th className="text-left px-5 py-2">Name</th>

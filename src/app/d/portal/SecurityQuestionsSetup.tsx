@@ -62,7 +62,7 @@ export default function DriverSecurityQuestionsSetup({ driverName }: { driverNam
           <p className="text-steel-400 text-sm mt-1">Security Questions Required</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
           <h2 className="text-lg font-bold text-center text-steel-900 mb-2">
             Welcome back, {driverName}
           </h2>

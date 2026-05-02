@@ -94,7 +94,7 @@ export default async function CalendarPage() {
   }));
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold text-steel-900 mb-6">Calendar</h1>
       <DispatcherCalendar
         timeOffEvents={serializedTimeOff}

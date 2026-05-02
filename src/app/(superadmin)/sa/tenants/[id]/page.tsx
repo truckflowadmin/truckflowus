@@ -130,7 +130,7 @@ export default async function TenantDetailPage({
   ]);
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       <TenantNav tenantId={company.id} tenantName={company.name} />
 
       <header className="flex items-start justify-between gap-4 flex-wrap">

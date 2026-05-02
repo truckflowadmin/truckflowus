@@ -57,7 +57,7 @@ export default async function InvoicesPage() {
   });
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('invoices.billing', lang)}</div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('invoices.title', lang)}</h1>

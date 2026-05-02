@@ -65,7 +65,7 @@ export default async function EditCustomerPage({ params }: { params: { id: strin
   if (!customer) notFound();
 
   return (
-    <div className="p-8 max-w-xl">
+    <div className="p-4 md:p-8 max-w-xl">
       <header className="mb-6">
         <Link href="/customers" className="text-sm text-steel-500 hover:text-steel-800">← Customers</Link>
         <h1 className="text-3xl font-bold tracking-tight mt-1">Edit Customer</h1>

@@ -31,7 +31,7 @@ export default async function CustomersPage() {
   });
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">{t('customers.people', lang)}</div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('customers.title', lang)}</h1>
@@ -63,11 +63,12 @@ export default async function CustomersPage() {
         </div>
       </form>
 
-      <div className="panel overflow-hidden">
+      <div className="panel">
         {customers.length === 0 ? (
           <div className="p-10 text-center text-steel-500">{t('customers.noCustomers', lang)}</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
               <tr>
                 <th className="text-left px-3 md:px-5 py-2">{t('common.name', lang)}</th>
@@ -97,6 +98,7 @@ export default async function CustomersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

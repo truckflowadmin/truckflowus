@@ -236,10 +236,10 @@ export default async function TenantTicketsPage({ params }: { params: { id: stri
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <TenantNav tenantId={company.id} tenantName={company.name} />
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-xl font-bold text-white">
           Tickets <span className="text-purple-400 font-normal">({tickets.length})</span>
         </h1>
@@ -334,7 +334,7 @@ export default async function TenantTicketsPage({ params }: { params: { id: stri
       </details>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[950px]">
           <thead className="text-xs uppercase tracking-wide text-purple-400 border-b border-purple-800">
             <tr>
               <th className="text-left py-2 px-2">#</th>

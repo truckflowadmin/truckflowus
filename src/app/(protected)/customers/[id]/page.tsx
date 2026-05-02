@@ -47,10 +47,10 @@ export default async function CustomerDetail({ params }: { params: { id: string 
     .reduce((sum, i) => sum + Number(i.total), 0);
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 md:p-8 max-w-6xl">
       <header className="mb-6">
         <Link href="/customers" className="text-sm text-steel-500 hover:text-steel-800">← Customers</Link>
-        <div className="flex items-center justify-between mt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-1">
           <h1 className="text-3xl font-bold tracking-tight">{customer.name}</h1>
           <Link href={`/customers/${customer.id}/edit`} className="btn-ghost">Edit</Link>
         </div>
@@ -87,7 +87,7 @@ export default async function CustomerDetail({ params }: { params: { id: string 
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tickets */}
-        <div className="lg:col-span-2 panel overflow-hidden">
+        <div className="lg:col-span-2 panel">
           <div className="flex items-center justify-between px-5 py-3 border-b border-steel-200">
             <h2 className="font-semibold">Recent Tickets</h2>
             <Link
@@ -100,7 +100,8 @@ export default async function CustomerDetail({ params }: { params: { id: string 
           {tickets.length === 0 ? (
             <div className="p-8 text-center text-steel-500">No tickets yet.</div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
               <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
                 <tr>
                   <th className="text-left px-5 py-2">#</th>
@@ -128,6 +129,7 @@ export default async function CustomerDetail({ params }: { params: { id: string 
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

@@ -73,7 +73,7 @@ export default async function EditPlanPage({ params }: { params: { id: string } 
   if (!plan) notFound();
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6">
       <nav className="text-sm">
         <Link href="/sa/plans" className="text-purple-400 hover:text-purple-200">
           ← Plans

@@ -386,7 +386,7 @@ export default async function PasswordManagementPage({
   });
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       <TenantNav tenantId={company.id} tenantName={company.name} />
 
       <header>
@@ -452,7 +452,7 @@ export default async function PasswordManagementPage({
               </div>
 
               {/* Stats row */}
-              <div className="grid grid-cols-3 gap-3 mb-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-xs">
                 <div className="bg-purple-950/50 rounded p-2">
                   <div className="text-purple-400 uppercase tracking-wider">Last Login</div>
                   <div className="text-white mt-1">
@@ -500,7 +500,7 @@ export default async function PasswordManagementPage({
                   <form action={forceResetAction} className="mt-3 space-y-2 border-t border-purple-800 pt-3">
                     <input type="hidden" name="userId" value={user.id} />
                     <input type="hidden" name="companyId" value={company.id} />
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <label className="label-sa text-xs">New Password</label>
                         <input
@@ -596,7 +596,7 @@ export default async function PasswordManagementPage({
               </div>
 
               {/* Stats row */}
-              <div className="grid grid-cols-3 gap-3 mb-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-xs">
                 <div className="bg-purple-950/50 rounded p-2">
                   <div className="text-purple-400 uppercase tracking-wider">Last Login</div>
                   <div className="text-white mt-1">
@@ -646,7 +646,7 @@ export default async function PasswordManagementPage({
                   <form action={forceResetDriverPinAction} className="mt-3 space-y-2 border-t border-purple-800 pt-3">
                     <input type="hidden" name="driverId" value={driver.id} />
                     <input type="hidden" name="companyId" value={company.id} />
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <label className="label-sa text-xs">New PIN</label>
                         <input

@@ -46,8 +46,8 @@ export default async function InvoiceDetail({ params }: { params: { id: string }
   const billedToEmail = isBroker ? invoice.broker?.email : invoice.customer?.email;
 
   return (
-    <div className="p-8 max-w-4xl">
-      <header className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-8 max-w-4xl">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <Link href="/invoices" className="text-sm text-steel-500 hover:text-steel-800">← Invoices</Link>
           <div className="flex items-center gap-3 mt-1">
@@ -95,9 +95,10 @@ export default async function InvoiceDetail({ params }: { params: { id: string }
         </div>
       </div>
 
-      <section className="panel overflow-hidden mb-6">
+      <section className="panel mb-6">
         <div className="px-5 py-3 border-b border-steel-200 font-semibold">Line Items</div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[550px]">
           <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200 bg-steel-50">
             <tr>
               <th className="text-left px-5 py-2">Ticket</th>
@@ -148,6 +149,7 @@ export default async function InvoiceDetail({ params }: { params: { id: string }
             </tr>
           </tfoot>
         </table>
+        </div>
       </section>
 
       <section className="panel p-5">

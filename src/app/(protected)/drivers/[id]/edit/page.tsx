@@ -98,7 +98,7 @@ export default async function EditDriverPage({ params }: { params: { id: string 
   if (!driver) notFound();
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-3xl">
       <header className="mb-6">
         <Link href="/drivers" className="text-sm text-steel-500 hover:text-steel-800">← Drivers</Link>
         <h1 className="text-3xl font-bold tracking-tight mt-1">Edit Driver</h1>
@@ -140,7 +140,7 @@ export default async function EditDriverPage({ params }: { params: { id: string 
               <label className="label">Street Address</label>
               <input name="address" className="input" defaultValue={driver.address ?? ''} />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="label">City</label>
                 <input name="city" className="input" defaultValue={driver.city ?? ''} />

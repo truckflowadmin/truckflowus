@@ -89,7 +89,7 @@ export default async function BulkCreatePage() {
   ]);
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-3xl">
       <header className="mb-6">
         <Link href="/tickets" className="text-sm text-steel-500 hover:text-steel-800">← Tickets</Link>
         <h1 className="text-3xl font-bold tracking-tight mt-1">Bulk Create Tickets</h1>

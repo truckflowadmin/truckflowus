@@ -202,10 +202,10 @@ export default async function TenantAuditPage({
   const hasActiveFilters = !!(filterAction || filterFrom || filterTo || filterSearch);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
       <TenantNav tenantId={company.id} tenantName={company.name} />
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-bold text-white">
           Audit Log <span className="text-purple-400 font-normal">({logs.length}{hasActiveFilters ? ' filtered' : ''})</span>
         </h1>

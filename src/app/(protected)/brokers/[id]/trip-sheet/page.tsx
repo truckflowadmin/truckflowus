@@ -80,7 +80,7 @@ export default async function TripSheetPage({
   }));
 
   return (
-    <div className="p-8 max-w-7xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <Link href={`/brokers/${broker.id}`} className="text-sm text-steel-500 hover:text-steel-800">
           ← {broker.name}

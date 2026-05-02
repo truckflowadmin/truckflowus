@@ -78,7 +78,7 @@ export default async function SuperadminBrokersPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-purple-400 font-semibold">{t('sa.platform', lang)}</div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">{t('brokers.title', lang)}</h1>
@@ -109,7 +109,7 @@ export default async function SuperadminBrokersPage() {
       {unassigned.length > 0 && (
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-white mb-2">{t('sa.unassignedBrokers', lang)}</h2>
-          <div className="panel-sa overflow-hidden overflow-x-auto">
+          <div className="panel-sa overflow-x-auto">
             <table className="w-full text-sm text-white min-w-[700px]">
               <thead className="text-xs uppercase tracking-wide text-purple-300 border-b border-purple-500/30">
                 <tr>
@@ -170,8 +170,8 @@ export default async function SuperadminBrokersPage() {
                 {t('sa.manage', lang)} →
               </Link>
             </div>
-            <div className="panel-sa overflow-hidden">
-              <table className="w-full text-sm text-white">
+            <div className="panel-sa overflow-x-auto">
+              <table className="w-full text-sm text-white min-w-[700px]">
                 <thead className="text-xs uppercase tracking-wide text-purple-300 border-b border-purple-500/30">
                   <tr>
                     <th className="text-left px-5 py-2">{t('common.name', lang)}</th>

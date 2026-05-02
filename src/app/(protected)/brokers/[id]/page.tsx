@@ -41,7 +41,7 @@ export default async function BrokerDetailPage({ params }: { params: { id: strin
     <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <Link href="/brokers" className="text-sm text-steel-500 hover:text-steel-800">← Brokers</Link>
-        <div className="flex items-center justify-between mt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-1">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{broker.name}</h1>
             <div className="text-sm text-steel-500 mt-0.5">

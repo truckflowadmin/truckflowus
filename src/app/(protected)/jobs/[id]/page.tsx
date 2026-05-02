@@ -172,7 +172,7 @@ export default async function JobDetailPage({
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto">
       <Link href="/jobs" className="text-sm text-steel-500 hover:text-steel-700">
         ← Back to Jobs
       </Link>
@@ -189,7 +189,7 @@ export default async function JobDetailPage({
   } catch (err: any) {
     console.error('[JobDetailPage] Server component error:', err);
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-4 md:p-6 max-w-5xl mx-auto">
         <Link href="/jobs" className="text-sm text-steel-500 hover:text-steel-700">
           ← Back to Jobs
         </Link>

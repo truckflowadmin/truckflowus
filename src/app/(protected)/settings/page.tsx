@@ -483,7 +483,8 @@ export default async function SettingsPage({
       {session.role === 'ADMIN' && (
         <section className="panel p-6 mb-6">
           <h2 className="font-semibold text-lg mb-4">Dispatchers &amp; Admins</h2>
-          <table className="w-full text-sm mb-4">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm mb-4 min-w-[400px]">
             <thead className="text-xs uppercase tracking-wide text-steel-500 border-b border-steel-200">
               <tr>
                 <th className="text-left py-2 pr-4">Name</th>
@@ -514,6 +515,7 @@ export default async function SettingsPage({
               ))}
             </tbody>
           </table>
+          </div>
 
           <details>
             <summary className="text-sm font-medium text-steel-700 cursor-pointer mb-3">+ Add User</summary>

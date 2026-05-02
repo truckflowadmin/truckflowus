@@ -179,7 +179,7 @@ function ManualCheckView({ check, company, onClose }: { check: ManualCheck; comp
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-x-auto">
       <div className="flex items-center justify-between">
         <button onClick={onClose} className="text-sm text-steel-500 hover:text-steel-700">← Back to checks</button>
         <button onClick={handlePrint} className="btn btn-primary flex items-center gap-2">
@@ -369,7 +369,7 @@ export default function ManualChecksPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-7xl">
       <header className="mb-6">
         <div className="text-xs uppercase tracking-widest text-steel-500 font-semibold">Payments</div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Manual Checks</h1>
@@ -477,7 +477,7 @@ export default function ManualChecksPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[700px]">
                 <thead className="text-[10px] uppercase tracking-widest text-steel-500 border-b border-steel-200">
                   <tr>
                     <th className="text-left py-2 pr-3">Check #</th>

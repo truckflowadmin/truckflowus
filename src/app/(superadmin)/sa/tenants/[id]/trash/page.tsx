@@ -161,7 +161,7 @@ export default async function TrashPage({ params }: { params: { id: string } }) 
   const totalDeleted = deletedCustomers.length + deletedJobs.length + deletedTickets.length;
 
   return (
-    <div className="p-6 text-white max-w-7xl">
+    <div className="p-4 md:p-8 text-white max-w-7xl mx-auto">
       <TenantNav tenantId={companyId} tenantName={company.name} />
 
       <h2 className="text-2xl font-bold mb-1">Trash</h2>
@@ -177,7 +177,7 @@ export default async function TrashPage({ params }: { params: { id: string } }) 
           <h3 className="text-lg font-semibold text-purple-300 mb-3">
             Customers ({deletedCustomers.length})
           </h3>
-          <div className="bg-purple-900/30 rounded-lg overflow-hidden">
+          <div className="bg-purple-900/30 rounded-lg overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-purple-400 text-left border-b border-purple-800">
@@ -223,7 +223,7 @@ export default async function TrashPage({ params }: { params: { id: string } }) 
           <h3 className="text-lg font-semibold text-purple-300 mb-3">
             Jobs ({deletedJobs.length})
           </h3>
-          <div className="bg-purple-900/30 rounded-lg overflow-hidden">
+          <div className="bg-purple-900/30 rounded-lg overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-purple-400 text-left border-b border-purple-800">
@@ -277,7 +277,7 @@ export default async function TrashPage({ params }: { params: { id: string } }) 
           <h3 className="text-lg font-semibold text-purple-300 mb-3">
             Tickets ({deletedTickets.length})
           </h3>
-          <div className="bg-purple-900/30 rounded-lg overflow-hidden">
+          <div className="bg-purple-900/30 rounded-lg overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-purple-400 text-left border-b border-purple-800">
