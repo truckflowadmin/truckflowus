@@ -1,61 +1,88 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePublicLang } from '@/lib/usePublicLang';
 import PublicLanguageToggle from '@/components/PublicLanguageToggle';
 
 export default function HomeContent() {
   const { lang, t } = usePublicLang();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-diesel text-white">
+    <div className="min-h-screen bg-diesel text-white overflow-x-hidden">
       {/* ── Navigation ── */}
       <nav className="sticky top-0 z-50 border-b border-steel-800 bg-diesel/95 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 py-4">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-9 h-9 bg-safety rounded flex items-center justify-center font-black text-diesel text-lg">
               TF
             </div>
             <span className="text-xl font-bold tracking-tight">TruckFlowUS</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/blog"
-              className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
-            >
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-3">
+            <Link href="/blog" className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2">
               {t('pub.nav.blog')}
             </Link>
-            <Link
-              href="/contact"
-              className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
-            >
+            <Link href="/contact" className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2">
               {t('pub.nav.contact')}
             </Link>
-            <Link
-              href="/resources"
-              className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
-            >
+            <Link href="/resources" className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2">
               {t('pub.nav.resources')}
             </Link>
-            <Link
-              href="/login"
-              className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2"
-            >
+            <Link href="/login" className="text-sm font-medium text-steel-300 hover:text-white transition-colors px-3 py-2">
               {t('pub.nav.login')}
             </Link>
             <PublicLanguageToggle />
-            <Link
-              href="/signup"
-              className="text-sm font-semibold bg-safety text-diesel px-4 py-2 rounded-md hover:bg-safety-dark transition-colors"
-            >
+            <Link href="/signup" className="text-sm font-semibold bg-safety text-diesel px-4 py-2 rounded-md hover:bg-safety-dark transition-colors">
               {t('pub.nav.startTrial')}
             </Link>
           </div>
+          {/* Mobile hamburger */}
+          <div className="flex items-center gap-2 md:hidden">
+            <PublicLanguageToggle />
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-2 text-steel-300 hover:text-white transition-colors"
+              aria-label="Toggle menu"
+            >
+              {menuOpen ? (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div className="md:hidden border-t border-steel-800 bg-diesel px-4 pb-4 space-y-1">
+            <Link href="/blog" onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-steel-300 hover:text-white py-2.5">
+              {t('pub.nav.blog')}
+            </Link>
+            <Link href="/contact" onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-steel-300 hover:text-white py-2.5">
+              {t('pub.nav.contact')}
+            </Link>
+            <Link href="/resources" onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-steel-300 hover:text-white py-2.5">
+              {t('pub.nav.resources')}
+            </Link>
+            <Link href="/login" onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-steel-300 hover:text-white py-2.5">
+              {t('pub.nav.login')}
+            </Link>
+            <Link href="/signup" onClick={() => setMenuOpen(false)} className="block text-sm font-semibold bg-safety text-diesel text-center px-4 py-2.5 rounded-md hover:bg-safety-dark transition-colors mt-2">
+              {t('pub.nav.startTrial')}
+            </Link>
+          </div>
+        )}
       </nav>
 
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden max-w-6xl mx-auto px-6 pt-20 pb-24 lg:pt-28 lg:pb-32">
+      <section className="relative overflow-hidden max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-24 lg:pt-28 lg:pb-32">
         {/* Truck silhouette background */}
         <div className="absolute right-[-80px] bottom-[-20px] opacity-[0.04] pointer-events-none select-none" aria-hidden="true">
           <svg width="620" height="320" viewBox="0 0 620 320" fill="currentColor">
@@ -127,7 +154,7 @@ export default function HomeContent() {
 
       {/* ── Social Proof Bar ── */}
       <section className="border-y border-steel-800 bg-steel-900/50">
-        <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           <div>
             <div className="text-3xl font-extrabold text-safety">500+</div>
             <div className="text-sm text-steel-400 mt-1">
@@ -154,7 +181,7 @@ export default function HomeContent() {
       </section>
 
       {/* ── Features ── */}
-      <section className="relative overflow-hidden max-w-6xl mx-auto px-6 py-20 lg:py-28">
+      <section className="relative overflow-hidden max-w-6xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
         {/* Construction-grade diagonal stripes */}
         <div className="absolute top-0 right-0 opacity-[0.02] pointer-events-none select-none" aria-hidden="true">
           <svg width="500" height="500" viewBox="0 0 500 500" fill="currentColor">
@@ -268,7 +295,7 @@ export default function HomeContent() {
             <rect x="0" y="170" width="1200" height="4" rx="2" opacity="0.5" />
           </svg>
         </div>
-        <div className="relative max-w-6xl mx-auto px-6 py-20 lg:py-28">
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
               {lang === 'en' ? (
@@ -305,7 +332,7 @@ export default function HomeContent() {
       </section>
 
       {/* ── Dispatcher + Driver Split ── */}
-      <section className="relative overflow-hidden max-w-6xl mx-auto px-6 py-20 lg:py-28">
+      <section className="relative overflow-hidden max-w-6xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
         {/* Tire track pattern */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 opacity-[0.025] pointer-events-none select-none" aria-hidden="true">
           <svg width="400" height="900" viewBox="0 0 400 900" fill="currentColor">
@@ -400,7 +427,7 @@ export default function HomeContent() {
             <rect x="220" y="280" width="360" height="16" rx="4" opacity="0.7" />
           </svg>
         </div>
-        <div className="relative max-w-3xl mx-auto px-6 py-20 lg:py-28 text-center">
+        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 py-20 lg:py-28 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
             {lang === 'en'
               ? 'Ready to streamline your hauling business?'
@@ -434,7 +461,7 @@ export default function HomeContent() {
       </section>
 
       {/* ── FAQ Section ── */}
-      <section className="max-w-6xl mx-auto px-6 py-20 lg:py-28">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
             {lang === 'en' ? (
@@ -579,8 +606,8 @@ export default function HomeContent() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-steel-800 bg-steel-900/40">
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="grid sm:grid-cols-4 gap-8 mb-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 bg-safety rounded flex items-center justify-center font-black text-diesel text-xs">
