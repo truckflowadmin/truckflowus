@@ -178,7 +178,7 @@ export default function BrokerHistory({
                         </td>
                         <td className="px-5 py-3">{t.customer?.name ?? '—'}</td>
                         <td className="px-5 py-3 hidden md:table-cell">{t.material ?? '—'}</td>
-                        <td className="px-5 py-3 text-right tabular-nums">{fmtQty(t.quantity, t.quantityType)} {qtyUnit(t.quantityType)}</td>
+                        <td className="px-5 py-3 text-right tabular-nums">{fmtQty(t.quantity, t.quantityType ?? 'LOADS')} {qtyUnit(t.quantityType ?? 'LOADS')}</td>
                         <td className="px-5 py-3 text-right tabular-nums hidden sm:table-cell">${lineTotal.toFixed(2)}</td>
                         <td className="px-5 py-3 text-right tabular-nums text-red-700 hidden sm:table-cell">${lineComm.toFixed(2)}</td>
                         <td className="px-5 py-3">
