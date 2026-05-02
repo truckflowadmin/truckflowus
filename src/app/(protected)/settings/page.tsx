@@ -13,8 +13,7 @@ async function saveCompanyAction(formData: FormData) {
   'use server';
   const session = await requireSession();
   if (session.role !== 'ADMIN') throw new Error('Only admins can modify company settings');
-  const rateStr = String(formData.get('defaultRate') || '').trim();
-  const rate = rateStr ? Number(rateStr) : 0;
+  const ein = String(formData.get('ein') || '').trim() || null;
   await prisma.company.update({
     where: { id: session.companyId },
     data: {
@@ -25,7 +24,7 @@ async function saveCompanyAction(formData: FormData) {
       zip: String(formData.get('zip') || '').trim() || null,
       phone: String(formData.get('phone') || '').trim() || null,
       email: String(formData.get('email') || '').trim() || null,
-      defaultRate: isNaN(rate) ? 0 : rate,
+      ein,
       checkBankName: String(formData.get('checkBankName') || '').trim() || null,
       checkRoutingNumber: String(formData.get('checkRoutingNumber') || '').trim() || null,
       checkAccountNumber: String(formData.get('checkAccountNumber') || '').trim() || null,
@@ -374,13 +373,14 @@ export default async function SettingsPage({
           </div>
         </div>
         <div>
-          <label className="label">Default rate per load ($)</label>
+          <label className="label">EIN (Employer Identification Number)</label>
           <input
-            name="defaultRate" type="number" step="0.01" min="0"
-            defaultValue={Number(company.defaultRate).toFixed(2)}
+            name="ein" type="text"
+            defaultValue={(company as any).ein ?? ''}
             className="input max-w-xs"
+            placeholder="XX-XXXXXXX"
           />
-          <p className="text-xs text-steel-500 mt-1">Used as the default when creating new tickets.</p>
+          <p className="text-xs text-steel-500 mt-1">Federal EIN used for 1099 filing and tax documents.</p>
         </div>
         <div className="border-t border-steel-200 pt-4 mt-4">
           <h3 className="font-semibold text-sm mb-3">Check / Payment Settings</h3>
