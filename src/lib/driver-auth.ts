@@ -88,7 +88,7 @@ export async function getDriverSession(): Promise<DriverSession | null> {
     });
     if (driver?.sessionInvalidatedAt) {
       const decoded = jwt.decode(token) as { iat?: number } | null;
-      if (decoded?.iat && decoded.iat <= driver.sessionInvalidatedAt.getTime() / 1000) {
+      if (decoded?.iat && decoded.iat < driver.sessionInvalidatedAt.getTime() / 1000) {
         // Don't clear cookie here — this may run during Server Component render
         // where cookies can't be modified. Just deny the session.
         return null;
@@ -128,7 +128,7 @@ export async function getDriverSessionFromRequest(req: Request): Promise<DriverS
         });
         if (driver?.sessionInvalidatedAt) {
           const decoded = jwt.decode(token) as { iat?: number } | null;
-          if (decoded?.iat && decoded.iat <= driver.sessionInvalidatedAt.getTime() / 1000) {
+          if (decoded?.iat && decoded.iat < driver.sessionInvalidatedAt.getTime() / 1000) {
             return null;
           }
         }
