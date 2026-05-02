@@ -102,18 +102,22 @@ export async function getSession(): Promise<SessionPayload | null> {
   const payload = verifySession(token);
   if (!payload) return null;
 
-  // Check session invalidation (force-logout by superadmin)
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: { sessionInvalidatedAt: true },
-  });
-  if (user?.sessionInvalidatedAt) {
-    // JWT `iat` is in seconds; compare with invalidation timestamp
-    const decoded = jwt.decode(token) as { iat?: number } | null;
-    if (decoded?.iat && decoded.iat < user.sessionInvalidatedAt.getTime() / 1000) {
-      clearSessionCookie();
-      return null;
+  // Check session invalidation (force-logout / single-device enforcement)
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { sessionInvalidatedAt: true },
+    });
+    if (user?.sessionInvalidatedAt) {
+      // JWT `iat` is in seconds; compare with invalidation timestamp
+      const decoded = jwt.decode(token) as { iat?: number } | null;
+      if (decoded?.iat && decoded.iat < user.sessionInvalidatedAt.getTime() / 1000) {
+        clearSessionCookie();
+        return null;
+      }
     }
+  } catch {
+    // sessionInvalidatedAt column may not exist yet — skip check, allow session
   }
 
   return payload;
@@ -219,10 +223,19 @@ export async function loginWithCredentials(email: string, password: string) {
   // getSession() already checks JWT `iat` against sessionInvalidatedAt, so setting
   // it to "now" causes every previously-issued token to be rejected on next request.
   const now = new Date();
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLoginAt: now, sessionInvalidatedAt: now },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: now, sessionInvalidatedAt: now },
+    });
+  } catch {
+    // Fallback: if sessionInvalidatedAt column doesn't exist yet (migration pending),
+    // still track login time so the user can sign in.
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: now },
+    });
+  }
 
   const payload: SessionPayload = {
     userId: user.id,

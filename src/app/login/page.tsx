@@ -37,7 +37,13 @@ export default async function LoginPage({
     // Prevent open redirect — only allow relative paths starting with /
     const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '';
 
-    const result = await loginWithCredentials(email, password);
+    let result: Awaited<ReturnType<typeof loginWithCredentials>>;
+    try {
+      result = await loginWithCredentials(email, password);
+    } catch (err: any) {
+      console.error('[login] loginWithCredentials threw:', err.message);
+      redirect(`/login?error=1${next ? `&next=${encodeURIComponent(next)}` : ''}`);
+    }
 
     if (!result) {
       redirect(`/login?error=1${next ? `&next=${encodeURIComponent(next)}` : ''}`);

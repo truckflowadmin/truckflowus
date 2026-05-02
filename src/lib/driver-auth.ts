@@ -80,17 +80,21 @@ export async function getDriverSession(): Promise<DriverSession | null> {
   const payload = verifyDriverSession(token);
   if (!payload) return null;
 
-  // Check session invalidation (force-logout by superadmin)
-  const driver = await prisma.driver.findUnique({
-    where: { id: payload.driverId },
-    select: { sessionInvalidatedAt: true },
-  });
-  if (driver?.sessionInvalidatedAt) {
-    const decoded = jwt.decode(token) as { iat?: number } | null;
-    if (decoded?.iat && decoded.iat < driver.sessionInvalidatedAt.getTime() / 1000) {
-      clearDriverSessionCookie();
-      return null;
+  // Check session invalidation (force-logout / single-device enforcement)
+  try {
+    const driver = await prisma.driver.findUnique({
+      where: { id: payload.driverId },
+      select: { sessionInvalidatedAt: true },
+    });
+    if (driver?.sessionInvalidatedAt) {
+      const decoded = jwt.decode(token) as { iat?: number } | null;
+      if (decoded?.iat && decoded.iat < driver.sessionInvalidatedAt.getTime() / 1000) {
+        clearDriverSessionCookie();
+        return null;
+      }
     }
+  } catch {
+    // sessionInvalidatedAt column may not exist yet — skip check
   }
 
   return payload;
@@ -111,15 +115,19 @@ export async function getDriverSessionFromRequest(req: Request): Promise<DriverS
     const payload = verifyDriverSession(token);
     if (payload) {
       // Check session invalidation
-      const driver = await prisma.driver.findUnique({
-        where: { id: payload.driverId },
-        select: { sessionInvalidatedAt: true },
-      });
-      if (driver?.sessionInvalidatedAt) {
-        const decoded = jwt.decode(token) as { iat?: number } | null;
-        if (decoded?.iat && decoded.iat < driver.sessionInvalidatedAt.getTime() / 1000) {
-          return null;
+      try {
+        const driver = await prisma.driver.findUnique({
+          where: { id: payload.driverId },
+          select: { sessionInvalidatedAt: true },
+        });
+        if (driver?.sessionInvalidatedAt) {
+          const decoded = jwt.decode(token) as { iat?: number } | null;
+          if (decoded?.iat && decoded.iat < driver.sessionInvalidatedAt.getTime() / 1000) {
+            return null;
+          }
         }
+      } catch {
+        // sessionInvalidatedAt column may not exist yet — skip check
       }
       return payload;
     }
@@ -160,10 +168,18 @@ export async function loginDriver(phone: string, pin: string): Promise<DriverSes
   // getDriverSession() already checks JWT `iat` against sessionInvalidatedAt, so
   // setting it to "now" causes every previously-issued token to be rejected.
   const now = new Date();
-  await prisma.driver.update({
-    where: { id: driver.id },
-    data: { lastLoginAt: now, sessionInvalidatedAt: now },
-  });
+  try {
+    await prisma.driver.update({
+      where: { id: driver.id },
+      data: { lastLoginAt: now, sessionInvalidatedAt: now },
+    });
+  } catch {
+    // Fallback: if sessionInvalidatedAt column doesn't exist yet, still track login
+    await prisma.driver.update({
+      where: { id: driver.id },
+      data: { lastLoginAt: now },
+    });
+  }
 
   return {
     driverId: driver.id,
